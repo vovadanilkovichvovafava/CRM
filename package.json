@@ -6,6 +6,11 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "build:api": "pnpm --filter api build",
+    "build:web": "pnpm --filter web build",
+    "start": "pnpm --filter api start",
+    "start:api": "pnpm --filter api start",
+    "start:web": "pnpm --filter web start",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -13,6 +18,7 @@
     "db:push": "pnpm --filter api db:push",
     "db:migrate": "pnpm --filter api db:migrate",
     "db:studio": "pnpm --filter api db:studio",
+    "postinstall": "pnpm db:generate",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
