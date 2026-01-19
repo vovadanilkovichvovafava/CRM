@@ -26,13 +26,22 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       return;
     }
 
+    this.logger.log('Attempting database connection...');
+
     try {
-      await this.$connect();
+      // Add 5 second timeout to prevent hanging
+      const connectPromise = this.$connect();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Database connection timeout (5s)')), 5000);
+      });
+
+      await Promise.race([connectPromise, timeoutPromise]);
       this._isConnected = true;
       this.logger.log('Database connection established');
     } catch (error) {
       this.logger.warn('Failed to connect to database - running in demo mode');
       this.logger.warn(error instanceof Error ? error.message : String(error));
+      // Don't rethrow - allow app to start without DB
     }
   }
 
