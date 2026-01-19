@@ -7,7 +7,16 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFieldDto, UpdateFieldDto } from './dto';
-import { Field, FieldType, Prisma, InputJsonValue } from '../../../generated/prisma';
+import { Field, FieldType, Prisma } from '../../../generated/prisma';
+
+interface SystemFieldConfig {
+  name: string;
+  displayName: string;
+  type: FieldType;
+  config: Record<string, unknown>;
+  isRequired: boolean;
+  isUnique: boolean;
+}
 
 @Injectable()
 export class FieldsService {
@@ -59,7 +68,7 @@ export class FieldsService {
         name: dto.name,
         displayName: dto.displayName,
         type: dto.type,
-        config: (dto.config || {}) as InputJsonValue,
+        config: (dto.config || {}) as Prisma.InputJsonValue,
         isRequired: dto.isRequired || false,
         isUnique: dto.isUnique || false,
         defaultValue: dto.defaultValue,
@@ -127,7 +136,7 @@ export class FieldsService {
 
     const updateData: Prisma.FieldUpdateInput = {
       ...dto,
-      config: dto.config as InputJsonValue | undefined,
+      config: dto.config as Prisma.InputJsonValue | undefined,
     };
 
     const field = await this.prisma.field.update({
@@ -208,7 +217,7 @@ export class FieldsService {
             name: config.name,
             displayName: config.displayName,
             type: config.type,
-            config: config.config as InputJsonValue,
+            config: config.config as Prisma.InputJsonValue,
             isRequired: config.isRequired,
             isUnique: config.isUnique,
             objectId,
@@ -225,26 +234,27 @@ export class FieldsService {
   /**
    * Validate field configuration based on type
    */
-  private validateFieldConfig(type: FieldType, config: Record<string, unknown>): void {
+  private validateFieldConfig(type: FieldType, config: object): void {
+    const cfg = config as Record<string, unknown>;
     switch (type) {
       case FieldType.SELECT:
       case FieldType.MULTI_SELECT:
         // Options should be an array
-        if (config.options && !Array.isArray(config.options)) {
+        if (cfg.options && !Array.isArray(cfg.options)) {
           throw new BadRequestException('Options must be an array');
         }
         break;
 
       case FieldType.RELATION:
         // Must have relatedObjectId
-        if (!config.relatedObjectId) {
+        if (!cfg.relatedObjectId) {
           throw new BadRequestException('Relation fields must specify relatedObjectId');
         }
         break;
 
       case FieldType.FORMULA:
         // Must have formula
-        if (!config.formula) {
+        if (!cfg.formula) {
           throw new BadRequestException('Formula fields must specify formula');
         }
         break;
@@ -276,22 +286,15 @@ export class FieldsService {
 
     await this.prisma.object.update({
       where: { id: objectId },
-      data: { schema: schema as InputJsonValue },
+      data: { schema: schema as Prisma.InputJsonValue },
     });
   }
 
   /**
    * Get system fields configuration for each object type
    */
-  private getSystemFieldsConfig(objectName: string): Array<{
-    name: string;
-    displayName: string;
-    type: FieldType;
-    config: Record<string, unknown>;
-    isRequired: boolean;
-    isUnique: boolean;
-  }> {
-    const commonFields = [
+  private getSystemFieldsConfig(objectName: string): SystemFieldConfig[] {
+    const commonFields: SystemFieldConfig[] = [
       {
         name: 'name',
         displayName: 'Name',
@@ -302,7 +305,7 @@ export class FieldsService {
       },
     ];
 
-    const fieldsByObject: Record<string, typeof commonFields> = {
+    const fieldsByObject: Record<string, SystemFieldConfig[]> = {
       contacts: [
         ...commonFields,
         {

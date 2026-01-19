@@ -15,7 +15,7 @@ export class CreateFieldDto {
   @ApiProperty({ description: 'Object ID this field belongs to' })
   @IsString()
   @IsNotEmpty()
-  objectId: string;
+  objectId!: string;
 
   @ApiProperty({ description: 'Field system name', example: 'email' })
   @IsString()
@@ -24,17 +24,17 @@ export class CreateFieldDto {
   @Matches(/^[a-z][a-z0-9_]*$/, {
     message: 'Name must start with a letter and contain only lowercase letters, numbers, and underscores',
   })
-  name: string;
+  name!: string;
 
   @ApiProperty({ description: 'Display name', example: 'Email Address' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  displayName: string;
+  displayName!: string;
 
   @ApiProperty({ enum: FieldType, description: 'Field type' })
   @IsEnum(FieldType)
-  type: FieldType;
+  type!: FieldType;
 
   @ApiPropertyOptional({ description: 'Type-specific configuration' })
   @IsObject()

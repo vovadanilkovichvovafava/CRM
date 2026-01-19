@@ -18,13 +18,13 @@ export class CreateObjectDto {
   @Matches(/^[a-z][a-z0-9_]*$/, {
     message: 'Name must start with a letter and contain only lowercase letters, numbers, and underscores',
   })
-  name: string;
+  name!: string;
 
   @ApiProperty({ description: 'Display name for UI', example: 'Contacts' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
-  displayName: string;
+  displayName!: string;
 
   @ApiPropertyOptional({ enum: ObjectType, default: ObjectType.CUSTOM })
   @IsEnum(ObjectType)

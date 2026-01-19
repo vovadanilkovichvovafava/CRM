@@ -27,7 +27,7 @@ export class CollaborationGateway implements OnGatewayConnection, OnGatewayDisco
   private readonly logger = new Logger(CollaborationGateway.name);
 
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   constructor(private readonly presenceService: PresenceService) {}
 

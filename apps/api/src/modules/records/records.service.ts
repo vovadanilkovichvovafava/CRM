@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ValidationService } from './validation.service';
 import { CreateRecordDto, UpdateRecordDto, QueryRecordsDto } from './dto';
-import { Record as CrmRecord, Prisma, ActivityType, InputJsonValue } from '../../../generated/prisma';
+import { Record as CrmRecord, Prisma, ActivityType } from '../../../generated/prisma';
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -49,7 +49,7 @@ export class RecordsService {
     const record = await this.prisma.record.create({
       data: {
         objectId: dto.objectId,
-        data: dto.data as InputJsonValue,
+        data: dto.data as Prisma.InputJsonValue,
         stage: dto.stage,
         ownerId: userId,
         createdBy: userId,
@@ -114,7 +114,7 @@ export class RecordsService {
       where.data = {
         ...((where.data as Prisma.JsonFilter) || {}),
         path: Object.keys(query.filters),
-        equals: Object.values(query.filters)[0],
+        equals: Object.values(query.filters)[0] as Prisma.InputJsonValue,
       };
     }
 
@@ -287,7 +287,7 @@ export class RecordsService {
     };
 
     if (dto.data) {
-      updateData.data = { ...(existing.data as object), ...dto.data } as InputJsonValue;
+      updateData.data = { ...(existing.data as object), ...dto.data } as Prisma.InputJsonValue;
     }
 
     if (dto.stage !== undefined) {
@@ -317,7 +317,7 @@ export class RecordsService {
           metadata: {
             previousStage: existing.stage,
             newStage: dto.stage,
-          } as InputJsonValue,
+          } as Prisma.InputJsonValue,
           userId,
         },
       });
@@ -329,7 +329,7 @@ export class RecordsService {
           title: 'Record updated',
           metadata: {
             updatedFields: Object.keys(dto.data),
-          } as InputJsonValue,
+          } as Prisma.InputJsonValue,
           userId,
         },
       });
@@ -377,7 +377,7 @@ export class RecordsService {
     const result = await this.prisma.record.updateMany({
       where: { id: { in: ids } },
       data: {
-        data: data as InputJsonValue,
+        data: data as Prisma.InputJsonValue,
         updatedBy: userId,
       },
     });

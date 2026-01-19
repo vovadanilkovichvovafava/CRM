@@ -5,11 +5,11 @@ export class CreateRecordDto {
   @ApiProperty({ description: 'Object ID this record belongs to' })
   @IsString()
   @IsNotEmpty()
-  objectId: string;
+  objectId!: string;
 
   @ApiProperty({ description: 'Record data as key-value pairs', example: { name: 'John Doe', email: 'john@example.com' } })
   @IsObject()
-  data: Record<string, unknown>;
+  data!: Record<string, unknown>;
 
   @ApiPropertyOptional({ description: 'Initial stage for pipeline objects' })
   @IsString()

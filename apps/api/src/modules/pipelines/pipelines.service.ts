@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Pipeline, Prisma, InputJsonValue } from '../../../generated/prisma';
+import { Pipeline, Prisma } from '../../../generated/prisma';
 
 export interface PipelineStage {
   id: string;
@@ -52,7 +52,7 @@ export class PipelinesService {
       data: {
         name: dto.name,
         objectId: dto.objectId,
-        stages: dto.stages as unknown as InputJsonValue,
+        stages: dto.stages as unknown as Prisma.InputJsonValue,
         isDefault: dto.isDefault || false,
       },
     });
@@ -98,7 +98,7 @@ export class PipelinesService {
 
     const updateData: Prisma.PipelineUpdateInput = {
       ...dto,
-      stages: dto.stages as unknown as InputJsonValue | undefined,
+      stages: dto.stages as unknown as Prisma.InputJsonValue | undefined,
     };
 
     return this.prisma.pipeline.update({
@@ -120,7 +120,7 @@ export class PipelinesService {
 
   async getStageStats(pipelineId: string): Promise<Array<{ stage: string; count: number; value: number }>> {
     const pipeline = await this.findOne(pipelineId);
-    const stages = pipeline.stages as PipelineStage[];
+    const stages = pipeline.stages as unknown as PipelineStage[];
 
     const records = await this.prisma.record.groupBy({
       by: ['stage'],

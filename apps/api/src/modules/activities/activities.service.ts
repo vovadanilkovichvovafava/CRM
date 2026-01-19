@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Activity, ActivityType, Prisma, InputJsonValue } from '../../../generated/prisma';
+import { Activity, ActivityType, Prisma } from '../../../generated/prisma';
 
 export interface CreateActivityDto {
   recordId?: string;
@@ -32,7 +32,7 @@ export class ActivitiesService {
         type: dto.type,
         title: dto.title,
         description: dto.description,
-        metadata: (dto.metadata || {}) as InputJsonValue,
+        metadata: (dto.metadata || {}) as Prisma.InputJsonValue,
         occurredAt: dto.occurredAt || new Date(),
         userId,
       },
