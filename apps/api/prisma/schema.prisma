@@ -1,0 +1,789 @@
+// Enterprise CRM + Project Management System
+// Prisma Schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// FLEXIBLE DATA MODEL (Attio-style)
+// ============================================================================
+
+// Meta-model: Define custom objects dynamically
+model Object {
+  id          String     @id @default(cuid())
+  name        String     @unique // "contacts", "companies", "webmasters"
+  displayName String     // "Contacts", "Companies", "Webmasters"
+  type        ObjectType @default(CUSTOM)
+  icon        String?    // Emoji or icon name
+  color       String?    // Hex color for UI
+  schema      Json       // Field definitions
+  settings    Json       @default("{}") // View settings, permissions
+  position    Int        @default(0) // Order in sidebar
+  isArchived  Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  fields    Field[]
+  records   Record[]
+  views     View[]
+  workflows Workflow[]
+  pipelines Pipeline[]
+
+  @@index([type])
+  @@index([position])
+}
+
+enum ObjectType {
+  SYSTEM // Pre-configured (Contacts, Companies, Deals)
+  CUSTOM // User-created
+}
+
+// Field definitions for custom objects
+model Field {
+  id           String    @id @default(cuid())
+  objectId     String
+  name         String    // "email", "company_size", "quality_score"
+  displayName  String    // "Email Address", "Company Size"
+  type         FieldType
+  config       Json      @default("{}") // Type-specific config, validation rules
+  isRequired   Boolean   @default(false)
+  isUnique     Boolean   @default(false)
+  defaultValue String?
+  position     Int       @default(0)
+  isSystem     Boolean   @default(false) // System fields can't be deleted
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  object Object @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
+  @@unique([objectId, name])
+  @@index([objectId])
+}
+
+enum FieldType {
+  TEXT
+  LONG_TEXT
+  NUMBER
+  DECIMAL
+  EMAIL
+  PHONE
+  URL
+  DATE
+  DATETIME
+  BOOLEAN
+  SELECT
+  MULTI_SELECT
+  RELATION
+  FORMULA
+  FILE
+  CURRENCY
+  PERCENT
+  RATING
+  USER
+}
+
+// Records - actual data
+model Record {
+  id         String   @id @default(cuid())
+  objectId   String
+  data       Json     // Field values as JSON
+  ownerId    String   // User who owns this record
+  score      Float?   // Lead score (if applicable)
+  stage      String?  // Current stage/status
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  createdBy  String
+  updatedBy  String
+
+  object      Object           @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  activities  Activity[]
+  files       File[]
+  comments    Comment[]
+  tasks       Task[]
+  relations   RecordRelation[] @relation("RecordFrom")
+  relatedTo   RecordRelation[] @relation("RecordTo")
+  timeEntries TimeEntry[]
+
+  @@index([objectId])
+  @@index([ownerId])
+  @@index([createdAt])
+  @@index([score])
+  @@index([stage])
+}
+
+// Relations between records
+model RecordRelation {
+  id           String   @id @default(cuid())
+  fromRecordId String
+  toRecordId   String
+  relationType String   // "company", "deal", "contact", etc.
+  metadata     Json     @default("{}") // Additional relation data
+  createdAt    DateTime @default(now())
+
+  fromRecord Record @relation("RecordFrom", fields: [fromRecordId], references: [id], onDelete: Cascade)
+  toRecord   Record @relation("RecordTo", fields: [toRecordId], references: [id], onDelete: Cascade)
+
+  @@unique([fromRecordId, toRecordId, relationType])
+  @@index([fromRecordId])
+  @@index([toRecordId])
+}
+
+// Custom views for objects
+model View {
+  id        String   @id @default(cuid())
+  objectId  String
+  name      String
+  type      ViewType
+  config    Json     // Filters, sorting, columns, etc.
+  isDefault Boolean  @default(false)
+  isShared  Boolean  @default(false)
+  ownerId   String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  object Object @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
+  @@index([objectId])
+  @@index([ownerId])
+}
+
+enum ViewType {
+  TABLE
+  BOARD
+  LIST
+  TIMELINE
+  CALENDAR
+  MAP
+}
+
+// ============================================================================
+// ACTIVITY & COLLABORATION
+// ============================================================================
+
+model Activity {
+  id          String       @id @default(cuid())
+  recordId    String?
+  type        ActivityType
+  title       String
+  description String?
+  metadata    Json         @default("{}") // Type-specific data
+  userId      String
+  occurredAt  DateTime     @default(now())
+  createdAt   DateTime     @default(now())
+
+  record Record? @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([recordId])
+  @@index([userId])
+  @@index([occurredAt])
+  @@index([type])
+}
+
+enum ActivityType {
+  EMAIL_SENT
+  EMAIL_RECEIVED
+  CALL_MADE
+  CALL_RECEIVED
+  MEETING
+  NOTE
+  TASK_CREATED
+  TASK_COMPLETED
+  STAGE_CHANGED
+  FIELD_UPDATED
+  FILE_UPLOADED
+  COMMENT_ADDED
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  recordId  String?
+  taskId    String?
+  projectId String?
+  authorId  String
+  mentions  String[] // User IDs mentioned with @
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  record  Record?  @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  task    Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([recordId])
+  @@index([taskId])
+  @@index([projectId])
+  @@index([authorId])
+}
+
+model File {
+  id           String   @id @default(cuid())
+  name         String
+  originalName String
+  mimeType     String
+  size         Int      // bytes
+  url          String   // MinIO/S3 URL
+  thumbnailUrl String?  // For images
+  recordId     String?
+  taskId       String?
+  projectId    String?
+  uploadedBy   String
+  createdAt    DateTime @default(now())
+
+  record  Record?  @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  task    Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([recordId])
+  @@index([taskId])
+  @@index([projectId])
+  @@index([uploadedBy])
+}
+
+// ============================================================================
+// PROJECT MANAGEMENT (ClickUp-style)
+// ============================================================================
+
+model Project {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  status       ProjectStatus @default(ACTIVE)
+  priority     Priority      @default(MEDIUM)
+  startDate    DateTime?
+  dueDate      DateTime?
+  completedAt  DateTime?
+  recordId     String?       // Optional: linked to CRM record
+  ownerId      String        // Project manager
+  teamIds      String[]      // Team member IDs
+  progress     Int           @default(0) // 0-100%
+  budget       Decimal?
+  timeEstimate Int?          // minutes
+  timeSpent    Int           @default(0) // minutes
+  color        String?       // Hex color
+  emoji        String?       // Project icon
+  isArchived   Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  createdBy    String
+
+  tasks      Task[]
+  milestones Milestone[]
+  sprints    Sprint[]
+  members    ProjectMember[]
+  comments   Comment[]
+  files      File[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([recordId])
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(MEMBER)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  status       TaskStatus @default(TODO)
+  priority     Priority   @default(MEDIUM)
+  projectId    String?
+  parentId     String?    // For subtasks
+  assigneeId   String?
+  recordId     String?    // Optional: linked to CRM record
+  startDate    DateTime?
+  dueDate      DateTime?
+  completedAt  DateTime?
+  timeEstimate Int?       // minutes
+  timeSpent    Int        @default(0) // minutes
+  position     Float      @default(0)
+  labels       String[]
+  isArchived   Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  createdBy    String
+
+  project      Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent       Task?            @relation("Subtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks     Task[]           @relation("Subtasks")
+  record       Record?          @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  comments     Comment[]
+  files        File[]
+  checklist    ChecklistItem[]
+  timeEntries  TimeEntry[]
+  dependencies TaskDependency[] @relation("Task")
+  dependents   TaskDependency[] @relation("DependsOn")
+
+  @@index([projectId])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([recordId])
+  @@index([parentId])
+  @@index([position])
+  @@index([dueDate])
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum Priority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model TaskDependency {
+  id          String         @id @default(cuid())
+  taskId      String
+  dependsOnId String
+  type        DependencyType @default(BLOCKS)
+
+  task      Task @relation("Task", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn Task @relation("DependsOn", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnId])
+  @@index([taskId])
+  @@index([dependsOnId])
+}
+
+enum DependencyType {
+  BLOCKS
+  BLOCKED_BY
+  RELATED
+}
+
+model ChecklistItem {
+  id          String  @id @default(cuid())
+  taskId      String
+  title       String
+  isCompleted Boolean @default(false)
+  position    Int
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model Milestone {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  projectId   String
+  dueDate     DateTime
+  isCompleted Boolean  @default(false)
+  position    Int      @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model Sprint {
+  id        String   @id @default(cuid())
+  name      String
+  projectId String
+  startDate DateTime
+  endDate   DateTime
+  goal      String?
+  isActive  Boolean  @default(false)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  userId      String
+  taskId      String?
+  projectId   String?
+  recordId    String?
+  description String?
+  duration    Int       // minutes
+  startTime   DateTime
+  endTime     DateTime?
+  isBillable  Boolean   @default(false)
+  hourlyRate  Decimal?
+  createdAt   DateTime  @default(now())
+
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  record Record? @relation(fields: [recordId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([recordId])
+  @@index([startTime])
+}
+
+// ============================================================================
+// SALES & PIPELINE (Salesforce-style)
+// ============================================================================
+
+model Pipeline {
+  id         String   @id @default(cuid())
+  name       String
+  objectId   String   // Which object this pipeline is for
+  stages     Json     // Array of stage definitions
+  isDefault  Boolean  @default(false)
+  isArchived Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  object Object @relation(fields: [objectId], references: [id], onDelete: Cascade)
+
+  @@index([objectId])
+}
+
+model LeadScore {
+  id           String   @id @default(cuid())
+  recordId     String   @unique
+  totalScore   Float    // 0-100
+  factors      Json     // Breakdown by category
+  grade        String   // A, B, C, D
+  calculatedAt DateTime @default(now())
+
+  @@index([totalScore])
+  @@index([grade])
+}
+
+model Forecast {
+  id          String           @id @default(cuid())
+  recordId    String           // Deal record
+  period      String           // "2026-Q1", "2026-01"
+  amount      Decimal
+  probability Int              // 0-100
+  category    ForecastCategory
+  createdAt   DateTime         @default(now())
+
+  @@index([recordId])
+  @@index([period])
+}
+
+enum ForecastCategory {
+  PIPELINE
+  BEST_CASE
+  COMMIT
+  CLOSED
+}
+
+// ============================================================================
+// COMMUNICATION
+// ============================================================================
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  body      String   // HTML with {{tokens}}
+  category  String?
+  isShared  Boolean  @default(false)
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sequences EmailSequenceStep[]
+
+  @@index([ownerId])
+  @@index([category])
+}
+
+model EmailSequence {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(false)
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  steps       EmailSequenceStep[]
+  enrollments EmailEnrollment[]
+
+  @@index([ownerId])
+}
+
+model EmailSequenceStep {
+  id         String @id @default(cuid())
+  sequenceId String
+  templateId String
+  stepNumber Int
+  delayDays  Int
+  delayHours Int    @default(0)
+
+  sequence EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  template EmailTemplate @relation(fields: [templateId], references: [id])
+
+  @@unique([sequenceId, stepNumber])
+  @@index([sequenceId])
+}
+
+model EmailEnrollment {
+  id          String           @id @default(cuid())
+  sequenceId  String
+  recordId    String
+  currentStep Int              @default(1)
+  status      EnrollmentStatus @default(ACTIVE)
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+
+  sequence EmailSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+
+  @@unique([sequenceId, recordId])
+  @@index([sequenceId])
+  @@index([status])
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  UNSUBSCRIBED
+}
+
+// ============================================================================
+// AUTOMATION & WORKFLOWS
+// ============================================================================
+
+model Workflow {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  objectId    String          // Which object triggers this
+  trigger     WorkflowTrigger
+  conditions  Json            // Array of condition rules
+  actions     Json            // Array of actions to execute
+  isActive    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  createdBy   String
+
+  object     Object              @relation(fields: [objectId], references: [id], onDelete: Cascade)
+  executions WorkflowExecution[]
+
+  @@index([objectId])
+  @@index([isActive])
+}
+
+enum WorkflowTrigger {
+  RECORD_CREATED
+  RECORD_UPDATED
+  RECORD_DELETED
+  FIELD_CHANGED
+  STAGE_CHANGED
+  TIME_BASED
+}
+
+model WorkflowExecution {
+  id         String                  @id @default(cuid())
+  workflowId String
+  recordId   String?
+  status     WorkflowExecutionStatus
+  result     Json?                   // Execution results
+  error      String?
+  executedAt DateTime                @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([status])
+  @@index([executedAt])
+}
+
+enum WorkflowExecutionStatus {
+  SUCCESS
+  FAILED
+  PARTIAL
+}
+
+// ============================================================================
+// TRAFFIC ARBITRAGE SPECIFIC
+// ============================================================================
+
+model KeitaroIntegration {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  apiUrl    String
+  apiKey    String   // Encrypted
+  lastSync  DateTime?
+  isActive  Boolean  @default(true)
+
+  campaigns KeitaroCampaign[]
+
+  @@index([userId])
+}
+
+model KeitaroCampaign {
+  id            String   @id @default(cuid())
+  integrationId String
+  keitaroId     String   // ID in Keitaro
+  name          String
+  clicks        Int      @default(0)
+  conversions   Int      @default(0)
+  revenue       Decimal  @default(0)
+  cost          Decimal  @default(0)
+  roi           Decimal  @default(0)
+  cr            Decimal  @default(0) // Conversion rate
+  epc           Decimal  @default(0) // Earnings per click
+  recordId      String?  // Linked to partner/webmaster
+  lastSynced    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  integration KeitaroIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, keitaroId])
+  @@index([integrationId])
+  @@index([recordId])
+}
+
+model WebmasterScore {
+  id                 String   @id @default(cuid())
+  recordId           String   @unique // Webmaster record
+  volumeScore        Float    @default(0)
+  qualityScore       Float    @default(0)
+  reliabilityScore   Float    @default(0)
+  communicationScore Float    @default(0)
+  totalScore         Float    @default(0)
+  grade              String   // "Gold", "Silver", "Bronze"
+  factors            Json     // Detailed breakdown
+  calculatedAt       DateTime @default(now())
+
+  @@index([totalScore])
+  @@index([grade])
+}
+
+model Offer {
+  id           String      @id @default(cuid())
+  name         String
+  partnerId    String      // Record ID of partner network
+  vertical     String      // "casino", "betting", "finance", etc.
+  geos         Json        // Array of {geo, payout, cap, current, cr}
+  status       OfferStatus @default(ACTIVE)
+  requirements String?
+  landingUrl   String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([partnerId])
+  @@index([vertical])
+  @@index([status])
+}
+
+enum OfferStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+// ============================================================================
+// SYSTEM & SETTINGS
+// ============================================================================
+
+model User {
+  id          String   @id // Supabase auth.users.id
+  email       String   @unique
+  name        String?
+  avatar      String?
+  role        UserRole @default(MEMBER)
+  timezone    String   @default("UTC")
+  locale      String   @default("en")
+  preferences Json     @default("{}")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([email])
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  MEMBER
+  VIEWER
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model Webhook {
+  id        String   @id @default(cuid())
+  url       String
+  events    String[] // Array of event types to listen to
+  secret    String?  // For HMAC verification
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveries WebhookDelivery[]
+
+  @@index([isActive])
+}
+
+model WebhookDelivery {
+  id          String   @id @default(cuid())
+  webhookId   String
+  event       String
+  payload     Json
+  response    String?
+  statusCode  Int?
+  success     Boolean
+  attempts    Int      @default(1)
+  deliveredAt DateTime @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId])
+  @@index([deliveredAt])
+}
