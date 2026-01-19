@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateObjectDto, UpdateObjectDto, QueryObjectsDto } from './dto';
-import { Object as CrmObject, ObjectType, Prisma } from '../../../generated/prisma';
+import { Object as CrmObject, ObjectType, Prisma, InputJsonValue } from '../../../generated/prisma';
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -50,8 +50,8 @@ export class ObjectsService {
         type: dto.type || ObjectType.CUSTOM,
         icon: dto.icon,
         color: dto.color,
-        schema: {},
-        settings: dto.settings || {},
+        schema: {} as InputJsonValue,
+        settings: (dto.settings || {}) as InputJsonValue,
         position: (maxPosition._max.position || 0) + 1,
       },
     });
@@ -167,9 +167,14 @@ export class ObjectsService {
       }
     }
 
+    const updateData: Prisma.ObjectUpdateInput = {
+      ...dto,
+      settings: dto.settings as InputJsonValue | undefined,
+    };
+
     const object = await this.prisma.object.update({
       where: { id },
-      data: dto,
+      data: updateData,
     });
 
     this.logger.log('Object updated', { objectId: id });
@@ -277,8 +282,8 @@ export class ObjectsService {
           data: {
             ...obj,
             type: ObjectType.SYSTEM,
-            schema: {},
-            settings: {},
+            schema: {} as InputJsonValue,
+            settings: {} as InputJsonValue,
           },
         });
         this.logger.log('System object created', { name: obj.name });

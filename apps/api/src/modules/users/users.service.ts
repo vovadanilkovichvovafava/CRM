@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { User, UserRole } from '../../../generated/prisma';
+import { User, UserRole, InputJsonValue, Prisma } from '../../../generated/prisma';
 
 export interface UpdateUserDto {
   name?: string;
@@ -42,9 +42,14 @@ export class UsersService {
   async update(id: string, dto: UpdateUserDto): Promise<User> {
     await this.findOne(id);
 
+    const updateData: Prisma.UserUpdateInput = {
+      ...dto,
+      preferences: dto.preferences as InputJsonValue | undefined,
+    };
+
     return this.prisma.user.update({
       where: { id },
-      data: dto,
+      data: updateData,
     });
   }
 
@@ -55,7 +60,7 @@ export class UsersService {
     return this.prisma.user.update({
       where: { id },
       data: {
-        preferences: { ...currentPrefs, ...preferences },
+        preferences: { ...currentPrefs, ...preferences } as InputJsonValue,
       },
     });
   }

@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFieldDto, UpdateFieldDto } from './dto';
-import { Field, FieldType } from '../../../generated/prisma';
+import { Field, FieldType, Prisma, InputJsonValue } from '../../../generated/prisma';
 
 @Injectable()
 export class FieldsService {
@@ -59,7 +59,7 @@ export class FieldsService {
         name: dto.name,
         displayName: dto.displayName,
         type: dto.type,
-        config: dto.config || {},
+        config: (dto.config || {}) as InputJsonValue,
         isRequired: dto.isRequired || false,
         isUnique: dto.isUnique || false,
         defaultValue: dto.defaultValue,
@@ -125,9 +125,14 @@ export class FieldsService {
       this.validateFieldConfig(existing.type, dto.config);
     }
 
+    const updateData: Prisma.FieldUpdateInput = {
+      ...dto,
+      config: dto.config as InputJsonValue | undefined,
+    };
+
     const field = await this.prisma.field.update({
       where: { id },
-      data: dto,
+      data: updateData,
     });
 
     // Update object schema
@@ -200,7 +205,12 @@ export class FieldsService {
       if (!existing) {
         await this.prisma.field.create({
           data: {
-            ...config,
+            name: config.name,
+            displayName: config.displayName,
+            type: config.type,
+            config: config.config as InputJsonValue,
+            isRequired: config.isRequired,
+            isUnique: config.isUnique,
             objectId,
             position: i,
             isSystem: true,
@@ -266,7 +276,7 @@ export class FieldsService {
 
     await this.prisma.object.update({
       where: { id: objectId },
-      data: { schema },
+      data: { schema: schema as InputJsonValue },
     });
   }
 

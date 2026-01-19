@@ -1,6 +1,6 @@
-import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Pipeline } from '../../../generated/prisma';
+import { Pipeline, Prisma, InputJsonValue } from '../../../generated/prisma';
 
 export interface PipelineStage {
   id: string;
@@ -52,7 +52,7 @@ export class PipelinesService {
       data: {
         name: dto.name,
         objectId: dto.objectId,
-        stages: dto.stages,
+        stages: dto.stages as unknown as InputJsonValue,
         isDefault: dto.isDefault || false,
       },
     });
@@ -96,9 +96,14 @@ export class PipelinesService {
       });
     }
 
+    const updateData: Prisma.PipelineUpdateInput = {
+      ...dto,
+      stages: dto.stages as unknown as InputJsonValue | undefined,
+    };
+
     return this.prisma.pipeline.update({
       where: { id },
-      data: dto,
+      data: updateData,
     });
   }
 

@@ -1,6 +1,6 @@
-import { Injectable, Logger, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { View, ViewType, Prisma } from '../../../generated/prisma';
+import { View, ViewType, Prisma, InputJsonValue } from '../../../generated/prisma';
 
 export interface CreateViewDto {
   objectId: string;
@@ -76,7 +76,7 @@ export class ViewsService {
         objectId: dto.objectId,
         name: dto.name,
         type: dto.type,
-        config: dto.config || {},
+        config: (dto.config || {}) as InputJsonValue,
         isDefault: dto.isDefault || false,
         isShared: dto.isShared || false,
         ownerId: userId,
@@ -122,9 +122,14 @@ export class ViewsService {
       });
     }
 
+    const updateData: Prisma.ViewUpdateInput = {
+      ...dto,
+      config: dto.config as InputJsonValue | undefined,
+    };
+
     return this.prisma.view.update({
       where: { id },
-      data: dto,
+      data: updateData,
     });
   }
 
@@ -147,7 +152,7 @@ export class ViewsService {
           objectId,
           name: views[i].name,
           type: views[i].type,
-          config: {},
+          config: {} as InputJsonValue,
           isDefault: views[i].isDefault || false,
           isShared: true,
           ownerId: userId,
