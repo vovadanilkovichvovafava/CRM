@@ -4,11 +4,11 @@ import { PrismaClient } from '../../../generated/prisma';
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
+  private _isConnected = false;
 
   constructor() {
     super({
       log: [
-        { emit: 'event', level: 'query' },
         { emit: 'stdout', level: 'info' },
         { emit: 'stdout', level: 'warn' },
         { emit: 'stdout', level: 'error' },
@@ -16,36 +16,30 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     });
   }
 
+  get isConnected(): boolean {
+    return this._isConnected;
+  }
+
   async onModuleInit() {
-    await this.$connect();
-    this.logger.log('Database connection established');
+    if (!process.env.DATABASE_URL) {
+      this.logger.warn('DATABASE_URL not set - running in demo mode without database');
+      return;
+    }
+
+    try {
+      await this.$connect();
+      this._isConnected = true;
+      this.logger.log('Database connection established');
+    } catch (error) {
+      this.logger.warn('Failed to connect to database - running in demo mode');
+      this.logger.warn(error instanceof Error ? error.message : String(error));
+    }
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
-    this.logger.log('Database connection closed');
-  }
-
-  /**
-   * Clean database - useful for testing
-   */
-  async cleanDatabase() {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('Cannot clean database in production');
+    if (this._isConnected) {
+      await this.$disconnect();
+      this.logger.log('Database connection closed');
     }
-
-    const models = Reflect.ownKeys(this).filter(
-      (key) => typeof key === 'string' && !key.startsWith('_') && !key.startsWith('$'),
-    );
-
-    return Promise.all(
-      models.map((modelKey) => {
-        const model = this[modelKey as keyof this];
-        if (model && typeof model === 'object' && 'deleteMany' in model) {
-          return (model as { deleteMany: () => Promise<unknown> }).deleteMany();
-        }
-        return Promise.resolve();
-      }),
-    );
   }
 }

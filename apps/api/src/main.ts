@@ -15,7 +15,7 @@ async function bootstrap() {
   logger.log(`REDIS_URL: ${process.env.REDIS_URL ? 'configured' : 'not set'}`);
 
   if (!process.env.DATABASE_URL) {
-    logger.error('DATABASE_URL is not set! The application will fail to connect to the database.');
+    logger.warn('DATABASE_URL not set - running in DEMO mode');
   }
 
   const app = await NestFactory.create(AppModule);
@@ -38,9 +38,9 @@ async function bootstrap() {
     }),
   );
 
-  // CORS
+  // CORS - allow all origins for demo
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: true,
     credentials: true,
   });
 
