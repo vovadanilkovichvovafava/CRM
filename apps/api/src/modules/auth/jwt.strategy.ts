@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -6,13 +6,18 @@ import { AuthService, JwtPayload, AuthUser } from './auth.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
+  private readonly logger = new Logger(JwtStrategy.name);
+
   constructor(
     private readonly authService: AuthService,
     config: ConfigService,
   ) {
-    const secretOrKey = config.get<string>('JWT_SECRET');
-    if (!secretOrKey) {
-      throw new Error('JWT_SECRET is not configured');
+    // Use demo secret if not configured
+    const secretOrKey = config.get<string>('JWT_SECRET') || 'demo-secret-key-change-in-production';
+
+    if (!config.get<string>('JWT_SECRET')) {
+      const logger = new Logger(JwtStrategy.name);
+      logger.warn('JWT_SECRET not configured - using demo secret (NOT FOR PRODUCTION)');
     }
 
     super({
