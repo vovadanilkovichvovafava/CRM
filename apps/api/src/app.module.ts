@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
 import { PrismaModule } from './modules/prisma/prisma.module';
@@ -16,6 +16,28 @@ import { FilesModule } from './modules/files/files.module';
 import { UsersModule } from './modules/users/users.module';
 import { CollaborationModule } from './modules/collaboration/collaboration.module';
 
+const logger = new Logger('AppModule');
+
+// Conditionally include BullMQ only if Redis is configured
+const optionalImports = [];
+
+if (process.env.REDIS_HOST || process.env.REDIS_URL) {
+  logger.log('Redis configured, enabling BullMQ');
+  optionalImports.push(
+    BullModule.forRoot({
+      connection: process.env.REDIS_URL
+        ? { url: process.env.REDIS_URL }
+        : {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379', 10),
+            password: process.env.REDIS_PASSWORD || undefined,
+          },
+    }),
+  );
+} else {
+  logger.warn('Redis not configured, BullMQ disabled. Background jobs will not work.');
+}
+
 @Module({
   imports: [
     // Configuration
@@ -24,14 +46,8 @@ import { CollaborationModule } from './modules/collaboration/collaboration.modul
       envFilePath: ['.env.local', '.env'],
     }),
 
-    // BullMQ for background jobs
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-        password: process.env.REDIS_PASSWORD || undefined,
-      },
-    }),
+    // Optional modules (like BullMQ)
+    ...optionalImports,
 
     // Core modules
     PrismaModule,

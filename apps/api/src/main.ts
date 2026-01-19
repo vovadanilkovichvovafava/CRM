@@ -5,6 +5,19 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+
+  // Log environment for debugging startup issues
+  logger.log(`Starting application...`);
+  logger.log(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
+  logger.log(`PORT: ${process.env.PORT || 'not set, using default'}`);
+  logger.log(`DATABASE_URL: ${process.env.DATABASE_URL ? 'configured' : 'NOT CONFIGURED!'}`);
+  logger.log(`REDIS_HOST: ${process.env.REDIS_HOST || 'not set'}`);
+  logger.log(`REDIS_URL: ${process.env.REDIS_URL ? 'configured' : 'not set'}`);
+
+  if (!process.env.DATABASE_URL) {
+    logger.error('DATABASE_URL is not set! The application will fail to connect to the database.');
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Health check endpoint (before global prefix)
@@ -61,4 +74,8 @@ async function bootstrap() {
   logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  const logger = new Logger('Bootstrap');
+  logger.error('Failed to start application:', error);
+  process.exit(1);
+});
