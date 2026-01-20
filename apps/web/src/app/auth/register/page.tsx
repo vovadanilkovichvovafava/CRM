@@ -98,13 +98,17 @@ export default function RegisterPage() {
       toast.success('Account created successfully!');
       router.push('/dashboard');
     } catch (error) {
+      console.error('Registration error:', error);
       if (error instanceof ApiError) {
-        const message =
-          (error.data as { message?: string })?.message ||
-          'Failed to create account';
+        const data = error.data as { message?: string | string[] };
+        const message = Array.isArray(data?.message)
+          ? data.message.join(', ')
+          : data?.message || `Error ${error.status}: ${error.statusText}`;
         toast.error(message);
+      } else if (error instanceof Error) {
+        toast.error(`Error: ${error.message}`);
       } else {
-        toast.error('Something went wrong. Please try again.');
+        toast.error('Network error. Check if API is running.');
       }
     } finally {
       setIsLoading(false);

@@ -82,11 +82,17 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${user.name || user.email}!`);
       router.push('/dashboard');
     } catch (error) {
+      console.error('Login error:', error);
       if (error instanceof ApiError) {
-        const message = (error.data as { message?: string })?.message || 'Invalid email or password';
+        const data = error.data as { message?: string | string[] };
+        const message = Array.isArray(data?.message)
+          ? data.message.join(', ')
+          : data?.message || `Error ${error.status}: ${error.statusText}`;
         toast.error(message);
+      } else if (error instanceof Error) {
+        toast.error(`Error: ${error.message}`);
       } else {
-        toast.error('Something went wrong. Please try again.');
+        toast.error('Network error. Check if API is running.');
       }
     } finally {
       setIsLoading(false);
@@ -101,7 +107,15 @@ export default function LoginPage() {
       toast.success('Logged in as Developer');
       router.push('/dashboard');
     } catch (error) {
-      toast.error('Failed to get dev token');
+      console.error('Dev login error:', error);
+      if (error instanceof ApiError) {
+        const data = error.data as { message?: string };
+        toast.error(data?.message || `Error ${error.status}`);
+      } else if (error instanceof Error) {
+        toast.error(`Error: ${error.message}`);
+      } else {
+        toast.error('Network error');
+      }
     } finally {
       setIsLoading(false);
     }
