@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { Record, PaginatedResponse } from '@/types';
+import type { CrmRecord, PaginatedResponse } from '@/types';
 
 interface RecordsParams {
   objectId?: string;
@@ -16,14 +16,14 @@ interface RecordsParams {
 export function useRecords(params?: RecordsParams) {
   return useQuery({
     queryKey: ['records', params],
-    queryFn: () => api.records.list(params) as Promise<PaginatedResponse<Record>>,
+    queryFn: () => api.records.list(params) as Promise<PaginatedResponse<CrmRecord>>,
   });
 }
 
 export function useRecord(id: string, include?: string[]) {
   return useQuery({
     queryKey: ['records', id, include],
-    queryFn: () => api.records.get(id, include) as Promise<Record>,
+    queryFn: () => api.records.get(id, include) as Promise<CrmRecord>,
     enabled: !!id,
   });
 }

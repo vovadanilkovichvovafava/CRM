@@ -78,8 +78,8 @@ export interface Field {
   updatedAt: string;
 }
 
-// Record Types
-export interface Record {
+// Record Types - renamed to CrmRecord to avoid collision with TypeScript's Record utility type
+export interface CrmRecord {
   id: string;
   objectId: string;
   data: Record<string, unknown>;
