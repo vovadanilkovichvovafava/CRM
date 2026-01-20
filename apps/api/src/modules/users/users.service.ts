@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, UserRole, Prisma } from '../../../generated/prisma';
+import * as bcrypt from 'bcryptjs';
 
 export interface UpdateUserDto {
   name?: string;
@@ -10,6 +11,11 @@ export interface UpdateUserDto {
   locale?: string;
   preferences?: Record<string, unknown>;
   isActive?: boolean;
+}
+
+export interface ChangePasswordDto {
+  currentPassword: string;
+  newPassword: string;
 }
 
 @Injectable()
@@ -74,5 +80,36 @@ export class UsersService {
     });
 
     this.logger.log('User deactivated', { userId: id });
+  }
+
+  async changePassword(id: string, dto: ChangePasswordDto): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID "${id}" not found`);
+    }
+
+    if (!user.password) {
+      throw new BadRequestException('This account uses external authentication and cannot change password');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(dto.currentPassword, user.password);
+
+    if (!isCurrentPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    if (dto.newPassword.length < 6) {
+      throw new BadRequestException('New password must be at least 6 characters');
+    }
+
+    const hashedNewPassword = await bcrypt.hash(dto.newPassword, 10);
+
+    await this.prisma.user.update({
+      where: { id },
+      data: { password: hashedNewPassword },
+    });
+
+    this.logger.log('User password changed', { userId: id });
   }
 }

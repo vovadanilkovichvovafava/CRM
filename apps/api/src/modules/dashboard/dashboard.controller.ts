@@ -22,4 +22,11 @@ export class DashboardController {
   getRecentActivities(@Query('limit') limit?: number) {
     return this.dashboardService.getRecentActivities(limit ? Number(limit) : 10);
   }
+
+  @Get('upcoming-tasks')
+  @Public()
+  @ApiOperation({ summary: 'Get upcoming tasks' })
+  getUpcomingTasks(@Query('limit') limit?: number) {
+    return this.dashboardService.getUpcomingTasks(limit ? Number(limit) : 5);
+  }
 }

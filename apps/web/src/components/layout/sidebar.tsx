@@ -191,9 +191,17 @@ export function Sidebar() {
       {/* Bottom section - User info */}
       <div className="border-t border-white/5 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500">
-            <span className="text-sm font-semibold text-white uppercase">{userInitial}</span>
-          </div>
+          {user?.avatar ? (
+            <img
+              src={user.avatar}
+              alt={user.name || 'User'}
+              className="h-9 w-9 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500">
+              <span className="text-sm font-semibold text-white uppercase">{userInitial}</span>
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">
               {user?.name || 'User'}

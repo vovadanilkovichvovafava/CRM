@@ -17,6 +17,9 @@ import {
   Eye,
   History,
   Loader2,
+  CalendarClock,
+  AlertTriangle,
+  FolderKanban,
 } from 'lucide-react';
 
 interface StatCardData {
@@ -136,6 +139,69 @@ function ActivityItem({ activity }: { activity: { id: string; type: string; titl
   );
 }
 
+interface UpcomingTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  dueDate: string | null;
+  project: { id: string; name: string } | null;
+}
+
+function TaskItem({ task }: { task: UpcomingTask }) {
+  const priorityColors: Record<string, string> = {
+    URGENT: 'bg-red-500/10 text-red-400 border-red-500/30',
+    HIGH: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
+    MEDIUM: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+    LOW: 'bg-slate-500/10 text-slate-400 border-slate-500/30',
+  };
+
+  const formatDueDate = (date: string | null) => {
+    if (!date) return null;
+    const dueDate = new Date(date);
+    const now = new Date();
+    const diffMs = dueDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / 86400000);
+
+    if (diffDays < 0) return { text: 'Overdue', isOverdue: true };
+    if (diffDays === 0) return { text: 'Today', isOverdue: false };
+    if (diffDays === 1) return { text: 'Tomorrow', isOverdue: false };
+    return { text: `${diffDays} days`, isOverdue: false };
+  };
+
+  const dueDateInfo = formatDueDate(task.dueDate);
+
+  return (
+    <Link
+      href={`/tasks?task=${task.id}`}
+      className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02] -mx-3 px-3 rounded-lg transition-colors"
+    >
+      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${priorityColors[task.priority] || 'bg-white/10'}`}>
+        {task.priority === 'URGENT' ? (
+          <AlertTriangle className="h-4 w-4" />
+        ) : (
+          <CheckSquare className="h-4 w-4" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white truncate">{task.title}</p>
+        {task.project && (
+          <div className="flex items-center gap-1 text-xs text-white/40">
+            <FolderKanban className="h-3 w-3" />
+            {task.project.name}
+          </div>
+        )}
+      </div>
+      {dueDateInfo && (
+        <span className={`text-xs px-2 py-1 rounded-full ${dueDateInfo.isOverdue ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-white/50'}`}>
+          {dueDateInfo.text}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 function LoadingSkeleton() {
   return (
     <div className="animate-pulse">
@@ -162,6 +228,12 @@ export default function DashboardPage() {
   const { data: activities, isLoading: activitiesLoading } = useQuery({
     queryKey: ['dashboard', 'activities'],
     queryFn: () => api.dashboard.getRecentActivities(10),
+    staleTime: 30000,
+  });
+
+  const { data: upcomingTasks, isLoading: tasksLoading } = useQuery({
+    queryKey: ['dashboard', 'upcoming-tasks'],
+    queryFn: () => api.dashboard.getUpcomingTasks(5),
     staleTime: 30000,
   });
 
@@ -270,37 +342,64 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6">
-          <h2 className="text-lg font-semibold text-white mb-6">Quick Actions</h2>
-          <div className="space-y-2">
-            {quickActions.map((action) => (
-              <Link
-                key={action.label}
-                href={action.href}
-                className="flex items-center gap-3 w-full p-3 rounded-xl border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all group"
-              >
-                <div className="h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <action.icon className={`h-4 w-4 ${action.color}`} />
-                </div>
-                <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
-                  {action.label}
-                </span>
-                <Plus className="h-4 w-4 text-white/20 ml-auto group-hover:text-white/40 transition-colors" />
+        {/* Right column */}
+        <div className="space-y-6">
+          {/* Upcoming Tasks */}
+          <div className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5 text-violet-400" />
+                <h2 className="text-lg font-semibold text-white">Upcoming Tasks</h2>
+              </div>
+              <Link href="/tasks" className="text-sm text-white/40 hover:text-white transition-colors">
+                View all
               </Link>
-            ))}
+            </div>
+            <div>
+              {tasksLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-5 w-5 animate-spin text-white/40" />
+                </div>
+              ) : upcomingTasks && upcomingTasks.length > 0 ? (
+                upcomingTasks.map((task) => (
+                  <TaskItem key={task.id} task={task} />
+                ))
+              ) : (
+                <div className="text-center py-6 text-white/40">
+                  <CheckSquare className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No upcoming tasks</p>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Janus Tip */}
-          <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-            <div className="flex items-start gap-3">
-              <div className="h-8 w-8 rounded-lg bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
-                <Eye className="h-4 w-4 text-indigo-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-white">Janus Tip</p>
-                <p className="text-xs text-white/50 mt-1">
-                  Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-white/60">⌘K</kbd> to search across all your data instantly.
+          {/* Quick Actions */}
+          <div className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6">
+            <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+            <div className="space-y-2">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.label}
+                  href={action.href}
+                  className="flex items-center gap-3 w-full p-3 rounded-xl border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all group"
+                >
+                  <div className="h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <action.icon className={`h-4 w-4 ${action.color}`} />
+                  </div>
+                  <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
+                    {action.label}
+                  </span>
+                  <Plus className="h-4 w-4 text-white/20 ml-auto group-hover:text-white/40 transition-colors" />
+                </Link>
+              ))}
+            </div>
+
+            {/* Janus Tip */}
+            <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+              <div className="flex items-start gap-2">
+                <Eye className="h-4 w-4 text-indigo-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-white/50">
+                  Press <kbd className="px-1 py-0.5 rounded bg-white/10 text-white/60">⌘K</kbd> to search
                 </p>
               </div>
             </div>

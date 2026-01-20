@@ -191,6 +191,11 @@ export const api = {
     me: () => request<unknown>('/users/me'),
     updateMe: (data: unknown) =>
       request<unknown>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }),
+    changePassword: (data: { currentPassword: string; newPassword: string }) =>
+      request<{ message: string }>('/users/me/change-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 
   // Comments
@@ -271,6 +276,16 @@ export const api = {
         recordId: string | null;
         occurredAt: string;
       }>>('/dashboard/activities', { params: { limit } }),
+    getUpcomingTasks: (limit?: number) =>
+      request<Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        status: string;
+        priority: string;
+        dueDate: string | null;
+        project: { id: string; name: string } | null;
+      }>>('/dashboard/upcoming-tasks', { params: { limit } }),
   },
 };
 

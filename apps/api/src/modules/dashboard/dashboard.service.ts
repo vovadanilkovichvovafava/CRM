@@ -17,6 +17,16 @@ export interface RecentActivity {
   occurredAt: Date;
 }
 
+export interface UpcomingTask {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: string;
+  dueDate: Date | null;
+  project: { id: string; name: string } | null;
+}
+
 @Injectable()
 export class DashboardService {
   private readonly logger = new Logger(DashboardService.name);
@@ -169,5 +179,42 @@ export class DashboardService {
     });
 
     return activities;
+  }
+
+  /**
+   * Get upcoming tasks for dashboard
+   */
+  async getUpcomingTasks(limit = 5): Promise<UpcomingTask[]> {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const tasks = await this.prisma.task.findMany({
+      where: {
+        isArchived: false,
+        status: { not: 'DONE' },
+        OR: [
+          { dueDate: { lte: sevenDaysFromNow } },
+          { dueDate: null, priority: { in: ['HIGH', 'URGENT'] } },
+        ],
+      },
+      orderBy: [{ dueDate: { sort: 'asc', nulls: 'last' } }, { priority: 'desc' }],
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        priority: true,
+        dueDate: true,
+        project: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    return tasks;
   }
 }

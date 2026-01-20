@@ -1,6 +1,6 @@
-import { Controller, Get, Body, Patch, Param, Delete, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Post, Param, Delete, UseGuards, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { UsersService, UpdateUserDto } from './users.service';
+import { UsersService, UpdateUserDto, ChangePasswordDto } from './users.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { AuthUser } from '../auth/auth.service';
@@ -40,6 +40,16 @@ export class UsersController {
   @ApiOperation({ summary: 'Update user preferences' })
   updatePreferences(@CurrentUser() user: AuthUser, @Body() preferences: Record<string, unknown>) {
     return this.usersService.updatePreferences(user.id, preferences);
+  }
+
+  @Post('me/change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change current user password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 401, description: 'Current password is incorrect' })
+  async changePassword(@CurrentUser() user: AuthUser, @Body() dto: ChangePasswordDto) {
+    await this.usersService.changePassword(user.id, dto);
+    return { message: 'Password changed successfully' };
   }
 
   @Patch(':id')
