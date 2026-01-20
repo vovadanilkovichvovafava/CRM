@@ -23,6 +23,7 @@ import { SlideOver } from '@/components/ui/slide-over';
 import { api, ApiError } from '@/lib/api';
 import { getInitials, formatRelativeTime } from '@/lib/utils';
 import { EditRecordModal } from '@/components/records/edit-record-modal';
+import { RelationsSection } from '@/components/records/relations-section';
 
 // Contact fields configuration
 const contactFields = [
@@ -249,6 +250,12 @@ export function ContactDetailPanel({ contactId, onClose }: ContactDetailPanelPro
                 </CardContent>
               </Card>
             )}
+
+            {/* Relations Section */}
+            <RelationsSection
+              recordId={contact.id}
+              currentObjectName="contacts"
+            />
 
             {/* Metadata Card */}
             <Card className="bg-white/[0.02] border-white/[0.05]">

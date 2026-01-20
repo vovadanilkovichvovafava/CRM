@@ -209,6 +209,50 @@ export const api = {
       request<unknown[]>(`/activities/record/${recordId}/timeline`, { params: { limit } }),
   },
 
+  // Relations
+  relations: {
+    listByRecord: (recordId: string, relationType?: string) =>
+      request<Array<{
+        id: string;
+        fromRecordId: string;
+        toRecordId: string;
+        relationType: string;
+        metadata: Record<string, unknown>;
+        createdAt: string;
+        fromRecord: {
+          id: string;
+          objectId: string;
+          data: Record<string, unknown>;
+          object: {
+            id: string;
+            name: string;
+            displayName: string;
+            icon: string | null;
+            color: string | null;
+          };
+        };
+        toRecord: {
+          id: string;
+          objectId: string;
+          data: Record<string, unknown>;
+          object: {
+            id: string;
+            name: string;
+            displayName: string;
+            icon: string | null;
+            color: string | null;
+          };
+        };
+      }>>(`/relations/record/${recordId}`, { params: relationType ? { relationType } : undefined }),
+    create: (data: {
+      fromRecordId: string;
+      toRecordId: string;
+      relationType: string;
+      metadata?: Record<string, unknown>;
+    }) => request<unknown>('/relations', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/relations/${id}`, { method: 'DELETE' }),
+  },
+
   // Dashboard
   dashboard: {
     getStats: () =>

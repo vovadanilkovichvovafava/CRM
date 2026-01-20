@@ -13,6 +13,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { TasksModule } from './modules/tasks/tasks.module';
 import { PipelinesModule } from './modules/pipelines/pipelines.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
+import { RelationsModule } from './modules/relations/relations.module';
 import { CommentsModule } from './modules/comments/comments.module';
 import { FilesModule } from './modules/files/files.module';
 import { UsersModule } from './modules/users/users.module';
@@ -69,6 +70,7 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
     ViewsModule,
     PipelinesModule,
     ActivitiesModule,
+    RelationsModule,
 
     // Collaboration
     CommentsModule,
