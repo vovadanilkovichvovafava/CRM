@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter, Loader2, Users, Trash2, Edit } from 'lucide-react';
+import { Plus, Search, Filter, Loader2, Users, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
+import { ContactDetailPanel } from '@/components/records/contact-detail-panel';
 import { api, ApiError } from '@/lib/api';
 import { getInitials, formatRelativeTime } from '@/lib/utils';
 
@@ -40,6 +41,7 @@ export default function ContactsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [contactsObjectId, setContactsObjectId] = useState<string | null>(null);
 
   // Get contacts object
@@ -185,6 +187,7 @@ export default function ContactsPage() {
                     <tr
                       key={contact.id}
                       className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      onClick={() => setSelectedContactId(contact.id)}
                     >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -216,8 +219,12 @@ export default function ContactsPage() {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-white/40 hover:text-white"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedContactId(contact.id);
+                            }}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Eye className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -253,6 +260,12 @@ export default function ContactsPage() {
           fields={contactFields}
         />
       )}
+
+      {/* Contact Detail Panel */}
+      <ContactDetailPanel
+        contactId={selectedContactId}
+        onClose={() => setSelectedContactId(null)}
+      />
     </div>
   );
 }
