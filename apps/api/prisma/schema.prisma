@@ -743,6 +743,19 @@ enum UserRole {
   VIEWER
 }
 
+model VerificationCode {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([code])
+  @@index([expiresAt])
+}
+
 model Notification {
   id        String   @id @default(cuid())
   userId    String

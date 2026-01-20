@@ -8,6 +8,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from './supabase.service';
+import { MailService } from './mail.service';
 import { User } from '../../../generated/prisma';
 import { RegisterDto, LoginDto } from './dto';
 import * as bcrypt from 'bcryptjs';
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly supabase: SupabaseService,
     private readonly jwt: JwtService,
+    private readonly mail: MailService,
   ) {}
 
   /**
@@ -239,6 +241,157 @@ export class AuthService {
       name: devUser.name,
       role: devUser.role,
     };
+
+    return {
+      user: authUser,
+      token: this.generateToken(authUser),
+    };
+  }
+
+  /**
+   * Generate and send verification code via email
+   */
+  async sendVerificationCode(email: string): Promise<{ message: string }> {
+    const normalizedEmail = email.toLowerCase();
+
+    // Delete any existing unused codes for this email
+    await this.prisma.verificationCode.deleteMany({
+      where: {
+        email: normalizedEmail,
+        used: false,
+      },
+    });
+
+    // Generate a 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store the code with 10-minute expiration
+    await this.prisma.verificationCode.create({
+      data: {
+        email: normalizedEmail,
+        code,
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+      },
+    });
+
+    // Send the code via email
+    await this.mail.sendVerificationCode(normalizedEmail, code);
+
+    this.logger.log('Verification code sent', { email: normalizedEmail });
+
+    return { message: 'Verification code sent' };
+  }
+
+  /**
+   * Verify code and authenticate user (creates user if doesn't exist)
+   */
+  async verifyCode(email: string, code: string): Promise<AuthResponse> {
+    const normalizedEmail = email.toLowerCase();
+
+    // Find the verification code
+    const verificationCode = await this.prisma.verificationCode.findFirst({
+      where: {
+        email: normalizedEmail,
+        code,
+        used: false,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!verificationCode) {
+      throw new UnauthorizedException('Invalid or expired verification code');
+    }
+
+    // Mark code as used
+    await this.prisma.verificationCode.update({
+      where: { id: verificationCode.id },
+      data: { used: true },
+    });
+
+    // Find or create user
+    let user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      // Create new user
+      user = await this.prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          name: normalizedEmail.split('@')[0],
+        },
+      });
+      this.logger.log('New user created via email verification', { userId: user.id });
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+
+    this.logger.log('User authenticated via email verification', { userId: user.id });
+
+    return {
+      user: authUser,
+      token: this.generateToken(authUser),
+    };
+  }
+
+  /**
+   * Authenticate user via Google OAuth
+   */
+  async googleAuth(googleUser: {
+    email: string;
+    name?: string;
+    picture?: string;
+    googleId: string;
+  }): Promise<AuthResponse> {
+    const normalizedEmail = googleUser.email.toLowerCase();
+
+    // Find or create user
+    let user = await this.prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.create({
+        data: {
+          email: normalizedEmail,
+          name: googleUser.name || normalizedEmail.split('@')[0],
+          avatar: googleUser.picture,
+        },
+      });
+      this.logger.log('New user created via Google OAuth', { userId: user.id });
+    } else {
+      // Update avatar if not set
+      if (!user.avatar && googleUser.picture) {
+        user = await this.prisma.user.update({
+          where: { id: user.id },
+          data: { avatar: googleUser.picture },
+        });
+      }
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+
+    this.logger.log('User authenticated via Google OAuth', { userId: user.id });
 
     return {
       user: authUser,

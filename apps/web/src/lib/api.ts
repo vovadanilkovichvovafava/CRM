@@ -95,6 +95,13 @@ export const api = {
         '/auth/register',
         { method: 'POST', body: JSON.stringify(data) },
       ),
+    sendCode: (data: { email: string }) =>
+      request<{ message: string }>('/auth/send-code', { method: 'POST', body: JSON.stringify(data) }),
+    verifyCode: (data: { email: string; code: string }) =>
+      request<{ user: { id: string; email: string; name: string | null; role: string }; token: string }>(
+        '/auth/verify-code',
+        { method: 'POST', body: JSON.stringify(data) },
+      ),
     getDevToken: () =>
       request<{ user: { id: string; email: string; name: string | null; role: string }; token: string }>(
         '/auth/dev-token',
