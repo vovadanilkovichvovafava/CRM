@@ -1,8 +1,16 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from './supabase.service';
 import { User } from '../../../generated/prisma';
+import { RegisterDto, LoginDto } from './dto';
+import * as bcrypt from 'bcryptjs';
 
 export interface JwtPayload {
   sub: string;
@@ -17,6 +25,11 @@ export interface AuthUser {
   role: string;
 }
 
+export interface AuthResponse {
+  user: AuthUser;
+  token: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -26,6 +39,87 @@ export class AuthService {
     private readonly supabase: SupabaseService,
     private readonly jwt: JwtService,
   ) {}
+
+  /**
+   * Register a new user with email and password
+   */
+  async register(dto: RegisterDto): Promise<AuthResponse> {
+    // Check if user already exists
+    const existing = await this.prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
+    if (existing) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    // Create user
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email.toLowerCase(),
+        password: hashedPassword,
+        name: dto.name || dto.email.split('@')[0],
+      },
+    });
+
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+
+    this.logger.log('User registered', { userId: user.id, email: user.email });
+
+    return {
+      user: authUser,
+      token: this.generateToken(authUser),
+    };
+  }
+
+  /**
+   * Login with email and password
+   */
+  async login(dto: LoginDto): Promise<AuthResponse> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email.toLowerCase() },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.password) {
+      throw new BadRequestException('This account uses external authentication');
+    }
+
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedException('Account is deactivated');
+    }
+
+    const authUser: AuthUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    };
+
+    this.logger.log('User logged in', { userId: user.id, email: user.email });
+
+    return {
+      user: authUser,
+      token: this.generateToken(authUser),
+    };
+  }
 
   /**
    * Validate user from Supabase token and sync to local DB
@@ -38,7 +132,11 @@ export class AuthService {
     }
 
     // Sync user to local database
-    const user = await this.syncUser(supabaseUser.id, supabaseUser.email, supabaseUser.user_metadata);
+    const user = await this.syncUser(
+      supabaseUser.id,
+      supabaseUser.email,
+      supabaseUser.user_metadata,
+    );
 
     return {
       id: user.id,
@@ -123,17 +221,13 @@ export class AuthService {
   /**
    * For development: create a test user and return token
    */
-  async createDevUser(): Promise<{ user: AuthUser; token: string }> {
-    if (process.env.NODE_ENV === 'production') {
-      throw new UnauthorizedException('Dev user not available in production');
-    }
-
+  async createDevUser(): Promise<AuthResponse> {
     const devUser = await this.prisma.user.upsert({
       where: { email: 'dev@example.com' },
       update: {},
       create: {
-        id: 'dev-user-id',
         email: 'dev@example.com',
+        password: await bcrypt.hash('dev123', 10),
         name: 'Developer',
         role: 'ADMIN',
       },

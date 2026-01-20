@@ -33,8 +33,19 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     }
   }
 
-  // Get token from localStorage
-  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  // Get token from zustand persisted storage
+  let token: string | null = null;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('janus-auth');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        token = parsed?.state?.token || null;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -67,8 +78,22 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 export const api = {
   // Auth
   auth: {
-    getDevToken: () => request<{ user: unknown; token: string }>('/auth/dev-token', { method: 'POST' }),
-    me: () => request<unknown>('/auth/me'),
+    login: (data: { email: string; password: string }) =>
+      request<{ user: { id: string; email: string; name: string | null; role: string }; token: string }>(
+        '/auth/login',
+        { method: 'POST', body: JSON.stringify(data) },
+      ),
+    register: (data: { email: string; password: string; name?: string }) =>
+      request<{ user: { id: string; email: string; name: string | null; role: string }; token: string }>(
+        '/auth/register',
+        { method: 'POST', body: JSON.stringify(data) },
+      ),
+    getDevToken: () =>
+      request<{ user: { id: string; email: string; name: string | null; role: string }; token: string }>(
+        '/auth/dev-token',
+        { method: 'POST' },
+      ),
+    me: () => request<{ id: string; email: string; name: string | null; role: string }>('/auth/me'),
   },
 
   // Objects

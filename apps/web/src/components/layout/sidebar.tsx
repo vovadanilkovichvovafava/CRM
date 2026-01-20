@@ -16,9 +16,10 @@ import {
   Plus,
   Home,
   Search,
-  Bell,
-  Eye,
+  LogOut,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/auth';
 
 function JanusLogo({ className = "w-8 h-8" }: { className?: string }) {
   return (
@@ -145,6 +146,15 @@ function NavSection({
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/auth/login');
+  };
+
+  const userInitial = user?.name?.charAt(0) || user?.email?.charAt(0) || 'U';
 
   return (
     <aside className="flex h-full w-64 flex-col bg-[#0a0a0f] border-r border-white/5">
@@ -178,18 +188,26 @@ export function Sidebar() {
         <NavSection items={otherItems} pathname={pathname} />
       </nav>
 
-      {/* Bottom section */}
+      {/* Bottom section - User info */}
       <div className="border-t border-white/5 p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-pink-500">
-            <span className="text-sm font-semibold text-white">U</span>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500">
+            <span className="text-sm font-semibold text-white uppercase">{userInitial}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-white truncate">User</p>
-            <p className="text-xs text-white/40 truncate">user@example.com</p>
+            <p className="text-sm font-medium text-white truncate">
+              {user?.name || 'User'}
+            </p>
+            <p className="text-xs text-white/40 truncate">
+              {user?.email || 'user@example.com'}
+            </p>
           </div>
-          <button className="rounded-lg p-2 text-white/40 hover:bg-white/5 hover:text-white transition-colors">
-            <Bell className="h-4 w-4" />
+          <button
+            onClick={handleLogout}
+            className="rounded-lg p-2 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4" />
           </button>
         </div>
       </div>
