@@ -4,12 +4,12 @@ import { Providers } from './providers';
 import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
-  title: 'Nexus CRM - The CRM that works for you',
-  description: 'A next-generation CRM platform for affiliate marketing teams. Track partners, manage deals, and scale your business with powerful automation.',
-  keywords: ['CRM', 'affiliate marketing', 'partner management', 'sales pipeline'],
+  title: 'Janus CRM - See everything. Miss nothing.',
+  description: 'Janus CRM — полная картина клиента. Платформа нового поколения для affiliate marketing. Видим прошлое, строим будущее.',
+  keywords: ['CRM', 'affiliate marketing', 'partner management', 'sales pipeline', 'Janus'],
   openGraph: {
-    title: 'Nexus CRM',
-    description: 'The CRM that works for you',
+    title: 'Janus CRM',
+    description: 'See everything. Miss nothing.',
     type: 'website',
   },
 };

@@ -17,6 +17,7 @@ import { CommentsModule } from './modules/comments/comments.module';
 import { FilesModule } from './modules/files/files.module';
 import { UsersModule } from './modules/users/users.module';
 import { CollaborationModule } from './modules/collaboration/collaboration.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 const logger = new Logger('AppModule');
 
@@ -80,6 +81,9 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
 
     // Users
     UsersModule,
+
+    // Dashboard
+    DashboardModule,
   ],
 })
 export class AppModule {}

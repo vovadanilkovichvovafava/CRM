@@ -14,11 +14,47 @@ import {
   BarChart3,
   Settings,
   Plus,
-  Sparkles,
   Home,
   Search,
   Bell,
+  Eye,
 } from 'lucide-react';
+
+function JanusLogo({ className = "w-8 h-8" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 48 48" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="sidebarJanusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#818cf8" />
+          <stop offset="50%" stopColor="#a78bfa" />
+          <stop offset="100%" stopColor="#c084fc" />
+        </linearGradient>
+        <linearGradient id="sidebarJanusGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#38bdf8" />
+          <stop offset="100%" stopColor="#818cf8" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M24 4C13 4 4 13 4 24C4 35 13 44 24 44"
+        stroke="url(#sidebarJanusGradient2)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M24 4C35 4 44 13 44 24C44 35 35 44 24 44"
+        stroke="url(#sidebarJanusGradient)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <line x1="24" y1="8" x2="24" y2="40" stroke="url(#sidebarJanusGradient)" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="16" cy="20" r="3" fill="url(#sidebarJanusGradient2)" />
+      <circle cx="32" cy="20" r="3" fill="url(#sidebarJanusGradient)" />
+      <circle cx="24" cy="32" r="4" fill="url(#sidebarJanusGradient)" />
+    </svg>
+  );
+}
 
 interface NavItem {
   name: string;
@@ -115,10 +151,11 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-white/5 px-4">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
-            <Sparkles className="h-4 w-4 text-white" />
+          <JanusLogo className="h-9 w-9" />
+          <div className="flex flex-col">
+            <span className="text-lg font-bold text-white">Janus</span>
+            <span className="text-[10px] text-white/40 -mt-1">See everything</span>
           </div>
-          <span className="text-lg font-semibold text-white">Nexus</span>
         </Link>
       </div>
 

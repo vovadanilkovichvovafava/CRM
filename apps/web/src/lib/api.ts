@@ -176,6 +176,26 @@ export const api = {
     getTimeline: (recordId: string, limit?: number) =>
       request<unknown[]>(`/activities/record/${recordId}/timeline`, { params: { limit } }),
   },
+
+  // Dashboard
+  dashboard: {
+    getStats: () =>
+      request<{
+        contacts: { total: number; change: number };
+        companies: { total: number; change: number };
+        deals: { total: number; value: number; change: number };
+        tasks: { total: number; completed: number; due: number };
+      }>('/dashboard/stats'),
+    getRecentActivities: (limit?: number) =>
+      request<Array<{
+        id: string;
+        type: string;
+        title: string;
+        description: string | null;
+        recordId: string | null;
+        occurredAt: string;
+      }>>('/dashboard/activities', { params: { limit } }),
+  },
 };
 
 export { ApiError };
