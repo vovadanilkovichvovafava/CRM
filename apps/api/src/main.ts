@@ -26,6 +26,34 @@ async function bootstrap() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Root endpoint - welcome page
+  expressApp.get('/', (_req: unknown, res: { send: (data: string) => void }) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Enterprise CRM API</title>
+          <style>
+            body { font-family: system-ui, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            h1 { color: #333; }
+            a { color: #3B82F6; }
+            .links { margin-top: 20px; }
+            .links a { display: block; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <h1>Enterprise CRM API</h1>
+          <p>API server is running successfully.</p>
+          <div class="links">
+            <a href="/api/docs">API Documentation (Swagger)</a>
+            <a href="/api/health">Health Check</a>
+            <a href="/api/objects">Objects API</a>
+          </div>
+        </body>
+      </html>
+    `);
+  });
+
   // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
