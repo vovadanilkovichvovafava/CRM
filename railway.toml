@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pnpm install && pnpm db:generate && pnpm db:push && pnpm build:web && pnpm build:api && cp -r apps/web/out apps/api/web-static"
+buildCommand = "pnpm install && pnpm db:generate && pnpm build:web && pnpm build:api && cp -r apps/web/out apps/api/web-static"
 
 [deploy]
-startCommand = "pnpm start:api"
+startCommand = "pnpm db:push && pnpm start:api"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"
