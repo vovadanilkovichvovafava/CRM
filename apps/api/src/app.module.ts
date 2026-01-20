@@ -51,7 +51,7 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
     // Serve static frontend files
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', '..', 'web-static'),
-      exclude: ['/api/*', '/socket.io/*'],
+      exclude: ['/api/{*path}', '/socket.io/{*path}'],
     }),
 
     // Optional modules (like BullMQ)
