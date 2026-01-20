@@ -22,6 +22,7 @@ import {
 import { ObjectsService } from './objects.service';
 import { CreateObjectDto, UpdateObjectDto, QueryObjectsDto } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { Public } from '../auth/public.decorator';
 
 @ApiTags('objects')
 @ApiBearerAuth()
@@ -55,6 +56,7 @@ export class ObjectsController {
   }
 
   @Get('by-name/:name')
+  @Public()
   @ApiOperation({ summary: 'Get object by name' })
   @ApiParam({ name: 'name', description: 'Object system name' })
   @ApiResponse({ status: 200, description: 'Returns the object' })
@@ -91,6 +93,7 @@ export class ObjectsController {
   }
 
   @Post('seed-system')
+  @Public()
   @ApiOperation({ summary: 'Create default system objects' })
   @ApiResponse({ status: 201, description: 'System objects created' })
   seedSystem() {

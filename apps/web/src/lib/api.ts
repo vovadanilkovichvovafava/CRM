@@ -43,9 +43,14 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
         const parsed = JSON.parse(stored);
         token = parsed?.state?.token || null;
       }
-    } catch {
-      // Ignore parse errors
+    } catch (e) {
+      console.error('Error reading auth token from localStorage:', e);
     }
+  }
+
+  // Debug: log token status
+  if (!token) {
+    console.warn(`API request to ${endpoint}: No auth token found`);
   }
 
   const headers: HeadersInit = {
@@ -64,6 +69,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   if (!response.ok) {
     const data = await response.json().catch(() => null);
+    console.error(`API Error ${response.status} for ${endpoint}:`, data);
     throw new ApiError(response.status, response.statusText, data);
   }
 
