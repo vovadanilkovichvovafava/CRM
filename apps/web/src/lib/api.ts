@@ -1,7 +1,5 @@
-// Use relative URL when in production (same domain), fallback to localhost for dev
-const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-  ? ''  // Empty string = relative URL (same origin)
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
+// Relative URL - frontend and API served from same origin
+const API_URL = '';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
