@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, DollarSign, Loader2, TrendingUp } from 'lucide-react';
+import { Plus, DollarSign, Loader2, TrendingUp, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { KanbanBoard, KanbanStage, KanbanItem } from '@/components/kanban';
@@ -64,27 +64,47 @@ export default function DealsPage() {
   const [stages, setStages] = useState<KanbanStage[]>(defaultStages);
 
   // Get deals object
-  const { data: objectData, isLoading: objectLoading } = useQuery({
+  const { data: objectData, isLoading: objectLoading, error: objectError, refetch: refetchObject } = useQuery({
     queryKey: ['objects', 'deals'],
     queryFn: async () => {
       try {
-        return await api.objects.getByName('deals');
+        const result = await api.objects.getByName('deals');
+        return result;
       } catch (error) {
         if (error instanceof ApiError && error.status === 404) {
+          console.log('Deals object not found, seeding system objects...');
           await api.objects.seedSystem();
           return await api.objects.getByName('deals');
         }
+        console.error('Error fetching deals object:', error);
         throw error;
       }
     },
+    retry: 1,
   });
 
   useEffect(() => {
     if (objectData) {
       const objId = (objectData as { id: string }).id;
+      console.log('Deals object loaded:', objId);
       setDealsObjectId(objId);
     }
   }, [objectData]);
+
+  // Handle add deal click - show error if object not loaded
+  const handleAddDeal = () => {
+    if (!dealsObjectId) {
+      if (objectError) {
+        toast.error('Failed to load deals configuration. Please refresh the page.');
+        console.error('Object error:', objectError);
+      } else {
+        toast.error('Loading deals configuration...');
+        refetchObject();
+      }
+      return;
+    }
+    setIsCreateOpen(true);
+  };
 
   // Get pipeline for deals
   const { data: pipelinesData } = useQuery({
@@ -193,11 +213,16 @@ export default function DealsPage() {
           </div>
         </div>
         <Button
-          onClick={() => setIsCreateOpen(true)}
-          disabled={!dealsObjectId}
+          onClick={handleAddDeal}
           className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
         >
-          <Plus className="mr-2 h-4 w-4" />
+          {objectLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : objectError ? (
+            <AlertCircle className="mr-2 h-4 w-4" />
+          ) : (
+            <Plus className="mr-2 h-4 w-4" />
+          )}
           Add Deal
         </Button>
       </div>
@@ -272,6 +297,7 @@ export default function DealsPage() {
           objectId={dealsObjectId}
           objectName="Deal"
           fields={dealFields}
+          defaultStage="lead"
         />
       )}
 

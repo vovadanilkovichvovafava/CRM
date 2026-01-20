@@ -27,6 +27,7 @@ interface CreateRecordModalProps {
   objectId: string;
   objectName: string;
   fields: Field[];
+  defaultStage?: string;
   onSuccess?: () => void;
 }
 
@@ -36,13 +37,14 @@ export function CreateRecordModal({
   objectId,
   objectName,
   fields,
+  defaultStage,
   onSuccess,
 }: CreateRecordModalProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   const createMutation = useMutation({
-    mutationFn: (data: { objectId: string; data: Record<string, unknown> }) =>
+    mutationFn: (data: { objectId: string; data: Record<string, unknown>; stage?: string }) =>
       api.records.create(data),
     onSuccess: () => {
       toast.success(`${objectName} created successfully!`);
@@ -80,6 +82,7 @@ export function CreateRecordModal({
     createMutation.mutate({
       objectId,
       data: formData,
+      stage: defaultStage,
     });
   };
 

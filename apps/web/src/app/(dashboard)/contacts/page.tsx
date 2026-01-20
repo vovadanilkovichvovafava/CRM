@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Filter, Loader2, Users, Trash2, Eye } from 'lucide-react';
+import { Plus, Search, Filter, Loader2, Users, Trash2, Eye, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,27 +45,48 @@ export default function ContactsPage() {
   const [contactsObjectId, setContactsObjectId] = useState<string | null>(null);
 
   // Get contacts object
-  const { data: objectData, isLoading: objectLoading } = useQuery({
+  const { data: objectData, isLoading: objectLoading, error: objectError, refetch: refetchObject } = useQuery({
     queryKey: ['objects', 'contacts'],
     queryFn: async () => {
       try {
-        return await api.objects.getByName('contacts');
+        const result = await api.objects.getByName('contacts');
+        return result;
       } catch (error) {
         // If not found, seed system objects
         if (error instanceof ApiError && error.status === 404) {
+          console.log('Contacts object not found, seeding system objects...');
           await api.objects.seedSystem();
           return await api.objects.getByName('contacts');
         }
+        console.error('Error fetching contacts object:', error);
         throw error;
       }
     },
+    retry: 1,
   });
 
   useEffect(() => {
     if (objectData) {
-      setContactsObjectId((objectData as { id: string }).id);
+      const id = (objectData as { id: string }).id;
+      console.log('Contacts object loaded:', id);
+      setContactsObjectId(id);
     }
   }, [objectData]);
+
+  // Handle add contact click - show error if object not loaded
+  const handleAddContact = () => {
+    if (!contactsObjectId) {
+      if (objectError) {
+        toast.error('Failed to load contacts configuration. Please refresh the page.');
+        console.error('Object error:', objectError);
+      } else {
+        toast.error('Loading contacts configuration...');
+        refetchObject();
+      }
+      return;
+    }
+    setIsCreateOpen(true);
+  };
 
   // Get contacts records
   const { data: recordsData, isLoading: recordsLoading } = useQuery({
@@ -111,11 +132,16 @@ export default function ContactsPage() {
           </div>
         </div>
         <Button
-          onClick={() => setIsCreateOpen(true)}
-          disabled={!contactsObjectId}
+          onClick={handleAddContact}
           className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
         >
-          <Plus className="mr-2 h-4 w-4" />
+          {objectLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : objectError ? (
+            <AlertCircle className="mr-2 h-4 w-4" />
+          ) : (
+            <Plus className="mr-2 h-4 w-4" />
+          )}
           Add Contact
         </Button>
       </div>
@@ -151,8 +177,7 @@ export default function ContactsPage() {
                 Get started by adding your first contact
               </p>
               <Button
-                onClick={() => setIsCreateOpen(true)}
-                disabled={!contactsObjectId}
+                onClick={handleAddContact}
                 className="bg-gradient-to-r from-indigo-500 to-purple-500"
               >
                 <Plus className="mr-2 h-4 w-4" />
