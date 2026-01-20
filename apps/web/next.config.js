@@ -1,12 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  trailingSlash: true,
   reactStrictMode: true,
-  experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
-  },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
