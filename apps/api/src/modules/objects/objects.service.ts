@@ -131,8 +131,8 @@ export class ObjectsService {
   /**
    * Get object by name
    */
-  async findByName(name: string): Promise<CrmObject | null> {
-    return this.prisma.object.findUnique({
+  async findByName(name: string): Promise<CrmObject> {
+    const object = await this.prisma.object.findUnique({
       where: { name },
       include: {
         fields: {
@@ -140,6 +140,12 @@ export class ObjectsService {
         },
       },
     });
+
+    if (!object) {
+      throw new NotFoundException(`Object with name "${name}" not found`);
+    }
+
+    return object;
   }
 
   /**
@@ -233,7 +239,7 @@ export class ObjectsService {
   /**
    * Create default system objects (Contacts, Companies, Deals)
    */
-  async createSystemObjects(): Promise<void> {
+  async createSystemObjects(): Promise<{ created: string[]; existing: string[] }> {
     const systemObjects = [
       {
         name: 'contacts',
@@ -272,12 +278,15 @@ export class ObjectsService {
       },
     ];
 
+    const created: string[] = [];
+    const existing: string[] = [];
+
     for (const obj of systemObjects) {
-      const existing = await this.prisma.object.findUnique({
+      const existingObj = await this.prisma.object.findUnique({
         where: { name: obj.name },
       });
 
-      if (!existing) {
+      if (!existingObj) {
         await this.prisma.object.create({
           data: {
             ...obj,
@@ -286,8 +295,13 @@ export class ObjectsService {
             settings: {} as Prisma.InputJsonValue,
           },
         });
+        created.push(obj.name);
         this.logger.log('System object created', { name: obj.name });
+      } else {
+        existing.push(obj.name);
       }
     }
+
+    return { created, existing };
   }
 }
