@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -16,8 +18,10 @@ import {
   TrendingUp,
   Target,
   Clock,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
+import { useAuthStore } from '@/stores/auth';
 
 function JanusLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
@@ -449,6 +453,34 @@ function Footer() {
 }
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { token } = useAuthStore();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    // Small delay to allow zustand to hydrate from localStorage
+    const timer = setTimeout(() => {
+      setIsChecking(false);
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!isChecking && token) {
+      router.replace('/dashboard');
+    }
+  }, [isChecking, token, router]);
+
+  // Show loading while checking auth
+  if (isChecking || token) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-black text-white">
       <NavBar />
