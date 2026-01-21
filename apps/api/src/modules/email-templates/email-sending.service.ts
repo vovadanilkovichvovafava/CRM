@@ -69,7 +69,7 @@ export class EmailSendingService {
     }
 
     // Get attachments if specified
-    let attachments: Array<{ filename: string; content: Buffer }> = [];
+    const attachments: Array<{ filename: string; content: Buffer }> = [];
     if (dto.attachmentIds && dto.attachmentIds.length > 0) {
       const templateAttachments = await this.prisma.emailTemplateAttachment.findMany({
         where: { id: { in: dto.attachmentIds } },

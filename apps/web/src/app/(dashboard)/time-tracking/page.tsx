@@ -69,7 +69,7 @@ export default function TimeTrackingPage() {
     const endDate = new Date(now);
     endDate.setHours(23, 59, 59, 999);
 
-    let startDate = new Date(now);
+    const startDate = new Date(now);
 
     switch (dateFilter) {
       case 'today':

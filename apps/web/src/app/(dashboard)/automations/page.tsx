@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import {
   Workflow,
   Plus,
@@ -12,12 +13,8 @@ import {
   Loader2,
   Play,
   Pause,
-  Eye,
   Zap,
   Clock,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -25,7 +22,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api, ApiError } from '@/lib/api';
 import { formatRelativeTime, cn } from '@/lib/utils';
-import { WorkflowEditorModal } from '@/components/automations/workflow-editor-modal';
 
 interface WorkflowType {
   id: string;
@@ -65,8 +61,6 @@ export default function AutomationsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState<boolean | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingWorkflow, setEditingWorkflow] = useState<WorkflowType | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['workflows', search, filterActive],
@@ -116,16 +110,6 @@ export default function AutomationsPage() {
     },
   });
 
-  const handleEdit = (workflow: WorkflowType) => {
-    setEditingWorkflow(workflow);
-    setIsModalOpen(true);
-  };
-
-  const handleCreate = () => {
-    setEditingWorkflow(null);
-    setIsModalOpen(true);
-  };
-
   const handleDelete = (id: string, name: string) => {
     if (confirm(`Are you sure you want to delete "${name}"?`)) {
       deleteMutation.mutate(id);
@@ -153,10 +137,12 @@ export default function AutomationsPage() {
           </div>
         </div>
 
-        <Button onClick={handleCreate} className="bg-orange-600 hover:bg-orange-700">
-          <Plus className="mr-2 h-4 w-4" />
-          New Workflow
-        </Button>
+        <Link href="/automations/new">
+          <Button className="bg-orange-600 hover:bg-orange-700">
+            <Plus className="mr-2 h-4 w-4" />
+            New Workflow
+          </Button>
+        </Link>
       </div>
 
       {/* Filters */}
@@ -227,10 +213,12 @@ export default function AutomationsPage() {
             <p className="text-white/40 mb-4">
               {search ? 'No workflows found' : 'No automations yet'}
             </p>
-            <Button onClick={handleCreate} className="bg-orange-600 hover:bg-orange-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Create your first workflow
-            </Button>
+            <Link href="/automations/new">
+              <Button className="bg-orange-600 hover:bg-orange-700">
+                <Plus className="mr-2 h-4 w-4" />
+                Create your first workflow
+              </Button>
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -242,125 +230,120 @@ export default function AutomationsPage() {
                 <Card
                   key={workflow.id}
                   className={cn(
-                    'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] transition-colors group',
+                    'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04] transition-colors group cursor-pointer',
                     !workflow.isActive && 'opacity-60'
                   )}
                 >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-base text-white truncate">
-                            {workflow.name}
-                          </CardTitle>
-                          {workflow.isActive ? (
-                            <span className="flex items-center gap-1 text-xs text-green-400">
-                              <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                              Active
-                            </span>
-                          ) : (
-                            <span className="text-xs text-white/40">Inactive</span>
-                          )}
+                  <Link href={`/automations/${workflow.id}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-base text-white truncate">
+                              {workflow.name}
+                            </CardTitle>
+                            {workflow.isActive ? (
+                              <span className="flex items-center gap-1 text-xs text-green-400">
+                                <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                                Active
+                              </span>
+                            ) : (
+                              <span className="text-xs text-white/40">Inactive</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-white/40 mt-1 truncate">
+                            {workflow.description || 'No description'}
+                          </p>
                         </div>
-                        <p className="text-xs text-white/40 mt-1 truncate">
-                          {workflow.description || 'No description'}
-                        </p>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Trigger */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
-                        <TriggerIcon className="h-4 w-4 text-orange-400" />
+                    </CardHeader>
+                    <CardContent>
+                      {/* Trigger */}
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10">
+                          <TriggerIcon className="h-4 w-4 text-orange-400" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-white">
+                            {TRIGGER_LABELS[workflow.trigger] || workflow.trigger}
+                          </p>
+                          <p className="text-xs text-white/40">
+                            on {workflow.object.displayName}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-white">
-                          {TRIGGER_LABELS[workflow.trigger] || workflow.trigger}
-                        </p>
-                        <p className="text-xs text-white/40">
-                          on {workflow.object.displayName}
-                        </p>
-                      </div>
-                    </div>
 
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 mb-4 text-xs text-white/50">
-                      <span>{actionsCount} action{actionsCount !== 1 ? 's' : ''}</span>
-                      <span>•</span>
-                      <span>{workflow._count.executions} runs</span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-white/30">
-                        {formatRelativeTime(workflow.updatedAt)}
-                      </span>
-
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            'h-7 w-7',
-                            workflow.isActive
-                              ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
-                              : 'text-white/40 hover:text-green-400 hover:bg-green-500/10'
-                          )}
-                          onClick={() => toggleMutation.mutate(workflow.id)}
-                          title={workflow.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {workflow.isActive ? (
-                            <Pause className="h-4 w-4" />
-                          ) : (
-                            <Play className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-white/40 hover:text-white"
-                          onClick={() => handleEdit(workflow)}
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-white/40 hover:text-white"
-                          onClick={() => duplicateMutation.mutate(workflow.id)}
-                          title="Duplicate"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-white/40 hover:text-red-400"
-                          onClick={() => handleDelete(workflow.id, workflow.name)}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      {/* Stats */}
+                      <div className="flex items-center gap-4 mb-4 text-xs text-white/50">
+                        <span>{actionsCount} action{actionsCount !== 1 ? 's' : ''}</span>
+                        <span>•</span>
+                        <span>{workflow._count.executions} runs</span>
                       </div>
+                    </CardContent>
+                  </Link>
+
+                  <div className="px-4 pb-3 flex items-center justify-between border-t border-white/5 pt-3">
+                    <span className="text-xs text-white/30">
+                      {formatRelativeTime(workflow.updatedAt)}
+                    </span>
+
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={cn(
+                          'h-7 w-7',
+                          workflow.isActive
+                            ? 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
+                            : 'text-white/40 hover:text-green-400 hover:bg-green-500/10'
+                        )}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleMutation.mutate(workflow.id);
+                        }}
+                        title={workflow.isActive ? 'Deactivate' : 'Activate'}
+                      >
+                        {workflow.isActive ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white/40 hover:text-white"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          duplicateMutation.mutate(workflow.id);
+                        }}
+                        title="Duplicate"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white/40 hover:text-red-400"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(workflow.id, workflow.name);
+                        }}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </CardContent>
+                  </div>
                 </Card>
               );
             })}
           </div>
         )}
       </div>
-
-      {/* Create/Edit Modal */}
-      <WorkflowEditorModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingWorkflow(null);
-        }}
-        workflow={editingWorkflow}
-      />
     </div>
   );
 }
