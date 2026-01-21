@@ -32,14 +32,40 @@ import { RelationsSection } from '@/components/records/relations-section';
 // Partner fields configuration
 const partnerFields = [
   { name: 'name', displayName: 'Partner Name', type: 'TEXT', isRequired: true },
-  { name: 'type', displayName: 'Type', type: 'SELECT', isRequired: false, options: ['CPA Network', 'Direct Advertiser', 'Media Buyer', 'Agency', 'Other'] },
+  {
+    name: 'type',
+    displayName: 'Type',
+    type: 'SELECT',
+    isRequired: false,
+    config: {
+      options: [
+        { value: 'CPA Network', label: 'CPA Network' },
+        { value: 'Direct Advertiser', label: 'Direct Advertiser' },
+        { value: 'Media Buyer', label: 'Media Buyer' },
+        { value: 'Agency', label: 'Agency' },
+        { value: 'Other', label: 'Other' },
+      ],
+    },
+  },
   { name: 'website', displayName: 'Website', type: 'URL', isRequired: false },
   { name: 'manager_name', displayName: 'Manager Name', type: 'TEXT', isRequired: false },
   { name: 'manager_contact', displayName: 'Manager Contact', type: 'TEXT', isRequired: false },
   { name: 'verticals', displayName: 'Verticals', type: 'TEXT', isRequired: false },
   { name: 'geos', displayName: 'GEOs', type: 'TEXT', isRequired: false },
   { name: 'payment_terms', displayName: 'Payment Terms', type: 'TEXT', isRequired: false },
-  { name: 'status', displayName: 'Status', type: 'SELECT', isRequired: false, options: ['active', 'paused', 'inactive'] },
+  {
+    name: 'status',
+    displayName: 'Status',
+    type: 'SELECT',
+    isRequired: false,
+    config: {
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'paused', label: 'Paused' },
+        { value: 'inactive', label: 'Inactive' },
+      ],
+    },
+  },
   { name: 'notes', displayName: 'Notes', type: 'LONG_TEXT', isRequired: false },
 ];
 

@@ -102,19 +102,42 @@ export class RecordsService {
       where.isArchived = false;
     }
 
-    // Search in data JSON
+    // Search in data JSON - use raw SQL for PostgreSQL jsonb search
     if (query.search) {
-      where.data = {
-        string_contains: query.search,
-      };
+      // Convert JSON to text and search case-insensitively
+      const searchTerm = `%${query.search.toLowerCase()}%`;
+      const searchCondition = Prisma.sql`LOWER("data"::text) LIKE ${searchTerm}`;
+
+      // Get IDs of matching records first
+      const matchingIds = await this.prisma.$queryRaw<{ id: string }[]>`
+        SELECT id FROM "Record"
+        WHERE ${query.objectId ? Prisma.sql`"objectId" = ${query.objectId} AND` : Prisma.empty}
+        "isArchived" = false AND
+        ${searchCondition}
+      `;
+
+      if (matchingIds.length === 0) {
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            page,
+            limit,
+            totalPages: 0,
+          },
+        };
+      }
+
+      where.id = { in: matchingIds.map(r => r.id) };
     }
 
-    // Apply custom filters
-    if (query.filters) {
+    // Apply custom filters - search specific field value
+    if (query.filters && Object.keys(query.filters).length > 0) {
+      const filterKey = Object.keys(query.filters)[0];
+      const filterValue = query.filters[filterKey];
       where.data = {
-        ...((where.data as Prisma.JsonFilter) || {}),
-        path: Object.keys(query.filters),
-        equals: Object.values(query.filters)[0] as Prisma.InputJsonValue,
+        path: [filterKey],
+        equals: filterValue as Prisma.InputJsonValue,
       };
     }
 

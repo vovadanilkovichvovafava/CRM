@@ -34,7 +34,19 @@ const webmasterFields = [
   { name: 'traffic_sources', displayName: 'Traffic Sources', type: 'TEXT', isRequired: false },
   { name: 'geos', displayName: 'GEOs', type: 'TEXT', isRequired: false },
   { name: 'verticals', displayName: 'Verticals', type: 'TEXT', isRequired: false },
-  { name: 'status', displayName: 'Status', type: 'SELECT', isRequired: false, options: ['active', 'paused', 'blocked'] },
+  {
+    name: 'status',
+    displayName: 'Status',
+    type: 'SELECT',
+    isRequired: false,
+    config: {
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'paused', label: 'Paused' },
+        { value: 'blocked', label: 'Blocked' },
+      ],
+    },
+  },
   { name: 'notes', displayName: 'Notes', type: 'LONG_TEXT', isRequired: false },
 ];
 
