@@ -17,6 +17,7 @@ import {
   Home,
   Search,
   LogOut,
+  Mail,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
@@ -80,6 +81,10 @@ const systemObjects: NavItem[] = [
 const pmItems: NavItem[] = [
   { name: 'Projects', href: '/projects', icon: FolderKanban, colorClass: 'text-cyan-400' },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, colorClass: 'text-lime-400' },
+];
+
+const marketingItems: NavItem[] = [
+  { name: 'Email Templates', href: '/email-templates', icon: Mail, colorClass: 'text-rose-400' },
 ];
 
 const otherItems: NavItem[] = [
@@ -187,6 +192,7 @@ export function Sidebar() {
         <NavSection items={mainItems} pathname={pathname} />
         <NavSection title="CRM" items={systemObjects} showAddButton pathname={pathname} />
         <NavSection title="Projects" items={pmItems} pathname={pathname} />
+        <NavSection title="Marketing" items={marketingItems} pathname={pathname} />
         <NavSection items={otherItems} pathname={pathname} />
       </nav>
 

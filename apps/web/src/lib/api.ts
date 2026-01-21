@@ -378,6 +378,50 @@ export const api = {
     delete: (id: string) => request<void>(`/notifications/${id}`, { method: 'DELETE' }),
     deleteAll: () => request<{ count: number }>('/notifications', { method: 'DELETE' }),
   },
+
+  // Email Templates
+  emailTemplates: {
+    list: (params?: { category?: string; search?: string; page?: number; limit?: number }) =>
+      request<{
+        data: Array<{
+          id: string;
+          name: string;
+          subject: string;
+          body: string;
+          category: string | null;
+          isShared: boolean;
+          ownerId: string;
+          createdAt: string;
+          updatedAt: string;
+        }>;
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      }>('/email-templates', { params }),
+    get: (id: string) =>
+      request<{
+        id: string;
+        name: string;
+        subject: string;
+        body: string;
+        category: string | null;
+        isShared: boolean;
+        ownerId: string;
+        createdAt: string;
+        updatedAt: string;
+      }>(`/email-templates/${id}`),
+    create: (data: { name: string; subject: string; body: string; category?: string; isShared?: boolean }) =>
+      request<unknown>('/email-templates', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { name?: string; subject?: string; body?: string; category?: string; isShared?: boolean }) =>
+      request<unknown>(`/email-templates/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/email-templates/${id}`, { method: 'DELETE' }),
+    duplicate: (id: string) =>
+      request<unknown>(`/email-templates/${id}/duplicate`, { method: 'POST' }),
+    getCategories: () => request<string[]>('/email-templates/categories'),
+    preview: (template: string, data: Record<string, string>) =>
+      request<{ html: string }>('/email-templates/preview', {
+        method: 'POST',
+        body: JSON.stringify({ template, data }),
+      }),
+  },
 };
 
 export { ApiError };
