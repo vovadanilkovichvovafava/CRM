@@ -26,6 +26,7 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
 import { ImportExportModule } from './modules/import-export/import-export.module';
 import { LeadScoringModule } from './modules/lead-scoring/lead-scoring.module';
+import { WebmasterScoringModule } from './modules/webmaster-scoring/webmaster-scoring.module';
 
 const logger = new Logger('AppModule');
 
@@ -114,6 +115,9 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
 
     // Lead Scoring
     LeadScoringModule,
+
+    // Webmaster Scoring
+    WebmasterScoringModule,
   ],
 })
 export class AppModule {}

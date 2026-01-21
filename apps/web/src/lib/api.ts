@@ -918,6 +918,64 @@ export const api = {
 
     getGradeThresholds: () => request<Record<string, number>>('/lead-scoring/grades'),
   },
+
+  // Webmaster Scoring
+  webmasterScoring: {
+    getScore: (recordId: string) =>
+      request<{
+        recordId: string;
+        volumeScore: number;
+        qualityScore: number;
+        reliabilityScore: number;
+        communicationScore: number;
+        totalScore: number;
+        grade: string;
+        gradeColor: string;
+        factors: {
+          volume: { score: number; maxScore: number; metrics: { leadsPerDay: number; leadsTotal: number; activeDays: number; trend: string } };
+          quality: { score: number; maxScore: number; metrics: { conversionRate: number; approveRate: number; rejectRate: number; holdRate: number; avgLeadValue: number } };
+          reliability: { score: number; maxScore: number; metrics: { uptime: number; consistency: number; lastActivityDays: number; fraudIncidents: number } };
+          communication: { score: number; maxScore: number; metrics: { responseTime: number; activityCount: number; lastContactDays: number; hasMessenger: boolean } };
+        };
+        calculatedAt: string;
+      } | null>(`/webmaster-scoring/record/${recordId}`),
+
+    calculateScore: (recordId: string) =>
+      request<{
+        recordId: string;
+        totalScore: number;
+        grade: string;
+        gradeColor: string;
+        calculatedAt: string;
+      }>(`/webmaster-scoring/record/${recordId}/calculate`, { method: 'POST' }),
+
+    recalculateAll: (objectId: string) =>
+      request<{ processed: number; errors: number }>(
+        `/webmaster-scoring/object/${objectId}/recalculate`,
+        { method: 'POST' },
+      ),
+
+    getDistribution: (objectId: string) =>
+      request<Record<string, number>>(`/webmaster-scoring/object/${objectId}/distribution`),
+
+    getTopWebmasters: (objectId: string, limit?: number) =>
+      request<Array<{ recordId: string; totalScore: number; grade: string }>>(
+        `/webmaster-scoring/object/${objectId}/top`,
+        { params: limit ? { limit } : {} },
+      ),
+
+    getByGrade: (objectId: string, grade: string, limit?: number) =>
+      request<Array<{ recordId: string; totalScore: number }>>(
+        `/webmaster-scoring/object/${objectId}/by-grade`,
+        { params: { grade, ...(limit ? { limit } : {}) } },
+      ),
+
+    getGrades: () =>
+      request<Record<string, { min: number; label: string; color: string }>>('/webmaster-scoring/grades'),
+
+    getCategoryWeights: () =>
+      request<Record<string, number>>('/webmaster-scoring/category-weights'),
+  },
 };
 
 export { ApiError };
