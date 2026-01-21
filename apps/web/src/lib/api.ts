@@ -768,6 +768,99 @@ export const api = {
         telegram: boolean;
       }>('/system-settings/status'),
   },
+
+  // Import/Export
+  importExport: {
+    getObjects: () =>
+      request<
+        Array<{
+          id: string;
+          name: string;
+          displayName: string;
+          icon: string | null;
+          recordCount: number;
+        }>
+      >('/import-export/objects'),
+
+    getObjectFields: (objectId: string) =>
+      request<
+        Array<{
+          name: string;
+          displayName: string;
+          type: string;
+          isRequired: boolean;
+          isUnique: boolean;
+        }>
+      >(`/import-export/objects/${objectId}/fields`),
+
+    uploadPreview: async (objectId: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Get token from zustand persisted storage
+      let token: string | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('janus-auth');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            token = parsed?.state?.token || null;
+          }
+        } catch (e) {
+          console.error('Error reading auth token:', e);
+        }
+      }
+
+      const response = await fetch(`/api/import-export/preview/${objectId}`, {
+        method: 'POST',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new ApiError(response.status, response.statusText, data);
+      }
+
+      return response.json() as Promise<{
+        totalRows: number;
+        headers: string[];
+        sampleData: Record<string, string>[];
+        suggestedMappings: Array<{
+          sourceColumn: string;
+          targetField: string;
+          transform?: string;
+        }>;
+      }>;
+    },
+
+    import: (data: {
+      objectId: string;
+      rows: Record<string, string>[];
+      mappings: Array<{
+        sourceColumn: string;
+        targetField: string;
+        transform?: string;
+      }>;
+      options?: {
+        skipDuplicates?: boolean;
+        updateExisting?: boolean;
+      };
+    }) =>
+      request<{
+        success: number;
+        failed: number;
+        errors: Array<{ row: number; error: string }>;
+      }>('/import-export/import', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    exportUrl: (objectId: string, format: 'csv' | 'xlsx' = 'csv') =>
+      `/api/import-export/export/${objectId}?format=${format}`,
+  },
 };
 
 export { ApiError };

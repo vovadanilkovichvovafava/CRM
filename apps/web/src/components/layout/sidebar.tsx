@@ -20,6 +20,7 @@ import {
   Mail,
   Clock,
   Workflow,
+  Upload,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
@@ -93,6 +94,7 @@ const marketingItems: NavItem[] = [
 
 const otherItems: NavItem[] = [
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Import Data', href: '/import', icon: Upload, colorClass: 'text-cyan-400' },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
