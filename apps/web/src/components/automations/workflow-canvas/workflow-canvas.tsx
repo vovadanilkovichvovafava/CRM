@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, DragEvent } from 'react';
+import { useState, useCallback, useRef, useEffect, DragEvent } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -17,6 +17,7 @@ import {
   BackgroundVariant,
   NodeChange,
   EdgeChange,
+  useReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { nodeTypes } from './node-types';
@@ -60,9 +61,20 @@ function WorkflowCanvasInner({
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [variables, setVariables] = useState<Array<{ name: string; value: string }>>([]);
   const [isVariablesModalOpen, setIsVariablesModalOpen] = useState(false);
-  const [reactFlowInstance, setReactFlowInstance] = useState<{
-    screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number };
-  } | null>(null);
+  const { screenToFlowPosition } = useReactFlow();
+
+  // Sync with parent's nodes/edges when they change (for loading existing workflows)
+  useEffect(() => {
+    if (initialNodes.length > 0) {
+      setNodes(initialNodes);
+    }
+  }, [initialNodes, setNodes]);
+
+  useEffect(() => {
+    if (initialEdges.length > 0) {
+      setEdges(initialEdges);
+    }
+  }, [initialEdges, setEdges]);
 
   // Notify parent of changes
   const handleChange = useCallback(
@@ -114,7 +126,7 @@ function WorkflowCanvasInner({
     (event: DragEvent) => {
       event.preventDefault();
 
-      if (!reactFlowWrapper.current || !reactFlowInstance) return;
+      if (!reactFlowWrapper.current) return;
 
       const nodeType = event.dataTransfer.getData('application/reactflow/type');
       const subType = event.dataTransfer.getData('application/reactflow/subtype');
@@ -122,10 +134,10 @@ function WorkflowCanvasInner({
 
       if (!nodeType) return;
 
-      const bounds = reactFlowWrapper.current.getBoundingClientRect();
-      const position = reactFlowInstance.screenToFlowPosition({
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
+      // Use screenToFlowPosition directly with client coordinates
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
       });
 
       const newNode: Node = {
@@ -159,7 +171,7 @@ function WorkflowCanvasInner({
       setNodes(newNodes);
       handleChange(newNodes, edges);
     },
-    [nodes, edges, setNodes, reactFlowInstance, objectId, objectName, handleChange]
+    [nodes, edges, setNodes, screenToFlowPosition, objectId, objectName, handleChange]
   );
 
   // Select node
@@ -247,7 +259,6 @@ function WorkflowCanvasInner({
           onNodesChange={handleNodesChange}
           onEdgesChange={handleEdgesChange}
           onConnect={onConnect}
-          onInit={setReactFlowInstance as (instance: unknown) => void}
           onDrop={onDrop}
           onDragOver={onDragOver}
           onNodeClick={onNodeClick}
