@@ -258,6 +258,65 @@ export const api = {
     delete: (id: string) => request<void>(`/relations/${id}`, { method: 'DELETE' }),
   },
 
+  // Files
+  files: {
+    listByRecord: (recordId: string) =>
+      request<Array<{
+        id: string;
+        name: string;
+        originalName: string;
+        mimeType: string;
+        size: number;
+        url: string;
+        createdAt: string;
+      }>>(`/files/record/${recordId}`),
+    listByTask: (taskId: string) =>
+      request<Array<{
+        id: string;
+        name: string;
+        originalName: string;
+        mimeType: string;
+        size: number;
+        url: string;
+        createdAt: string;
+      }>>(`/files/task/${taskId}`),
+    upload: async (file: File, options: { recordId?: string; taskId?: string; projectId?: string }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (options.recordId) formData.append('recordId', options.recordId);
+      if (options.taskId) formData.append('taskId', options.taskId);
+      if (options.projectId) formData.append('projectId', options.projectId);
+
+      let token: string | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('janus-auth');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            token = parsed?.state?.token || null;
+          }
+        } catch (e) {
+          console.error('Error reading auth token:', e);
+        }
+      }
+
+      const response = await fetch(`${API_URL}/api/files/upload`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new ApiError(response.status, response.statusText, data);
+      }
+
+      return response.json();
+    },
+    delete: (id: string) => request<void>(`/files/${id}`, { method: 'DELETE' }),
+    getDownloadUrl: (id: string) => `${API_URL}/api/files/${id}/download`,
+  },
+
   // Dashboard
   dashboard: {
     getStats: () =>

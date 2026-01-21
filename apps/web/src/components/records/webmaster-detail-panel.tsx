@@ -27,6 +27,8 @@ import { api, ApiError } from '@/lib/api';
 import { getInitials, formatRelativeTime } from '@/lib/utils';
 import { EditRecordModal } from '@/components/records/edit-record-modal';
 import { RelationsSection } from '@/components/records/relations-section';
+import { CommentSection } from '@/components/comments/comment-section';
+import { FileSection } from '@/components/files/file-section';
 
 // Webmaster fields configuration
 const webmasterFields = [
@@ -330,6 +332,12 @@ export function WebmasterDetailPanel({ webmasterId, onClose }: WebmasterDetailPa
               recordId={webmaster.id}
               currentObjectName="webmasters"
             />
+
+            {/* Comments Section */}
+            <CommentSection recordId={webmaster.id} />
+
+            {/* Files Section */}
+            <FileSection recordId={webmaster.id} />
 
             {/* Metadata Card */}
             <Card className="bg-white/[0.02] border-white/[0.05]">

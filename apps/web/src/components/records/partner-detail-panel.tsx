@@ -28,6 +28,8 @@ import { api, ApiError } from '@/lib/api';
 import { getInitials, formatRelativeTime } from '@/lib/utils';
 import { EditRecordModal } from '@/components/records/edit-record-modal';
 import { RelationsSection } from '@/components/records/relations-section';
+import { CommentSection } from '@/components/comments/comment-section';
+import { FileSection } from '@/components/files/file-section';
 
 // Partner fields configuration
 const partnerFields = [
@@ -345,6 +347,12 @@ export function PartnerDetailPanel({ partnerId, onClose }: PartnerDetailPanelPro
               recordId={partner.id}
               currentObjectName="partners"
             />
+
+            {/* Comments Section */}
+            <CommentSection recordId={partner.id} />
+
+            {/* Files Section */}
+            <FileSection recordId={partner.id} />
 
             {/* Metadata Card */}
             <Card className="bg-white/[0.02] border-white/[0.05]">
