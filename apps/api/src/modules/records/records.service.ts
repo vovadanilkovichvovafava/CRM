@@ -3,11 +3,14 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ValidationService } from './validation.service';
+import { WorkflowEngineService, TriggerContext } from '../workflows/workflow-engine.service';
 import { CreateRecordDto, UpdateRecordDto, QueryRecordsDto } from './dto';
-import { Record as CrmRecord, Prisma, ActivityType } from '../../../generated/prisma';
+import { Record as CrmRecord, Prisma, ActivityType, WorkflowTrigger } from '../../../generated/prisma';
 
 export interface PaginatedResult<T> {
   data: T[];
@@ -26,6 +29,8 @@ export class RecordsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly validation: ValidationService,
+    @Inject(forwardRef(() => WorkflowEngineService))
+    private readonly workflowEngine: WorkflowEngineService,
   ) {}
 
   /**
@@ -71,6 +76,19 @@ export class RecordsService {
       recordId: record.id,
       objectId: dto.objectId,
       userId,
+    });
+
+    // Execute workflow triggers asynchronously
+    this.executeWorkflowTrigger(
+      WorkflowTrigger.RECORD_CREATED,
+      record,
+      object,
+      userId,
+    ).catch((error) => {
+      this.logger.error('Failed to execute RECORD_CREATED workflows', {
+        recordId: record.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
 
     return record;
@@ -360,15 +378,93 @@ export class RecordsService {
 
     this.logger.log('Record updated', { recordId: id, userId });
 
+    // Build changes object for workflow triggers
+    const changes: Record<string, { old: unknown; new: unknown }> = {};
+    if (dto.data) {
+      const existingData = existing.data as Record<string, unknown>;
+      const newData = record.data as Record<string, unknown>;
+      for (const key of Object.keys(dto.data)) {
+        changes[key] = {
+          old: existingData[key],
+          new: newData[key],
+        };
+      }
+    }
+    if (stageChanged) {
+      changes['stage'] = {
+        old: existing.stage,
+        new: dto.stage,
+      };
+    }
+
+    // Execute workflow triggers asynchronously
+    const triggerPromises: Promise<unknown>[] = [];
+
+    // RECORD_UPDATED trigger
+    triggerPromises.push(
+      this.executeWorkflowTrigger(
+        WorkflowTrigger.RECORD_UPDATED,
+        record,
+        { id: existing.object.id, name: existing.object.name, displayName: existing.object.displayName },
+        userId,
+        { changes },
+      ),
+    );
+
+    // STAGE_CHANGED trigger
+    if (stageChanged && dto.stage) {
+      triggerPromises.push(
+        this.executeWorkflowTrigger(
+          WorkflowTrigger.STAGE_CHANGED,
+          record,
+          { id: existing.object.id, name: existing.object.name, displayName: existing.object.displayName },
+          userId,
+          { stage: { old: existing.stage || '', new: dto.stage } },
+        ),
+      );
+    }
+
+    // FIELD_CHANGED triggers for each changed field
+    if (dto.data) {
+      const existingData = existing.data as Record<string, unknown>;
+      for (const [fieldName, newValue] of Object.entries(dto.data)) {
+        const oldValue = existingData[fieldName];
+        if (oldValue !== newValue) {
+          triggerPromises.push(
+            this.executeWorkflowTrigger(
+              WorkflowTrigger.FIELD_CHANGED,
+              record,
+              { id: existing.object.id, name: existing.object.name, displayName: existing.object.displayName },
+              userId,
+              { field: { name: fieldName, old: oldValue, new: newValue } },
+            ),
+          );
+        }
+      }
+    }
+
+    // Execute all triggers (don't wait for completion)
+    Promise.all(triggerPromises).catch((error) => {
+      this.logger.error('Failed to execute update workflows', {
+        recordId: id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+
     return record;
   }
 
   /**
    * Delete record (soft delete)
    */
-  async remove(id: string, hard = false): Promise<void> {
+  async remove(id: string, userId: string, hard = false): Promise<void> {
     const existing = await this.prisma.record.findUnique({
       where: { id },
+      include: {
+        object: {
+          select: { id: true, name: true, displayName: true },
+        },
+      },
     });
 
     if (!existing) {
@@ -376,6 +472,19 @@ export class RecordsService {
     }
 
     if (hard) {
+      // Execute RECORD_DELETED trigger before deletion
+      this.executeWorkflowTrigger(
+        WorkflowTrigger.RECORD_DELETED,
+        existing,
+        existing.object,
+        userId,
+      ).catch((error) => {
+        this.logger.error('Failed to execute RECORD_DELETED workflows', {
+          recordId: id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+
       await this.prisma.record.delete({
         where: { id },
       });
@@ -428,6 +537,52 @@ export class RecordsService {
         data: { isArchived: true },
       });
       return { deleted: result.count };
+    }
+  }
+
+  /**
+   * Execute workflow trigger asynchronously
+   */
+  private async executeWorkflowTrigger(
+    trigger: WorkflowTrigger,
+    record: CrmRecord,
+    object: { id: string; name: string; displayName: string },
+    userId: string,
+    extra?: {
+      changes?: Record<string, { old: unknown; new: unknown }>;
+      field?: { name: string; old: unknown; new: unknown };
+      stage?: { old: string; new: string };
+    },
+  ): Promise<void> {
+    try {
+      // Get user info for context
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true },
+      });
+
+      if (!user) {
+        this.logger.warn('User not found for workflow context', { userId });
+        return;
+      }
+
+      const context: TriggerContext = {
+        trigger,
+        record: record as TriggerContext['record'],
+        object,
+        user,
+        changes: extra?.changes,
+        field: extra?.field,
+        stage: extra?.stage,
+      };
+
+      await this.workflowEngine.executeTrigger(context);
+    } catch (error) {
+      this.logger.error('Workflow trigger execution failed', {
+        trigger,
+        recordId: record.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

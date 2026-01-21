@@ -19,6 +19,7 @@ import {
   LogOut,
   Mail,
   Clock,
+  Workflow,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
@@ -87,6 +88,7 @@ const pmItems: NavItem[] = [
 
 const marketingItems: NavItem[] = [
   { name: 'Email Templates', href: '/email-templates', icon: Mail, colorClass: 'text-rose-400' },
+  { name: 'Automations', href: '/automations', icon: Workflow, colorClass: 'text-orange-400' },
 ];
 
 const otherItems: NavItem[] = [

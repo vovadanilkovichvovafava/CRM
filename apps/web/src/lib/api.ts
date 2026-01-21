@@ -622,6 +622,126 @@ export const api = {
     stopTimer: (id: string) =>
       request<unknown>(`/time-entries/${id}/stop`, { method: 'POST' }),
   },
+
+  // Workflows
+  workflows: {
+    list: (params?: { objectId?: string; isActive?: boolean; search?: string; page?: number; limit?: number }) =>
+      request<{
+        data: Array<{
+          id: string;
+          name: string;
+          description: string | null;
+          objectId: string;
+          trigger: string;
+          conditions: unknown[];
+          actions: unknown[];
+          isActive: boolean;
+          createdBy: string;
+          createdAt: string;
+          updatedAt: string;
+          object: { id: string; name: string; displayName: string; icon: string | null };
+          _count: { executions: number };
+        }>;
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      }>('/workflows', { params }),
+    get: (id: string) =>
+      request<{
+        id: string;
+        name: string;
+        description: string | null;
+        objectId: string;
+        trigger: string;
+        conditions: unknown[];
+        actions: unknown[];
+        isActive: boolean;
+        createdBy: string;
+        createdAt: string;
+        updatedAt: string;
+        object: { id: string; name: string; displayName: string; icon: string | null };
+        executions: Array<{
+          id: string;
+          status: string;
+          result: unknown;
+          error: string | null;
+          executedAt: string;
+        }>;
+      }>(`/workflows/${id}`),
+    create: (data: {
+      name: string;
+      description?: string;
+      objectId: string;
+      trigger: string;
+      conditions: unknown[];
+      actions: unknown[];
+      isActive?: boolean;
+    }) => request<unknown>('/workflows', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: {
+      name?: string;
+      description?: string;
+      trigger?: string;
+      conditions?: unknown[];
+      actions?: unknown[];
+      isActive?: boolean;
+    }) => request<unknown>(`/workflows/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/workflows/${id}`, { method: 'DELETE' }),
+    toggle: (id: string) =>
+      request<unknown>(`/workflows/${id}/toggle`, { method: 'POST' }),
+    duplicate: (id: string) =>
+      request<unknown>(`/workflows/${id}/duplicate`, { method: 'POST' }),
+    test: (id: string, recordId: string) =>
+      request<{
+        workflowId: string;
+        status: string;
+        actionsExecuted: number;
+        results: Array<{
+          actionId: string;
+          actionType: string;
+          success: boolean;
+          result?: string;
+          error?: string;
+        }>;
+      }>(`/workflows/${id}/test`, { method: 'POST', body: JSON.stringify({ recordId }) }),
+    getExecutions: (id: string, params?: { page?: number; limit?: number }) =>
+      request<{
+        data: Array<{
+          id: string;
+          workflowId: string;
+          recordId: string | null;
+          status: string;
+          result: unknown;
+          error: string | null;
+          executedAt: string;
+        }>;
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      }>(`/workflows/${id}/executions`, { params }),
+    // Meta endpoints
+    getTriggers: () =>
+      request<Array<{
+        value: string;
+        label: string;
+        description: string;
+        icon: string;
+      }>>('/workflows/meta/triggers'),
+    getActions: () =>
+      request<Array<{
+        type: string;
+        name: string;
+        description: string;
+        configSchema: Record<string, unknown>;
+      }>>('/workflows/meta/actions'),
+    getOperators: () =>
+      request<Array<{
+        value: string;
+        label: string;
+        types: string[];
+      }>>('/workflows/meta/operators'),
+    getVariables: (trigger: string) =>
+      request<Array<{
+        name: string;
+        description: string;
+        example: string;
+      }>>(`/workflows/meta/variables/${trigger}`),
+  },
 };
 
 export { ApiError };

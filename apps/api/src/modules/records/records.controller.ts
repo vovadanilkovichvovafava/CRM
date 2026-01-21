@@ -76,8 +76,12 @@ export class RecordsController {
   @ApiParam({ name: 'id', description: 'Record ID' })
   @ApiResponse({ status: 204, description: 'Record archived successfully' })
   @ApiResponse({ status: 404, description: 'Record not found' })
-  remove(@Param('id') id: string, @Query('hard') hard?: boolean) {
-    return this.recordsService.remove(id, hard);
+  remove(
+    @Param('id') id: string,
+    @Query('hard') hard: boolean,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.recordsService.remove(id, user.id, hard);
   }
 
   @Post('bulk/update')
