@@ -29,4 +29,11 @@ export class DashboardController {
   getUpcomingTasks(@Query('limit') limit?: number) {
     return this.dashboardService.getUpcomingTasks(limit ? Number(limit) : 5);
   }
+
+  @Get('analytics')
+  @Public()
+  @ApiOperation({ summary: 'Get analytics overview' })
+  getAnalyticsOverview() {
+    return this.dashboardService.getAnalyticsOverview();
+  }
 }

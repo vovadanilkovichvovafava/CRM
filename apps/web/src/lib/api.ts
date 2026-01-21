@@ -286,6 +286,16 @@ export const api = {
         dueDate: string | null;
         project: { id: string; name: string } | null;
       }>>('/dashboard/upcoming-tasks', { params: { limit } }),
+    getAnalytics: () =>
+      request<{
+        totalRecords: number;
+        totalDealsValue: number;
+        conversionRate: number;
+        avgDealValue: number;
+        recordsByObject: Array<{ name: string; count: number; color: string }>;
+        dealsByStage: Array<{ stage: string; count: number; value: number }>;
+        recordsOverTime: Array<{ date: string; count: number }>;
+      }>('/dashboard/analytics'),
   },
 };
 

@@ -27,6 +27,16 @@ export interface UpcomingTask {
   project: { id: string; name: string } | null;
 }
 
+export interface AnalyticsOverview {
+  totalRecords: number;
+  totalDealsValue: number;
+  conversionRate: number;
+  avgDealValue: number;
+  recordsByObject: Array<{ name: string; count: number; color: string }>;
+  dealsByStage: Array<{ stage: string; count: number; value: number }>;
+  recordsOverTime: Array<{ date: string; count: number }>;
+}
+
 @Injectable()
 export class DashboardService {
   private readonly logger = new Logger(DashboardService.name);
@@ -216,5 +226,143 @@ export class DashboardService {
     });
 
     return tasks;
+  }
+
+  /**
+   * Get analytics overview data
+   */
+  async getAnalyticsOverview(): Promise<AnalyticsOverview> {
+    // Get all objects
+    const objects = await this.prisma.object.findMany({
+      where: { isArchived: false },
+      select: { id: true, name: true, displayName: true, color: true },
+    });
+
+    const objectColors: Record<string, string> = {
+      contacts: '#3b82f6',
+      companies: '#10b981',
+      deals: '#f59e0b',
+      webmasters: '#8b5cf6',
+      partners: '#ec4899',
+    };
+
+    // Get record counts by object
+    const recordsByObject = await Promise.all(
+      objects.map(async (obj) => {
+        const count = await this.prisma.record.count({
+          where: { objectId: obj.id, isArchived: false },
+        });
+        return {
+          name: obj.displayName || obj.name,
+          count,
+          color: obj.color || objectColors[obj.name] || '#6b7280',
+        };
+      }),
+    );
+
+    // Get total records
+    const totalRecords = recordsByObject.reduce((sum, obj) => sum + obj.count, 0);
+
+    // Get deals object
+    const dealsObject = objects.find((o) => o.name === 'deals');
+    let totalDealsValue = 0;
+    let avgDealValue = 0;
+    let conversionRate = 0;
+    const dealsByStage: Array<{ stage: string; count: number; value: number }> = [];
+
+    if (dealsObject) {
+      const deals = await this.prisma.record.findMany({
+        where: { objectId: dealsObject.id, isArchived: false },
+        select: { data: true, stage: true },
+      });
+
+      // Calculate total value
+      deals.forEach((deal) => {
+        const data = deal.data as Record<string, unknown>;
+        const value = typeof data?.value === 'number' ? data.value : 0;
+        totalDealsValue += value;
+      });
+
+      avgDealValue = deals.length > 0 ? totalDealsValue / deals.length : 0;
+
+      // Get deals by stage
+      const pipeline = await this.prisma.pipeline.findFirst({
+        where: { objectId: dealsObject.id, isDefault: true },
+      });
+
+      if (pipeline && pipeline.stages) {
+        // stages is a JSON array in the format: [{ name: string, order: number, color?: string }]
+        const stages = pipeline.stages as Array<{ name: string; order: number; color?: string }>;
+        const sortedStages = [...stages].sort((a, b) => a.order - b.order);
+
+        for (const stage of sortedStages) {
+          const stageDeals = deals.filter((d) => d.stage === stage.name);
+          const stageValue = stageDeals.reduce((sum, d) => {
+            const data = d.data as Record<string, unknown>;
+            return sum + (typeof data?.value === 'number' ? data.value : 0);
+          }, 0);
+
+          dealsByStage.push({
+            stage: stage.name,
+            count: stageDeals.length,
+            value: stageValue,
+          });
+        }
+
+        // Calculate conversion rate (closed won / total)
+        const closedWonStage = sortedStages.find((s) =>
+          s.name.toLowerCase().includes('won') || s.name.toLowerCase().includes('closed'),
+        );
+        if (closedWonStage) {
+          const closedDeals = deals.filter((d) => d.stage === closedWonStage.name);
+          conversionRate = deals.length > 0 ? (closedDeals.length / deals.length) * 100 : 0;
+        }
+      }
+    }
+
+    // Get records over time (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const recentRecords = await this.prisma.record.findMany({
+      where: {
+        isArchived: false,
+        createdAt: { gte: thirtyDaysAgo },
+      },
+      select: { createdAt: true },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    // Group by date
+    const recordsOverTime: Array<{ date: string; count: number }> = [];
+    const dateMap = new Map<string, number>();
+
+    for (let i = 0; i < 30; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
+      const dateStr = date.toISOString().split('T')[0];
+      dateMap.set(dateStr, 0);
+    }
+
+    recentRecords.forEach((record) => {
+      const dateStr = record.createdAt.toISOString().split('T')[0];
+      if (dateMap.has(dateStr)) {
+        dateMap.set(dateStr, (dateMap.get(dateStr) || 0) + 1);
+      }
+    });
+
+    dateMap.forEach((count, date) => {
+      recordsOverTime.push({ date, count });
+    });
+
+    return {
+      totalRecords,
+      totalDealsValue,
+      conversionRate: Math.round(conversionRate * 10) / 10,
+      avgDealValue: Math.round(avgDealValue),
+      recordsByObject: recordsByObject.filter((r) => r.count > 0),
+      dealsByStage,
+      recordsOverTime,
+    };
   }
 }
