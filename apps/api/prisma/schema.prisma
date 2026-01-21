@@ -845,3 +845,16 @@ model WebhookDelivery {
   @@index([webhookId])
   @@index([deliveredAt])
 }
+
+// System Settings - store configuration like API keys, etc.
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // "resend_api_key", "email_from", "telegram_bot_token"
+  value     String   // Encrypted for sensitive data
+  encrypted Boolean  @default(false)
+  updatedBy String?  // User who last updated
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([key])
+}

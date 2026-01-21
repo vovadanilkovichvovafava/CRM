@@ -15,6 +15,9 @@ import {
   Bell,
   Eye,
   EyeOff,
+  Send,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -70,10 +73,28 @@ export default function SettingsPage() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
+  // Email settings state
+  const [resendApiKey, setResendApiKey] = useState('');
+  const [emailFrom, setEmailFrom] = useState('');
+  const [showResendKey, setShowResendKey] = useState(false);
+
   // Fetch current user profile
   const { data: profile, isLoading } = useQuery({
     queryKey: ['users', 'me'],
     queryFn: () => api.users.me() as Promise<UserProfile>,
+  });
+
+  // Fetch system settings (admin only)
+  const { data: systemSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: () => api.systemSettings.get(),
+    enabled: profile?.role === 'ADMIN',
+  });
+
+  // Fetch integration status
+  const { data: integrationStatus } = useQuery({
+    queryKey: ['system-settings', 'status'],
+    queryFn: () => api.systemSettings.getStatus(),
   });
 
   // Initialize form with profile data
@@ -84,6 +105,14 @@ export default function SettingsPage() {
       setLocale(profile.locale || 'en');
     }
   }, [profile]);
+
+  // Initialize email settings
+  useEffect(() => {
+    if (systemSettings) {
+      setResendApiKey(systemSettings.resend_api_key || '');
+      setEmailFrom(systemSettings.email_from || '');
+    }
+  }, [systemSettings]);
 
   // Update profile mutation
   const updateMutation = useMutation({
@@ -133,8 +162,31 @@ export default function SettingsPage() {
     },
   });
 
+  // Update email settings mutation
+  const updateEmailSettingsMutation = useMutation({
+    mutationFn: (data: { resend_api_key?: string; email_from?: string }) =>
+      api.systemSettings.update(data),
+    onSuccess: () => {
+      toast.success('Email settings updated');
+      queryClient.invalidateQueries({ queryKey: ['system-settings'] });
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        const message = (err.data as { message?: string })?.message || 'Failed to update settings';
+        toast.error(message);
+      }
+    },
+  });
+
   const handleSaveProfile = () => {
     updateMutation.mutate({ name, timezone, locale });
+  };
+
+  const handleSaveEmailSettings = () => {
+    updateEmailSettingsMutation.mutate({
+      resend_api_key: resendApiKey,
+      email_from: emailFrom,
+    });
   };
 
   const handleChangePassword = () => {
@@ -381,6 +433,117 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Email Settings Card (Admin only) */}
+        {profile?.role === 'ADMIN' && (
+          <Card className="bg-white/[0.02] border-white/[0.05]">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
+                  <Send className="h-5 w-5 text-green-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-white">Email Settings</CardTitle>
+                    {integrationStatus?.email ? (
+                      <span className="flex items-center gap-1 text-xs text-green-400">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Connected
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs text-amber-400">
+                        <AlertCircle className="h-3 w-3" />
+                        Not configured
+                      </span>
+                    )}
+                  </div>
+                  <CardDescription className="text-white/50">
+                    Configure email sending via Resend
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingSettings ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-white/30" />
+                </div>
+              ) : (
+                <>
+                  {/* Resend API Key */}
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-white/70">Resend API Key</label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                      <Input
+                        type={showResendKey ? 'text' : 'password'}
+                        value={resendApiKey}
+                        onChange={(e) => setResendApiKey(e.target.value)}
+                        placeholder="re_xxxx..."
+                        className="pl-10 pr-10 bg-white/[0.03] border-white/10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResendKey(!showResendKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                      >
+                        {showResendKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-white/30">
+                      Get your API key from{' '}
+                      <a
+                        href="https://resend.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-400 hover:underline"
+                      >
+                        resend.com
+                      </a>
+                    </p>
+                  </div>
+
+                  {/* Email From */}
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-white/70">From Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                      <Input
+                        type="email"
+                        value={emailFrom}
+                        onChange={(e) => setEmailFrom(e.target.value)}
+                        placeholder="noreply@yourdomain.com"
+                        className="pl-10 bg-white/[0.03] border-white/10"
+                      />
+                    </div>
+                    <p className="text-xs text-white/30">
+                      Must be a verified domain in Resend, or use onboarding@resend.dev for testing
+                    </p>
+                  </div>
+
+                  {/* Save Button */}
+                  <Button
+                    onClick={handleSaveEmailSettings}
+                    disabled={updateEmailSettingsMutation.isPending}
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                  >
+                    {updateEmailSettingsMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Email Settings
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Integrations Card */}
         <Card className="bg-white/[0.02] border-white/[0.05]">

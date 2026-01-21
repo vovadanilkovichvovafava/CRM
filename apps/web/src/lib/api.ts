@@ -742,6 +742,32 @@ export const api = {
         example: string;
       }>>(`/workflows/meta/variables/${trigger}`),
   },
+
+  // System Settings
+  systemSettings: {
+    get: () =>
+      request<{
+        resend_api_key?: string;
+        email_from?: string;
+        telegram_bot_token?: string;
+        telegram_chat_id?: string;
+      }>('/system-settings'),
+    update: (data: {
+      resend_api_key?: string;
+      email_from?: string;
+      telegram_bot_token?: string;
+      telegram_chat_id?: string;
+    }) =>
+      request<{ updated: string[] }>('/system-settings', {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    getStatus: () =>
+      request<{
+        email: boolean;
+        telegram: boolean;
+      }>('/system-settings/status'),
+  },
 };
 
 export { ApiError };

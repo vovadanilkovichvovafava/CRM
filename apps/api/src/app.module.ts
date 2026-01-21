@@ -23,6 +23,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { EmailTemplatesModule } from './modules/email-templates/email-templates.module';
 import { TimeEntriesModule } from './modules/time-entries/time-entries.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
+import { SystemSettingsModule } from './modules/system-settings/system-settings.module';
 
 const logger = new Logger('AppModule');
 
@@ -102,6 +103,9 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
 
     // Workflows & Automations
     WorkflowsModule,
+
+    // System Settings
+    SystemSettingsModule,
   ],
 })
 export class AppModule {}
