@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Node, Edge } from '@xyflow/react';
 import {
@@ -28,13 +28,11 @@ interface WorkflowSettings {
   isActive: boolean;
 }
 
-interface WorkflowEditorProps {
-  workflowId: string;
-}
-
-export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
+export default function WorkflowEditorPage() {
+  const searchParams = useSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const workflowId = searchParams.get('id') || 'new';
   const isNew = workflowId === 'new';
 
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -67,11 +65,13 @@ export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
     queryFn: () => api.emailTemplates.list(),
   });
 
-  const objects = (objectsData?.data || []) as Array<{
-    id: string;
-    name: string;
-    displayName: string;
-  }>;
+  const objects = useMemo(() => {
+    return (objectsData?.data || []) as Array<{
+      id: string;
+      name: string;
+      displayName: string;
+    }>;
+  }, [objectsData?.data]);
 
   const emailTemplates = (templatesData?.data || []) as Array<{
     id: string;
@@ -239,7 +239,7 @@ export function WorkflowEditor({ workflowId }: WorkflowEditorProps) {
 
       if (isNew && data) {
         const newWorkflow = data as { id: string };
-        router.replace(`/automations/${newWorkflow.id}`);
+        router.replace(`/automations/editor?id=${newWorkflow.id}`);
       }
     },
     onError: (err) => {

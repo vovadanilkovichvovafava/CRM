@@ -137,7 +137,7 @@ export default function AutomationsPage() {
           </div>
         </div>
 
-        <Link href="/automations/new">
+        <Link href="/automations/editor?id=new">
           <Button className="bg-orange-600 hover:bg-orange-700">
             <Plus className="mr-2 h-4 w-4" />
             New Workflow
@@ -213,7 +213,7 @@ export default function AutomationsPage() {
             <p className="text-white/40 mb-4">
               {search ? 'No workflows found' : 'No automations yet'}
             </p>
-            <Link href="/automations/new">
+            <Link href="/automations/editor?id=new">
               <Button className="bg-orange-600 hover:bg-orange-700">
                 <Plus className="mr-2 h-4 w-4" />
                 Create your first workflow
@@ -234,7 +234,7 @@ export default function AutomationsPage() {
                     !workflow.isActive && 'opacity-60'
                   )}
                 >
-                  <Link href={`/automations/${workflow.id}`}>
+                  <Link href={`/automations/editor?id=${workflow.id}`}>
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
