@@ -4,6 +4,7 @@ import { WorkflowsService } from './workflows.service';
 import { WorkflowEngineService } from './workflow-engine.service';
 import { WorkflowsController } from './workflows.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AuthModule } from '../auth/auth.module';
 import { EmailTemplatesModule } from '../email-templates/email-templates.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -11,6 +12,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
   imports: [
     ConfigModule,
     PrismaModule,
+    AuthModule,
     forwardRef(() => EmailTemplatesModule),
     forwardRef(() => NotificationsModule),
   ],
