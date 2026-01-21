@@ -861,6 +861,63 @@ export const api = {
     exportUrl: (objectId: string, format: 'csv' | 'xlsx' = 'csv') =>
       `/api/import-export/export/${objectId}?format=${format}`,
   },
+
+  // Lead Scoring
+  leadScoring: {
+    getRules: () =>
+      request<
+        Array<{
+          id: string;
+          name: string;
+          category: string;
+          field: string;
+          operator: string;
+          value: string | number | boolean | string[];
+          score: number;
+          maxScore: number;
+        }>
+      >('/lead-scoring/rules'),
+
+    getScore: (recordId: string) =>
+      request<{
+        recordId: string;
+        totalScore: number;
+        grade: string;
+        factors: {
+          demographic: { score: number; maxScore: number; details: Array<{ rule: string; field: string; matched: boolean; score: number; reason?: string }> };
+          firmographic: { score: number; maxScore: number; details: Array<{ rule: string; field: string; matched: boolean; score: number; reason?: string }> };
+          behavioral: { score: number; maxScore: number; details: Array<{ rule: string; field: string; matched: boolean; score: number; reason?: string }> };
+          engagement: { score: number; maxScore: number; details: Array<{ rule: string; field: string; matched: boolean; score: number; reason?: string }> };
+          bant: { score: number; maxScore: number; details: Array<{ rule: string; field: string; matched: boolean; score: number; reason?: string }> };
+        };
+        calculatedAt: string;
+      } | null>(`/lead-scoring/record/${recordId}`),
+
+    calculateScore: (recordId: string) =>
+      request<{
+        recordId: string;
+        totalScore: number;
+        grade: string;
+        calculatedAt: string;
+      }>(`/lead-scoring/record/${recordId}/calculate`, { method: 'POST' }),
+
+    recalculateAll: (objectId: string) =>
+      request<{ processed: number; errors: number }>(
+        `/lead-scoring/object/${objectId}/recalculate`,
+        { method: 'POST' },
+      ),
+
+    getDistribution: (objectId: string) =>
+      request<Record<string, number>>(`/lead-scoring/object/${objectId}/distribution`),
+
+    getLeadsByGrade: (objectId: string, grade: string, limit?: number) =>
+      request<Array<{ recordId: string; totalScore: number; calculatedAt: string }>>(
+        `/lead-scoring/object/${objectId}/leads`,
+        { params: { grade, ...(limit ? { limit } : {}) } },
+      ),
+
+    getGradeThresholds: () => request<Record<string, number>>('/lead-scoring/grades'),
+  },
 };
 
 export { ApiError };
