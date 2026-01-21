@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Modal } from '@/components/ui/modal';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select } from '@/components/ui/select';
+import { NativeSelect } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { api, ApiError } from '@/lib/api';
 
@@ -106,7 +106,7 @@ export function CreateRecordModal({
 
       case 'SELECT':
         return (
-          <Select
+          <NativeSelect
             value={value}
             onChange={(e) => handleChange(field.name, e.target.value)}
           >
@@ -116,7 +116,7 @@ export function CreateRecordModal({
                 {opt.label}
               </option>
             ))}
-          </Select>
+          </NativeSelect>
         );
 
       case 'NUMBER':

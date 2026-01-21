@@ -104,4 +104,18 @@ export class TasksController {
   removeDependency(@Param('id') id: string, @Param('dependsOnId') dependsOnId: string) {
     return this.tasksService.removeDependency(id, dependsOnId);
   }
+
+  @Get('calendar/events')
+  @ApiOperation({ summary: 'Get tasks for calendar view' })
+  @ApiResponse({ status: 200, description: 'Returns tasks with dates for calendar' })
+  getCalendarEvents(
+    @Query('start') start: string,
+    @Query('end') end: string,
+    @Query('projectId') projectId?: string,
+    @CurrentUser() user?: AuthUser,
+  ) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    return this.tasksService.getCalendarEvents(startDate, endDate, user?.id || '', projectId);
+  }
 }

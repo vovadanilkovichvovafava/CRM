@@ -172,6 +172,16 @@ export const api = {
     delete: (id: string) => request<void>(`/tasks/${id}`, { method: 'DELETE' }),
     move: (id: string, status: string, position: number) =>
       request<unknown>(`/tasks/${id}/move`, { method: 'POST', body: JSON.stringify({ status, position }) }),
+    calendarEvents: (params: { start: string; end: string; projectId?: string }) =>
+      request<Array<{
+        id: string;
+        title: string;
+        startDate?: string;
+        dueDate?: string;
+        status: string;
+        priority: string;
+        project?: { id: string; name: string; color?: string };
+      }>>('/tasks/calendar/events', { params }),
   },
 
   // Pipelines

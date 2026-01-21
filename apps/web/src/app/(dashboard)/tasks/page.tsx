@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Plus, Search, LayoutGrid, List, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTasks } from '@/hooks/use-tasks';
 import { cn } from '@/lib/utils';
+import { CalendarView, type CalendarEvent } from '@/components/calendar/calendar-view';
 
 type ViewMode = 'board' | 'list' | 'calendar';
 
@@ -42,6 +43,27 @@ export default function TasksPage() {
   ];
 
   const tasks = data?.data || demoTasks;
+
+  // Convert tasks to calendar events
+  const calendarEvents: CalendarEvent[] = useMemo(() => {
+    return tasks
+      .filter((t: any) => t.dueDate || t.startDate)
+      .map((t: any) => ({
+        id: t.id,
+        title: t.title,
+        start: t.startDate || t.dueDate,
+        end: t.dueDate || t.startDate,
+        allDay: true,
+        extendedProps: {
+          type: 'task' as const,
+          status: t.status,
+          priority: t.priority,
+          projectId: t.project?.id,
+          projectName: t.project?.name,
+          description: t.description,
+        },
+      }));
+  }, [tasks]);
 
   const tasksByStatus = columns.reduce((acc, col) => {
     acc[col.id] = tasks.filter((t: any) => t.status === col.id);
@@ -181,11 +203,18 @@ export default function TasksPage() {
         </Card>
       )}
 
-      {/* Calendar View Placeholder */}
+      {/* Calendar View */}
       {viewMode === 'calendar' && (
         <Card>
-          <CardContent className="flex h-96 items-center justify-center">
-            <p className="text-muted-foreground">Calendar view coming soon...</p>
+          <CardContent className="p-4">
+            <CalendarView
+              events={calendarEvents}
+              onEventClick={(event) => {
+                // Navigate to task details
+                window.location.href = `/tasks/${event.id}`;
+              }}
+              initialView="dayGridMonth"
+            />
           </CardContent>
         </Card>
       )}

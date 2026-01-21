@@ -316,4 +316,47 @@ export class TasksService {
       where: { taskId, dependsOnId },
     });
   }
+
+  async getCalendarEvents(
+    startDate: Date,
+    endDate: Date,
+    userId: string,
+    projectId?: string,
+  ): Promise<Task[]> {
+    const where: Prisma.TaskWhereInput = {
+      isArchived: false,
+      OR: [
+        {
+          startDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        {
+          dueDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        {
+          AND: [
+            { startDate: { lte: startDate } },
+            { dueDate: { gte: endDate } },
+          ],
+        },
+      ],
+    };
+
+    if (projectId) {
+      where.projectId = projectId;
+    }
+
+    return this.prisma.task.findMany({
+      where,
+      orderBy: { startDate: 'asc' },
+      include: {
+        project: { select: { id: true, name: true, color: true } },
+      },
+    });
+  }
 }

@@ -21,6 +21,7 @@ import {
   Clock,
   Workflow,
   Upload,
+  CalendarDays,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
@@ -84,6 +85,7 @@ const systemObjects: NavItem[] = [
 const pmItems: NavItem[] = [
   { name: 'Projects', href: '/projects', icon: FolderKanban, colorClass: 'text-cyan-400' },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare, colorClass: 'text-lime-400' },
+  { name: 'Calendar', href: '/calendar', icon: CalendarDays, colorClass: 'text-indigo-400' },
   { name: 'Time Tracking', href: '/time-tracking', icon: Clock, colorClass: 'text-amber-400' },
 ];
 
