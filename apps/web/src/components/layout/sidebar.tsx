@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
+import { NotificationBell } from '@/components/notifications/notification-bell';
 
 function JanusLogo({ className = "w-8 h-8" }: { className?: string }) {
   return (
@@ -158,8 +159,8 @@ export function Sidebar() {
 
   return (
     <aside className="flex h-full w-64 flex-col bg-[#0a0a0f] border-r border-white/5">
-      {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-white/5 px-4">
+      {/* Logo and Notifications */}
+      <div className="flex h-16 items-center justify-between border-b border-white/5 px-4">
         <Link href="/" className="flex items-center gap-3">
           <JanusLogo className="h-9 w-9" />
           <div className="flex flex-col">
@@ -167,6 +168,7 @@ export function Sidebar() {
             <span className="text-[10px] text-white/40 -mt-1">See everything</span>
           </div>
         </Link>
+        <NotificationBell />
       </div>
 
       {/* Search */}

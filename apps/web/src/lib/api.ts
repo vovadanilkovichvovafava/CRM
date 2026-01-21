@@ -356,6 +356,28 @@ export const api = {
         recordsOverTime: Array<{ date: string; count: number }>;
       }>('/dashboard/analytics'),
   },
+
+  // Notifications
+  notifications: {
+    list: (params?: { unreadOnly?: boolean; limit?: number }) =>
+      request<Array<{
+        id: string;
+        userId: string;
+        type: string;
+        title: string;
+        message: string;
+        data: Record<string, unknown> | null;
+        isRead: boolean;
+        createdAt: string;
+      }>>('/notifications', { params }),
+    getUnreadCount: () => request<{ count: number }>('/notifications/unread-count'),
+    markAsRead: (id: string) =>
+      request<unknown>(`/notifications/${id}/read`, { method: 'POST' }),
+    markAllAsRead: () =>
+      request<{ count: number }>('/notifications/read-all', { method: 'POST' }),
+    delete: (id: string) => request<void>(`/notifications/${id}`, { method: 'DELETE' }),
+    deleteAll: () => request<{ count: number }>('/notifications', { method: 'DELETE' }),
+  },
 };
 
 export { ApiError };
