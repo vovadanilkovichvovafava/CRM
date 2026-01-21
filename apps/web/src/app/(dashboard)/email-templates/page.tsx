@@ -12,7 +12,8 @@ import {
   Loader2,
   Share2,
   Eye,
-  MoreHorizontal,
+  Send,
+  Paperclip,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api, ApiError } from '@/lib/api';
 import { formatRelativeTime, cn } from '@/lib/utils';
 import { EmailTemplateModal } from '@/components/email/email-template-modal';
+import { SendEmailModal } from '@/components/email/send-email-modal';
+
+interface Attachment {
+  id: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+}
 
 interface EmailTemplate {
   id: string;
@@ -32,6 +43,7 @@ interface EmailTemplate {
   ownerId: string;
   createdAt: string;
   updatedAt: string;
+  attachments: Attachment[];
 }
 
 export default function EmailTemplatesPage() {
@@ -41,6 +53,7 @@ export default function EmailTemplatesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
+  const [sendingTemplate, setSendingTemplate] = useState<EmailTemplate | null>(null);
 
   // Get templates
   const { data, isLoading } = useQuery({
@@ -100,6 +113,10 @@ export default function EmailTemplatesPage() {
     if (confirm(`Are you sure you want to delete "${name}"?`)) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const handleSend = (template: EmailTemplate) => {
+    setSendingTemplate(template);
   };
 
   const templates = data?.data || [];
@@ -205,7 +222,12 @@ export default function EmailTemplatesPage() {
                         Subject: {template.subject}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1">
+                      {template.attachments?.length > 0 && (
+                        <div className="p-1" title={`${template.attachments.length} attachment(s)`}>
+                          <Paperclip className="h-3 w-3 text-white/40" />
+                        </div>
+                      )}
                       {template.isShared && (
                         <div className="p-1" title="Shared template">
                           <Share2 className="h-3 w-3 text-rose-400" />
@@ -235,6 +257,15 @@ export default function EmailTemplatesPage() {
                     </div>
 
                     <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white/40 hover:text-green-400"
+                        onClick={() => handleSend(template)}
+                        title="Send Email"
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -290,6 +321,13 @@ export default function EmailTemplatesPage() {
         template={editingTemplate}
       />
 
+      {/* Send Email Modal */}
+      <SendEmailModal
+        isOpen={!!sendingTemplate}
+        onClose={() => setSendingTemplate(null)}
+        template={sendingTemplate}
+      />
+
       {/* Preview Modal */}
       {previewTemplate && (
         <div
@@ -308,7 +346,38 @@ export default function EmailTemplatesPage() {
               className="p-6 prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: previewTemplate.body }}
             />
-            <div className="border-t p-4 flex justify-end">
+            {previewTemplate.attachments?.length > 0 && (
+              <div className="border-t p-4">
+                <p className="text-sm text-gray-500 mb-2">
+                  <Paperclip className="h-4 w-4 inline mr-1" />
+                  {previewTemplate.attachments.length} attachment(s)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {previewTemplate.attachments.map((att) => (
+                    <a
+                      key={att.id}
+                      href={att.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                    >
+                      {att.originalName}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="border-t p-4 flex justify-between">
+              <Button
+                onClick={() => {
+                  setPreviewTemplate(null);
+                  setSendingTemplate(previewTemplate);
+                }}
+                className="bg-rose-600 hover:bg-rose-700"
+              >
+                <Send className="mr-2 h-4 w-4" />
+                Send Email
+              </Button>
               <Button
                 variant="outline"
                 onClick={() => setPreviewTemplate(null)}

@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EmailTemplate, Prisma } from '../../../generated/prisma';
+import { StorageService } from '../files/storage.service';
+import { EmailTemplate, EmailTemplateAttachment, Prisma } from '../../../generated/prisma';
 
 export interface CreateEmailTemplateDto {
   name: string;
@@ -16,6 +17,10 @@ export interface UpdateEmailTemplateDto {
   body?: string;
   category?: string;
   isShared?: boolean;
+}
+
+export interface EmailTemplateWithAttachments extends EmailTemplate {
+  attachments: EmailTemplateAttachment[];
 }
 
 export interface QueryEmailTemplatesDto {
@@ -40,7 +45,10 @@ export interface PaginatedResult<T> {
 export class EmailTemplatesService {
   private readonly logger = new Logger(EmailTemplatesService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly storage: StorageService,
+  ) {}
 
   async create(dto: CreateEmailTemplateDto, userId: string): Promise<EmailTemplate> {
     const template = await this.prisma.emailTemplate.create({
@@ -59,7 +67,7 @@ export class EmailTemplatesService {
     return template;
   }
 
-  async findAll(query: QueryEmailTemplatesDto, userId: string): Promise<PaginatedResult<EmailTemplate>> {
+  async findAll(query: QueryEmailTemplatesDto, userId: string): Promise<PaginatedResult<EmailTemplateWithAttachments>> {
     const page = query.page || 1;
     const limit = query.limit || 50;
     const skip = (page - 1) * limit;
@@ -91,6 +99,7 @@ export class EmailTemplatesService {
         orderBy: { updatedAt: 'desc' },
         skip,
         take: limit,
+        include: { attachments: true },
       }),
       this.prisma.emailTemplate.count({ where }),
     ]);
@@ -106,8 +115,11 @@ export class EmailTemplatesService {
     };
   }
 
-  async findOne(id: string, userId: string): Promise<EmailTemplate> {
-    const template = await this.prisma.emailTemplate.findUnique({ where: { id } });
+  async findOne(id: string, userId: string): Promise<EmailTemplateWithAttachments> {
+    const template = await this.prisma.emailTemplate.findUnique({
+      where: { id },
+      include: { attachments: true },
+    });
 
     if (!template) {
       throw new NotFoundException(`Email template with ID "${id}" not found`);
@@ -211,5 +223,97 @@ export class EmailTemplatesService {
       rendered = rendered.replace(new RegExp(`{{${key}}}`, 'g'), value);
     }
     return rendered;
+  }
+
+  // Attachment management
+  async addAttachment(
+    templateId: string,
+    file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
+    userId: string,
+  ): Promise<EmailTemplateAttachment> {
+    // Check template ownership
+    const template = await this.prisma.emailTemplate.findUnique({
+      where: { id: templateId },
+    });
+
+    if (!template) {
+      throw new NotFoundException(`Template with ID "${templateId}" not found`);
+    }
+
+    if (template.ownerId !== userId) {
+      throw new ForbiddenException('You can only add attachments to your own templates');
+    }
+
+    // Upload file to storage
+    const { name, url } = await this.storage.upload(
+      file.buffer,
+      file.originalname,
+      file.mimetype,
+    );
+
+    // Create attachment record
+    const attachment = await this.prisma.emailTemplateAttachment.create({
+      data: {
+        templateId,
+        name,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        url,
+      },
+    });
+
+    this.logger.log('Attachment added to template', {
+      templateId,
+      attachmentId: attachment.id,
+      fileName: file.originalname,
+    });
+
+    return attachment;
+  }
+
+  async removeAttachment(attachmentId: string, userId: string): Promise<void> {
+    const attachment = await this.prisma.emailTemplateAttachment.findUnique({
+      where: { id: attachmentId },
+      include: { template: { select: { ownerId: true } } },
+    });
+
+    if (!attachment) {
+      throw new NotFoundException(`Attachment with ID "${attachmentId}" not found`);
+    }
+
+    if (attachment.template.ownerId !== userId) {
+      throw new ForbiddenException('You can only remove attachments from your own templates');
+    }
+
+    // Delete from storage
+    await this.storage.delete(attachment.name);
+
+    // Delete record
+    await this.prisma.emailTemplateAttachment.delete({
+      where: { id: attachmentId },
+    });
+
+    this.logger.log('Attachment removed from template', {
+      attachmentId,
+      templateId: attachment.templateId,
+    });
+  }
+
+  async getAttachments(templateId: string, userId: string): Promise<EmailTemplateAttachment[]> {
+    const template = await this.prisma.emailTemplate.findUnique({
+      where: { id: templateId },
+      include: { attachments: true },
+    });
+
+    if (!template) {
+      throw new NotFoundException(`Template with ID "${templateId}" not found`);
+    }
+
+    if (template.ownerId !== userId && !template.isShared) {
+      throw new ForbiddenException('You do not have access to this template');
+    }
+
+    return template.attachments;
   }
 }

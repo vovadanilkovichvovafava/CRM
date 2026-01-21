@@ -522,10 +522,67 @@ model EmailTemplate {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sequences EmailSequenceStep[]
+  sequences   EmailSequenceStep[]
+  attachments EmailTemplateAttachment[]
+  sentEmails  EmailLog[]
 
   @@index([ownerId])
   @@index([category])
+}
+
+// Attachments for email templates
+model EmailTemplateAttachment {
+  id           String   @id @default(cuid())
+  templateId   String
+  name         String   // Display name
+  originalName String   // Original file name
+  mimeType     String
+  size         Int      // bytes
+  url          String   // Storage URL
+  createdAt    DateTime @default(now())
+
+  template EmailTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+}
+
+// Log of sent emails
+model EmailLog {
+  id          String      @id @default(cuid())
+  templateId  String?
+  recordId    String?     // Optional: linked to CRM record
+  from        String
+  to          String[]
+  cc          String[]    @default([])
+  bcc         String[]    @default([])
+  subject     String
+  body        String
+  status      EmailStatus @default(PENDING)
+  error       String?
+  messageId   String?     // SMTP message ID
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  sentAt      DateTime?
+  sentBy      String
+  createdAt   DateTime    @default(now())
+
+  template EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([templateId])
+  @@index([recordId])
+  @@index([status])
+  @@index([sentBy])
+  @@index([sentAt])
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  FAILED
 }
 
 model EmailSequence {

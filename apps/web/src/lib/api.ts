@@ -393,6 +393,14 @@ export const api = {
           ownerId: string;
           createdAt: string;
           updatedAt: string;
+          attachments: Array<{
+            id: string;
+            name: string;
+            originalName: string;
+            mimeType: string;
+            size: number;
+            url: string;
+          }>;
         }>;
         meta: { total: number; page: number; limit: number; totalPages: number };
       }>('/email-templates', { params }),
@@ -407,6 +415,14 @@ export const api = {
         ownerId: string;
         createdAt: string;
         updatedAt: string;
+        attachments: Array<{
+          id: string;
+          name: string;
+          originalName: string;
+          mimeType: string;
+          size: number;
+          url: string;
+        }>;
       }>(`/email-templates/${id}`),
     create: (data: { name: string; subject: string; body: string; category?: string; isShared?: boolean }) =>
       request<unknown>('/email-templates', { method: 'POST', body: JSON.stringify(data) }),
@@ -421,6 +437,116 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ template, data }),
       }),
+    // Attachments
+    getAttachments: (templateId: string) =>
+      request<Array<{
+        id: string;
+        name: string;
+        originalName: string;
+        mimeType: string;
+        size: number;
+        url: string;
+      }>>(`/email-templates/${templateId}/attachments`),
+    uploadAttachment: async (templateId: string, file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      let token: string | null = null;
+      if (typeof window !== 'undefined') {
+        try {
+          const stored = localStorage.getItem('janus-auth');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            token = parsed?.state?.token || null;
+          }
+        } catch (e) {
+          console.error('Error reading auth token:', e);
+        }
+      }
+
+      const response = await fetch(`${API_URL}/api/email-templates/${templateId}/attachments`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new ApiError(response.status, response.statusText, data);
+      }
+
+      return response.json();
+    },
+    deleteAttachment: (attachmentId: string) =>
+      request<void>(`/email-templates/attachments/${attachmentId}`, { method: 'DELETE' }),
+    // Send emails
+    send: (data: {
+      templateId?: string;
+      recordId?: string;
+      to: string[];
+      cc?: string[];
+      bcc?: string[];
+      subject: string;
+      body: string;
+      attachmentIds?: string[];
+    }) => request<{ id: string; messageId?: string }>('/email-templates/send', { method: 'POST', body: JSON.stringify(data) }),
+    sendFromTemplate: (templateId: string, data: {
+      to: string[];
+      data: Record<string, string>;
+      cc?: string[];
+      bcc?: string[];
+      recordId?: string;
+    }) => request<{ id: string; messageId?: string }>(`/email-templates/${templateId}/send`, { method: 'POST', body: JSON.stringify(data) }),
+    // Email logs
+    getLogs: (params?: { templateId?: string; recordId?: string; status?: string; page?: number; limit?: number }) =>
+      request<{
+        data: Array<{
+          id: string;
+          templateId: string | null;
+          recordId: string | null;
+          from: string;
+          to: string[];
+          cc: string[];
+          bcc: string[];
+          subject: string;
+          body: string;
+          status: string;
+          error: string | null;
+          messageId: string | null;
+          sentAt: string | null;
+          createdAt: string;
+          template: { name: string } | null;
+        }>;
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      }>('/email-templates/logs', { params }),
+    getLogStats: () =>
+      request<{
+        total: number;
+        sent: number;
+        delivered: number;
+        opened: number;
+        clicked: number;
+        bounced: number;
+        failed: number;
+      }>('/email-templates/logs/stats'),
+    getLog: (logId: string) =>
+      request<{
+        id: string;
+        templateId: string | null;
+        recordId: string | null;
+        from: string;
+        to: string[];
+        cc: string[];
+        bcc: string[];
+        subject: string;
+        body: string;
+        status: string;
+        error: string | null;
+        messageId: string | null;
+        sentAt: string | null;
+        createdAt: string;
+        template: { name: string } | null;
+      }>(`/email-templates/logs/${logId}`),
   },
 
   // Time Entries
