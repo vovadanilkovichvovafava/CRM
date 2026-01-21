@@ -422,6 +422,80 @@ export const api = {
         body: JSON.stringify({ template, data }),
       }),
   },
+
+  // Time Entries
+  timeEntries: {
+    list: (params?: { taskId?: string; projectId?: string; startDate?: string; endDate?: string; page?: number; limit?: number }) =>
+      request<{
+        data: Array<{
+          id: string;
+          userId: string;
+          taskId: string | null;
+          projectId: string | null;
+          recordId: string | null;
+          description: string | null;
+          duration: number;
+          startTime: string;
+          endTime: string | null;
+          isBillable: boolean;
+          hourlyRate: string | null;
+          createdAt: string;
+          task: { id: string; title: string } | null;
+        }>;
+        meta: { total: number; page: number; limit: number; totalPages: number };
+      }>('/time-entries', { params }),
+    get: (id: string) =>
+      request<{
+        id: string;
+        userId: string;
+        taskId: string | null;
+        description: string | null;
+        duration: number;
+        startTime: string;
+        endTime: string | null;
+        isBillable: boolean;
+        hourlyRate: string | null;
+        task: { id: string; title: string } | null;
+      }>(`/time-entries/${id}`),
+    create: (data: {
+      taskId?: string;
+      projectId?: string;
+      description?: string;
+      duration: number;
+      startTime: string;
+      endTime?: string;
+      isBillable?: boolean;
+      hourlyRate?: number;
+    }) => request<unknown>('/time-entries', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: {
+      description?: string;
+      duration?: number;
+      startTime?: string;
+      endTime?: string;
+      isBillable?: boolean;
+      hourlyRate?: number;
+    }) => request<unknown>(`/time-entries/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/time-entries/${id}`, { method: 'DELETE' }),
+    getStats: (params?: { startDate?: string; endDate?: string }) =>
+      request<{
+        totalMinutes: number;
+        totalHours: number;
+        billableMinutes: number;
+        billableAmount: number;
+        entriesCount: number;
+      }>('/time-entries/stats', { params }),
+    getActiveTimer: () =>
+      request<{
+        id: string;
+        description: string | null;
+        startTime: string;
+        task: { id: string; title: string } | null;
+      } | null>('/time-entries/active'),
+    startTimer: (data: { taskId?: string; description?: string }) =>
+      request<unknown>('/time-entries/start', { method: 'POST', body: JSON.stringify(data) }),
+    stopTimer: (id: string) =>
+      request<unknown>(`/time-entries/${id}/stop`, { method: 'POST' }),
+  },
 };
 
 export { ApiError };

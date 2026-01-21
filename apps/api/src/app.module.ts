@@ -21,6 +21,7 @@ import { CollaborationModule } from './modules/collaboration/collaboration.modul
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { EmailTemplatesModule } from './modules/email-templates/email-templates.module';
+import { TimeEntriesModule } from './modules/time-entries/time-entries.module';
 
 const logger = new Logger('AppModule');
 
@@ -94,6 +95,9 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
 
     // Email
     EmailTemplatesModule,
+
+    // Time Tracking
+    TimeEntriesModule,
   ],
 })
 export class AppModule {}
