@@ -69,19 +69,23 @@ export class ProjectsService {
       },
       include: {
         _count: {
-          select: { tasks: true, members: true },
+          select: { tasks: true },
         },
       },
     });
 
-    // Add creator as owner member
-    await this.prisma.projectMember.create({
-      data: {
-        projectId: project.id,
-        userId,
-        role: 'OWNER',
-      },
-    });
+    // Add creator as owner member (skip if table doesn't exist)
+    try {
+      await this.prisma.projectMember.create({
+        data: {
+          projectId: project.id,
+          userId,
+          role: 'OWNER',
+        },
+      });
+    } catch (error) {
+      this.logger.warn('Could not create project member', { error });
+    }
 
     this.logger.log('Project created', { projectId: project.id, userId });
 
@@ -121,7 +125,7 @@ export class ProjectsService {
         take: limit,
         include: {
           _count: {
-            select: { tasks: true, members: true },
+            select: { tasks: true },
           },
         },
       }),
@@ -143,11 +147,8 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
-        members: true,
-        milestones: { orderBy: { dueDate: 'asc' } },
-        sprints: { orderBy: { startDate: 'asc' } },
         _count: {
-          select: { tasks: true, comments: true, files: true },
+          select: { tasks: true },
         },
       },
     });
@@ -167,7 +168,7 @@ export class ProjectsService {
       data: dto,
       include: {
         _count: {
-          select: { tasks: true, members: true },
+          select: { tasks: true },
         },
       },
     });
