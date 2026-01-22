@@ -34,6 +34,9 @@ export class CommentsService {
         authorId: userId,
         mentions,
       },
+      include: {
+        author: { select: { id: true, name: true, email: true, avatar: true } },
+      },
     });
   }
 
@@ -41,6 +44,9 @@ export class CommentsService {
     return this.prisma.comment.findMany({
       where: { recordId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { id: true, name: true, email: true, avatar: true } },
+      },
     });
   }
 
@@ -48,6 +54,9 @@ export class CommentsService {
     return this.prisma.comment.findMany({
       where: { taskId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { id: true, name: true, email: true, avatar: true } },
+      },
     });
   }
 
@@ -55,6 +64,9 @@ export class CommentsService {
     return this.prisma.comment.findMany({
       where: { projectId },
       orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { id: true, name: true, email: true, avatar: true } },
+      },
     });
   }
 

@@ -156,6 +156,7 @@ export interface Task {
   updatedAt: string;
   createdBy: string;
   project?: { id: string; name: string; color?: string };
+  assignee?: { id: string; name?: string; email: string; avatar?: string };
   _count?: {
     subtasks: number;
     comments: number;
@@ -197,6 +198,23 @@ export interface User {
   locale: string;
   preferences: Record<string, unknown>;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Comment Types
+export interface Comment {
+  id: string;
+  content: string;
+  taskId?: string;
+  recordId?: string;
+  authorId: string;
+  author?: {
+    id: string;
+    name?: string;
+    email: string;
+    avatar?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

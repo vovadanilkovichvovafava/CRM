@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, FolderKanban } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, FolderKanban, User, MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useTasks, useCreateTask, useMoveTask, useUpdateTask } from '@/hooks/use-tasks';
+import { useUsers, useCurrentUser } from '@/hooks/use-users';
+import { useTaskComments, useCreateComment } from '@/hooks/use-comments';
 import { cn } from '@/lib/utils';
 import type { Task as TaskType } from '@/types';
 import { CalendarView, type CalendarEvent } from '@/components/calendar/calendar-view';
@@ -26,8 +28,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
   DndContext,
   DragOverlay,
@@ -59,7 +63,8 @@ interface Task {
   dueDate?: string;
   startDate?: string;
   project?: { id: string; name: string };
-  assignee?: { id: string; name: string };
+  assignee?: { id: string; name?: string; email?: string; avatar?: string };
+  assigneeId?: string;
   labels?: string[];
   position?: number;
 }
@@ -133,18 +138,28 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
               {task.description && (
                 <p className="text-xs text-white/50 line-clamp-2 mb-2">{task.description}</p>
               )}
-              <div className="flex items-center gap-2 text-xs text-white/40">
-                {task.project && (
-                  <span className="flex items-center gap-1">
-                    <FolderKanban className="h-3 w-3" />
-                    {task.project.name}
-                  </span>
-                )}
-                {task.dueDate && (
-                  <span className="flex items-center gap-1">
-                    <CalendarDays className="h-3 w-3" />
-                    {format(new Date(task.dueDate), 'MMM d')}
-                  </span>
+              <div className="flex items-center justify-between text-xs text-white/40">
+                <div className="flex items-center gap-2">
+                  {task.project && (
+                    <span className="flex items-center gap-1">
+                      <FolderKanban className="h-3 w-3" />
+                      {task.project.name}
+                    </span>
+                  )}
+                  {task.dueDate && (
+                    <span className="flex items-center gap-1">
+                      <CalendarDays className="h-3 w-3" />
+                      {format(new Date(task.dueDate), 'MMM d')}
+                    </span>
+                  )}
+                </div>
+                {task.assignee && (
+                  <Avatar className="h-5 w-5">
+                    <AvatarImage src={task.assignee.avatar} />
+                    <AvatarFallback className="text-[9px] bg-indigo-500">
+                      {task.assignee.name?.charAt(0) || task.assignee.email?.charAt(0) || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                 )}
               </div>
             </div>
@@ -240,17 +255,26 @@ export default function TasksPage() {
   const [createForStatus, setCreateForStatus] = useState('TODO');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [showMyTasks, setShowMyTasks] = useState(false);
+  const [newComment, setNewComment] = useState('');
 
   // Form state
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newPriority, setNewPriority] = useState('MEDIUM');
   const [newDueDate, setNewDueDate] = useState('');
+  const [newAssigneeId, setNewAssigneeId] = useState('');
 
+  // Fetch data
+  const { data: currentUser } = useCurrentUser();
+  const { data: users } = useUsers();
   const { data, isLoading } = useTasks({ search: search || undefined, limit: 200 });
+  const { data: taskComments, isLoading: commentsLoading } = useTaskComments(selectedTask?.id || '');
+
   const createTaskMutation = useCreateTask();
   const moveTaskMutation = useMoveTask();
   const updateTaskMutation = useUpdateTask();
+  const createCommentMutation = useCreateComment();
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -263,7 +287,13 @@ export default function TasksPage() {
     })
   );
 
-  const tasks = (data?.data as Task[]) || [];
+  const allTasks = (data?.data as Task[]) || [];
+
+  // Filter tasks by "My Tasks" if enabled
+  const tasks = useMemo(() => {
+    if (!showMyTasks || !currentUser) return allTasks;
+    return allTasks.filter((t) => t.assigneeId === (currentUser as { id: string }).id);
+  }, [allTasks, showMyTasks, currentUser]);
 
   const tasksByStatus = useMemo(() => {
     return columns.reduce((acc, col) => {
@@ -356,6 +386,7 @@ export default function TasksPage() {
         priority: newPriority as 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW',
         status: createForStatus as 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE',
         dueDate: newDueDate || undefined,
+        assigneeId: newAssigneeId || undefined,
       },
       {
         onSuccess: () => {
@@ -365,6 +396,23 @@ export default function TasksPage() {
         },
         onError: () => {
           toast.error('Failed to create task');
+        },
+      }
+    );
+  };
+
+  const handleAddComment = () => {
+    if (!newComment.trim() || !selectedTask) return;
+
+    createCommentMutation.mutate(
+      { content: newComment, taskId: selectedTask.id },
+      {
+        onSuccess: () => {
+          toast.success('Comment added');
+          setNewComment('');
+        },
+        onError: () => {
+          toast.error('Failed to add comment');
         },
       }
     );
@@ -386,6 +434,7 @@ export default function TasksPage() {
     setNewDescription('');
     setNewPriority('MEDIUM');
     setNewDueDate('');
+    setNewAssigneeId('');
     setCreateForStatus('TODO');
   };
 
@@ -410,14 +459,30 @@ export default function TasksPage() {
 
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search tasks..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search tasks..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {/* My Tasks Toggle */}
+          <Button
+            variant={showMyTasks ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={() => setShowMyTasks(!showMyTasks)}
+            className={cn(
+              showMyTasks && 'bg-indigo-500 hover:bg-indigo-600',
+              !showMyTasks && 'border-white/10 hover:bg-white/10'
+            )}
+          >
+            <User className="h-4 w-4 mr-2" />
+            My Tasks
+          </Button>
         </div>
 
         {/* View Toggle */}
@@ -492,6 +557,7 @@ export default function TasksPage() {
                   <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Task</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Status</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Priority</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Assignee</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Due Date</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Project</th>
                 </tr>
@@ -499,7 +565,7 @@ export default function TasksPage() {
               <tbody>
                 {tasks.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-white/40">
+                    <td colSpan={6} className="px-4 py-8 text-center text-white/40">
                       No tasks found. Create your first task!
                     </td>
                   </tr>
@@ -527,6 +593,21 @@ export default function TasksPage() {
                         <Badge className={cn('text-white', priorityColors[task.priority])}>
                           {task.priority}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        {task.assignee ? (
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={task.assignee.avatar} />
+                              <AvatarFallback className="text-[10px] bg-indigo-500">
+                                {task.assignee.name?.charAt(0) || task.assignee.email?.charAt(0) || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm text-white/60">{task.assignee.name || task.assignee.email}</span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-white/40">-</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-white/60">
                         {task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : '-'}
@@ -635,14 +716,43 @@ export default function TasksPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={newDueDate}
-                onChange={(e) => setNewDueDate(e.target.value)}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={newDueDate}
+                  onChange={(e) => setNewDueDate(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Assignee</Label>
+                <Select value={newAssigneeId} onValueChange={setNewAssigneeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select assignee" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">
+                      <span className="text-white/50">Unassigned</span>
+                    </SelectItem>
+                    {(users as Array<{ id: string; name?: string; email: string; avatar?: string }> || []).map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        <span className="flex items-center gap-2">
+                          <Avatar className="h-5 w-5">
+                            <AvatarImage src={user.avatar} />
+                            <AvatarFallback className="text-[9px] bg-indigo-500">
+                              {user.name?.charAt(0) || user.email.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {user.name || user.email}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -662,7 +772,7 @@ export default function TasksPage() {
 
       {/* Task Detail Dialog */}
       <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <span className={cn('w-3 h-3 rounded-full', columns.find(c => c.id === selectedTask?.status)?.color)} />
@@ -671,7 +781,7 @@ export default function TasksPage() {
           </DialogHeader>
 
           {selectedTask && (
-            <div className="space-y-4">
+            <div className="flex-1 overflow-auto space-y-4">
               {selectedTask.description && (
                 <p className="text-sm text-white/70">{selectedTask.description}</p>
               )}
@@ -700,35 +810,149 @@ export default function TasksPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Change Status</Label>
-                <Select
-                  value={selectedTask.status}
-                  onValueChange={(value) => {
-                    const status = value as 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
-                    handleUpdateTask(selectedTask.id, { status });
-                    setSelectedTask({ ...selectedTask, status });
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {columns.map((col) => (
-                      <SelectItem key={col.id} value={col.id}>
-                        <span className="flex items-center gap-2">
-                          <span className={cn('w-2 h-2 rounded-full', col.color)} />
-                          {col.name}
-                        </span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={selectedTask.status}
+                    onValueChange={(value) => {
+                      const status = value as 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
+                      handleUpdateTask(selectedTask.id, { status });
+                      setSelectedTask({ ...selectedTask, status });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {columns.map((col) => (
+                        <SelectItem key={col.id} value={col.id}>
+                          <span className="flex items-center gap-2">
+                            <span className={cn('w-2 h-2 rounded-full', col.color)} />
+                            {col.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Assignee</Label>
+                  <Select
+                    value={selectedTask.assigneeId || ''}
+                    onValueChange={(value) => {
+                      handleUpdateTask(selectedTask.id, { assigneeId: value || null } as Partial<TaskType>);
+                      const user = (users as Array<{ id: string; name?: string; email: string; avatar?: string }> || []).find(u => u.id === value);
+                      setSelectedTask({
+                        ...selectedTask,
+                        assigneeId: value || undefined,
+                        assignee: user ? { id: user.id, name: user.name, email: user.email, avatar: user.avatar } : undefined,
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Unassigned" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">
+                        <span className="text-white/50">Unassigned</span>
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {(users as Array<{ id: string; name?: string; email: string; avatar?: string }> || []).map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <span className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage src={user.avatar} />
+                              <AvatarFallback className="text-[9px] bg-indigo-500">
+                                {user.name?.charAt(0) || user.email.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            {user.name || user.email}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Comments Section */}
+              <div className="border-t border-white/10 pt-4 mt-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <MessageSquare className="h-4 w-4 text-white/60" />
+                  <h3 className="font-medium">Comments</h3>
+                  <Badge variant="secondary" className="bg-white/10">
+                    {(taskComments as Array<unknown> || []).length}
+                  </Badge>
+                </div>
+
+                {/* Comments List */}
+                <ScrollArea className="h-48 mb-4">
+                  {commentsLoading ? (
+                    <div className="flex items-center justify-center h-24">
+                      <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" />
+                    </div>
+                  ) : (taskComments as Array<{ id: string; content: string; author?: { name?: string; email: string; avatar?: string }; createdAt: string }> || []).length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-24 text-white/40">
+                      <MessageSquare className="h-8 w-8 mb-2" />
+                      <p className="text-sm">No comments yet</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 pr-4">
+                      {(taskComments as Array<{ id: string; content: string; author?: { name?: string; email: string; avatar?: string }; createdAt: string }> || []).map((comment) => (
+                        <div key={comment.id} className="flex gap-3 p-3 rounded-lg bg-white/5">
+                          <Avatar className="h-8 w-8 shrink-0">
+                            <AvatarImage src={comment.author?.avatar} />
+                            <AvatarFallback className="text-xs bg-indigo-500">
+                              {comment.author?.name?.charAt(0) || comment.author?.email?.charAt(0) || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">
+                                {comment.author?.name || comment.author?.email || 'Unknown'}
+                              </span>
+                              <span className="text-xs text-white/40">
+                                {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-white/70 whitespace-pre-wrap">{comment.content}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+
+                {/* Add Comment */}
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Write a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    rows={2}
+                    className="resize-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        handleAddComment();
+                      }
+                    }}
+                  />
+                  <Button
+                    size="icon"
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || createCommentMutation.isPending}
+                    className="shrink-0"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-xs text-white/40 mt-1">Press Cmd+Enter to send</p>
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setSelectedTask(null)}>
               Close
             </Button>

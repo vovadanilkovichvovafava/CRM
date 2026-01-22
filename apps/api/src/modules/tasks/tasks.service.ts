@@ -86,6 +86,7 @@ export class TasksService {
       include: {
         project: { select: { id: true, name: true } },
         parent: { select: { id: true, title: true } },
+        assignee: { select: { id: true, name: true, email: true, avatar: true } },
         _count: { select: { subtasks: true, comments: true, files: true } },
       },
     });
@@ -151,6 +152,7 @@ export class TasksService {
         take: limit,
         include: {
           project: { select: { id: true, name: true, color: true } },
+          assignee: { select: { id: true, name: true, email: true, avatar: true } },
           _count: { select: { subtasks: true, comments: true, files: true, checklist: true } },
         },
       }),
@@ -169,6 +171,7 @@ export class TasksService {
       include: {
         project: { select: { id: true, name: true, color: true } },
         parent: { select: { id: true, title: true } },
+        assignee: { select: { id: true, name: true, email: true, avatar: true } },
         subtasks: {
           where: { isArchived: false },
           orderBy: { position: 'asc' },
@@ -177,6 +180,9 @@ export class TasksService {
         comments: {
           orderBy: { createdAt: 'desc' },
           take: 20,
+          include: {
+            author: { select: { id: true, name: true, email: true, avatar: true } },
+          },
         },
         files: { orderBy: { createdAt: 'desc' } },
         dependencies: {
@@ -211,6 +217,7 @@ export class TasksService {
       },
       include: {
         project: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true, email: true, avatar: true } },
         _count: { select: { subtasks: true, comments: true, files: true } },
       },
     });
