@@ -1,13 +1,34 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, FolderKanban } from 'lucide-react';
+import { Plus, Search, FolderKanban, X, Calendar, Users, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useProjects } from '@/hooks/use-projects';
+import { useProjects, useCreateProject } from '@/hooks/use-projects';
+import { useTasks } from '@/hooks/use-tasks';
 import { formatDate } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+
+interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  status: string;
+  progress: number;
+  dueDate?: string;
+  color?: string;
+  _count?: { tasks: number };
+}
 
 const statusColors: Record<string, string> = {
   PLANNING: 'bg-gray-500',
@@ -19,18 +40,48 @@ const statusColors: Record<string, string> = {
 
 export default function ProjectsPage() {
   const [search, setSearch] = useState('');
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
 
   const { data, isLoading } = useProjects({ search: search || undefined });
+  const createProjectMutation = useCreateProject();
 
-  // Demo data
-  const demoProjects = [
-    { id: '1', name: 'Website Redesign', description: 'Complete overhaul of company website', status: 'ACTIVE', progress: 65, dueDate: '2026-02-15', _count: { tasks: 24 } },
-    { id: '2', name: 'Mobile App Launch', description: 'Launch new mobile application', status: 'PLANNING', progress: 20, dueDate: '2026-03-01', _count: { tasks: 15 } },
-    { id: '3', name: 'Q1 Marketing Campaign', description: 'Marketing campaign for Q1', status: 'ACTIVE', progress: 45, dueDate: '2026-01-31', _count: { tasks: 18 } },
-    { id: '4', name: 'CRM Integration', description: 'Integrate new CRM system', status: 'COMPLETED', progress: 100, dueDate: '2026-01-10', _count: { tasks: 32 } },
-  ];
+  // Get tasks for selected project
+  const { data: tasksData } = useTasks({
+    projectId: selectedProject?.id,
+    limit: 100
+  });
 
-  const projects = data?.data || demoProjects;
+  const projects = (data?.data as Project[]) || [];
+  const projectTasks = tasksData?.data || [];
+
+  const handleCreateProject = () => {
+    if (!newName.trim()) return;
+
+    createProjectMutation.mutate(
+      { name: newName, description: newDescription },
+      {
+        onSuccess: () => {
+          toast.success('Project created');
+          setIsCreateDialogOpen(false);
+          setNewName('');
+          setNewDescription('');
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : 'Failed to create project');
+        },
+      }
+    );
+  };
+
+  const tasksByStatus = {
+    TODO: projectTasks.filter((t: { status: string }) => t.status === 'TODO'),
+    IN_PROGRESS: projectTasks.filter((t: { status: string }) => t.status === 'IN_PROGRESS'),
+    IN_REVIEW: projectTasks.filter((t: { status: string }) => t.status === 'IN_REVIEW'),
+    DONE: projectTasks.filter((t: { status: string }) => t.status === 'DONE'),
+  };
 
   return (
     <div className="space-y-6">
@@ -40,7 +91,7 @@ export default function ProjectsPage() {
           <h1 className="text-3xl font-bold">Projects</h1>
           <p className="text-muted-foreground">Manage your projects and track progress</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           New Project
         </Button>
@@ -58,54 +109,227 @@ export default function ProjectsPage() {
       </div>
 
       {/* Projects Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {projects.map((project: any) => (
-          <Card key={project.id} className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <FolderKanban className="h-5 w-5 text-primary" />
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="text-center py-12">
+          <FolderKanban className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+          <p className="text-muted-foreground">No projects yet</p>
+          <Button variant="link" onClick={() => setIsCreateDialogOpen(true)}>
+            Create your first project
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project) => (
+            <Card
+              key={project.id}
+              className="cursor-pointer hover:shadow-md transition-shadow hover:border-primary/50"
+              onClick={() => setSelectedProject(project)}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="flex h-10 w-10 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: project.color ? `${project.color}20` : 'hsl(var(--primary) / 0.1)' }}
+                    >
+                      <FolderKanban
+                        className="h-5 w-5"
+                        style={{ color: project.color || 'hsl(var(--primary))' }}
+                      />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{project.name}</CardTitle>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className={`${statusColors[project.status]} text-white`}>
+                    {project.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="mb-4 line-clamp-2">
+                  {project.description || 'No description'}
+                </CardDescription>
+
+                {/* Progress */}
+                <div className="mb-4">
+                  <div className="mb-1 flex justify-between text-sm">
+                    <span className="text-muted-foreground">Progress</span>
+                    <span className="font-medium">{project.progress}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{
+                        width: `${project.progress}%`,
+                        backgroundColor: project.color || undefined
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Meta */}
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{project._count?.tasks || 0} tasks</span>
+                  {project.dueDate && (
+                    <span>Due {formatDate(project.dueDate)}</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Project Detail Dialog */}
+      <Dialog open={!!selectedProject} onOpenChange={(open) => !open && setSelectedProject(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          {selectedProject && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-12 w-12 items-center justify-center rounded-lg"
+                    style={{ backgroundColor: selectedProject.color ? `${selectedProject.color}20` : 'hsl(var(--primary) / 0.1)' }}
+                  >
+                    <FolderKanban
+                      className="h-6 w-6"
+                      style={{ color: selectedProject.color || 'hsl(var(--primary))' }}
+                    />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
+                    <DialogTitle className="text-xl">{selectedProject.name}</DialogTitle>
+                    <Badge variant="secondary" className={`${statusColors[selectedProject.status]} text-white mt-1`}>
+                      {selectedProject.status}
+                    </Badge>
                   </div>
                 </div>
-                <Badge variant="secondary" className={`${statusColors[project.status]} text-white`}>
-                  {project.status}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="mb-4 line-clamp-2">
-                {project.description}
-              </CardDescription>
+              </DialogHeader>
 
-              {/* Progress */}
-              <div className="mb-4">
-                <div className="mb-1 flex justify-between text-sm">
-                  <span className="text-muted-foreground">Progress</span>
-                  <span className="font-medium">{project.progress}%</span>
-                </div>
-                <div className="h-2 rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${project.progress}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Meta */}
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>{project._count?.tasks || 0} tasks</span>
-                {project.dueDate && (
-                  <span>Due {formatDate(project.dueDate)}</span>
+              <div className="space-y-6 mt-4">
+                {/* Description */}
+                {selectedProject.description && (
+                  <div>
+                    <Label className="text-muted-foreground text-xs uppercase">Description</Label>
+                    <p className="mt-1">{selectedProject.description}</p>
+                  </div>
                 )}
+
+                {/* Progress */}
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase">Progress</Label>
+                  <div className="mt-2">
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span>{selectedProject.progress}% complete</span>
+                    </div>
+                    <div className="h-3 rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${selectedProject.progress}%`,
+                          backgroundColor: selectedProject.color || 'hsl(var(--primary))'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Task Stats */}
+                <div>
+                  <Label className="text-muted-foreground text-xs uppercase">Tasks Overview</Label>
+                  <div className="grid grid-cols-4 gap-3 mt-2">
+                    <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold">{tasksByStatus.TODO.length}</div>
+                      <div className="text-xs text-muted-foreground">To Do</div>
+                    </div>
+                    <div className="bg-blue-500/10 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-blue-500">{tasksByStatus.IN_PROGRESS.length}</div>
+                      <div className="text-xs text-muted-foreground">In Progress</div>
+                    </div>
+                    <div className="bg-yellow-500/10 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-yellow-500">{tasksByStatus.IN_REVIEW.length}</div>
+                      <div className="text-xs text-muted-foreground">In Review</div>
+                    </div>
+                    <div className="bg-green-500/10 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-green-500">{tasksByStatus.DONE.length}</div>
+                      <div className="text-xs text-muted-foreground">Done</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Due Date */}
+                {selectedProject.dueDate && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Due {formatDate(selectedProject.dueDate)}</span>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-4 border-t">
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      setSelectedProject(null);
+                      window.location.href = `/tasks?project=${selectedProject.id}`;
+                    }}
+                  >
+                    View Tasks
+                  </Button>
+                  <Button variant="outline" onClick={() => setSelectedProject(null)}>
+                    Close
+                  </Button>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Project Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Project Name</Label>
+              <Input
+                id="name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="My Project"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={newDescription}
+                onChange={(e) => setNewDescription(e.target.value)}
+                placeholder="Project description..."
+                rows={3}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateProject}
+              disabled={!newName.trim() || createProjectMutation.isPending}
+            >
+              {createProjectMutation.isPending ? 'Creating...' : 'Create Project'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
