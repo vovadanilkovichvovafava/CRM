@@ -57,8 +57,8 @@ export class TasksController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete (archive) task' })
   @ApiParam({ name: 'id', description: 'Task ID' })
-  remove(@Param('id') id: string, @Query('hard') hard?: boolean) {
-    return this.tasksService.remove(id, hard);
+  remove(@Param('id') id: string, @Query('hard') hard: boolean, @CurrentUser() user: AuthUser) {
+    return this.tasksService.remove(id, user.id, hard);
   }
 
   @Post(':id/move')
@@ -66,8 +66,9 @@ export class TasksController {
   move(
     @Param('id') id: string,
     @Body() body: { status: TaskStatus; position: number },
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.tasksService.moveTask(id, body.status, body.position);
+    return this.tasksService.moveTask(id, body.status, body.position, user.id);
   }
 
   @Post(':id/checklist')

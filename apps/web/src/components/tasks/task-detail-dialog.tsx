@@ -61,6 +61,30 @@ import { useUpdateTask, useCreateTask } from '@/hooks/use-tasks';
 import { toast } from 'sonner';
 import type { Task as TaskType } from '@/types';
 import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/auth';
+
+/**
+ * Task role for permission checks
+ */
+type TaskRole = 'creator' | 'assignee' | 'viewer';
+
+/**
+ * Get user role for a task
+ */
+function getUserRole(task: Task, userId: string | undefined): TaskRole {
+  if (!userId) return 'viewer';
+  if (task.createdBy === userId) return 'creator';
+  if (task.assigneeId === userId) return 'assignee';
+  return 'viewer';
+}
+
+/**
+ * Check if all subtasks are done
+ */
+function areAllSubtasksDone(subtasks: Task[] | undefined): boolean {
+  if (!subtasks || subtasks.length === 0) return true;
+  return subtasks.every((st) => st.status === 'DONE');
+}
 
 interface User {
   id: string;
@@ -78,6 +102,7 @@ interface Task {
   dueDate?: string;
   startDate?: string;
   createdAt?: string;
+  createdBy: string;
   project?: { id: string; name: string; color?: string };
   assignee?: User;
   assigneeId?: string;
@@ -197,6 +222,17 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   const fileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Get current user for permission checks
+  const currentUser = useAuthStore((state) => state.user);
+  const userRole = task ? getUserRole(task, currentUser?.id) : 'viewer';
+  const isCreator = userRole === 'creator';
+  const isAssignee = userRole === 'assignee';
+  const canEditStatus = isCreator || isAssignee;
+  const canEditAllFields = isCreator;
+  const canAddAttachments = isCreator || isAssignee;
+  const canAddComments = true; // Everyone can add comments
+  const hasIncompleteSubtasks = task ? !areAllSubtasksDone(task.subtasks) : false;
+
   const { data: taskComments, isLoading: commentsLoading, refetch: refetchComments } = useTaskComments(task?.id || '');
   const createCommentMutation = useCreateComment();
   const updateTaskMutation = useUpdateTask();
@@ -211,11 +247,21 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
   const handleUpdateTask = (updates: Partial<TaskType>) => {
     if (!task) return;
+
+    // Check if trying to set status to DONE with incomplete subtasks
+    if (updates.status === 'DONE' && hasIncompleteSubtasks) {
+      toast.error('Cannot mark task as DONE. Complete all subtasks first.');
+      return;
+    }
+
     updateTaskMutation.mutate(
       { id: task.id, data: updates },
       {
         onSuccess: () => {
           toast.success('Task updated');
+        },
+        onError: (error: Error) => {
+          toast.error(error.message || 'Failed to update task');
         },
       }
     );
@@ -380,23 +426,34 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <Clock className="h-3 w-3" />
                         <span>Status</span>
+                        {!canEditStatus && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                        )}
                       </div>
                       <Select
                         value={task.status}
+                        disabled={!canEditStatus}
                         onValueChange={(value) => {
                           handleUpdateTask({ status: value as TaskType['status'] });
                           onUpdate({ ...task, status: value });
                         }}
                       >
-                        <SelectTrigger className={cn('h-9 w-full', currentStatus?.textColor)}>
+                        <SelectTrigger className={cn('h-9 w-full', currentStatus?.textColor, !canEditStatus && 'opacity-60')}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {columns.map((col) => (
-                            <SelectItem key={col.id} value={col.id}>
+                            <SelectItem
+                              key={col.id}
+                              value={col.id}
+                              disabled={col.id === 'DONE' && hasIncompleteSubtasks}
+                            >
                               <span className="flex items-center gap-2">
                                 <span className={cn('w-2 h-2 rounded-full', col.color)} />
                                 {col.name}
+                                {col.id === 'DONE' && hasIncompleteSubtasks && (
+                                  <span className="text-[10px] text-white/40">(subtasks pending)</span>
+                                )}
                               </span>
                             </SelectItem>
                           ))}
@@ -409,9 +466,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <User className="h-3 w-3" />
                         <span>Assignees</span>
+                        {!canEditAllFields && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                        )}
                       </div>
                       <Select
                         value={task.assigneeId || '__none__'}
+                        disabled={!canEditAllFields}
                         onValueChange={(value) => {
                           const actualValue = value === '__none__' ? null : value;
                           handleUpdateTask({ assigneeId: actualValue } as Partial<TaskType>);
@@ -423,7 +484,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                           });
                         }}
                       >
-                        <SelectTrigger className="h-9 w-full">
+                        <SelectTrigger className={cn('h-9 w-full', !canEditAllFields && 'opacity-60')}>
                           <SelectValue placeholder="Unassigned" />
                         </SelectTrigger>
                         <SelectContent>
@@ -470,15 +531,19 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <Flag className="h-3 w-3" />
                         <span>Priority</span>
+                        {!canEditAllFields && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                        )}
                       </div>
                       <Select
                         value={task.priority}
+                        disabled={!canEditAllFields}
                         onValueChange={(value) => {
                           handleUpdateTask({ priority: value as TaskType['priority'] });
                           onUpdate({ ...task, priority: value });
                         }}
                       >
-                        <SelectTrigger className={cn('h-9 w-full', currentPriority?.color)}>
+                        <SelectTrigger className={cn('h-9 w-full', currentPriority?.color, !canEditAllFields && 'opacity-60')}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -513,24 +578,32 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-white/50 text-xs">Attachments</Label>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="text-white/50 hover:text-white text-xs"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add
-                      </Button>
+                      {canAddAttachments && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="text-white/50 hover:text-white text-xs"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add
+                        </Button>
+                      )}
                     </div>
 
-                    <div
-                      className="border-2 border-dashed border-white/10 rounded-lg p-6 text-center hover:border-white/20 transition-colors cursor-pointer"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-white/30" />
-                      <p className="text-sm text-white/50">Drop your files here to <span className="text-blue-400">upload</span></p>
-                    </div>
+                    {canAddAttachments ? (
+                      <div
+                        className="border-2 border-dashed border-white/10 rounded-lg p-6 text-center hover:border-white/20 transition-colors cursor-pointer"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <Upload className="h-8 w-8 mx-auto mb-2 text-white/30" />
+                        <p className="text-sm text-white/50">Drop your files here to <span className="text-blue-400">upload</span></p>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-white/10 rounded-lg p-4 text-center opacity-50">
+                        <p className="text-sm text-white/40">Only the creator or assignee can upload files</p>
+                      </div>
+                    )}
 
                     {task.files && task.files.length > 0 && (
                       <div className="grid grid-cols-2 gap-2">
@@ -610,6 +683,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 <Badge variant="secondary" className="bg-white/10 text-xs">
                   {comments.length}
                 </Badge>
+                {/* Show user role */}
+                {isCreator && (
+                  <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 text-[10px]">Creator</Badge>
+                )}
+                {isAssignee && !isCreator && (
+                  <Badge variant="secondary" className="bg-green-500/20 text-green-400 text-[10px]">Assignee</Badge>
+                )}
               </div>
             </div>
 
@@ -620,7 +700,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 <div className="flex items-start gap-3 text-xs text-white/50">
                   <div className="w-1 h-1 rounded-full bg-white/30 mt-1.5" />
                   <div>
-                    <span>You created this task</span>
+                    <span>
+                      {getUserById(task.createdBy)?.name || getUserById(task.createdBy)?.email || 'Someone'} created this task
+                    </span>
                     {task.createdAt && (
                       <span className="ml-2">{format(new Date(task.createdAt), 'MMM d, yyyy')}</span>
                     )}

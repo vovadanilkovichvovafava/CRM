@@ -1,7 +1,29 @@
-import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  Inject,
+  forwardRef,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectsService } from '../projects/projects.service';
 import { Task, TaskStatus, Priority, Prisma } from '../../../generated/prisma';
+
+/**
+ * Task role enum for permission checks
+ */
+export enum TaskRole {
+  CREATOR = 'creator',
+  ASSIGNEE = 'assignee',
+  VIEWER = 'viewer',
+}
+
+/**
+ * Fields that assignee can update
+ */
+const ASSIGNEE_ALLOWED_FIELDS = ['status', 'timeSpent'] as const;
 
 export interface CreateTaskDto {
   title: string;
@@ -55,6 +77,80 @@ export class TasksService {
     @Inject(forwardRef(() => ProjectsService))
     private readonly projectsService: ProjectsService,
   ) {}
+
+  /**
+   * Get user role for a task
+   */
+  getUserRole(task: { createdBy: string; assigneeId?: string | null }, userId: string): TaskRole {
+    if (task.createdBy === userId) {
+      return TaskRole.CREATOR;
+    }
+    if (task.assigneeId === userId) {
+      return TaskRole.ASSIGNEE;
+    }
+    return TaskRole.VIEWER;
+  }
+
+  /**
+   * Check if user can update specific fields
+   */
+  validateUpdatePermissions(
+    task: { createdBy: string; assigneeId?: string | null },
+    dto: UpdateTaskDto,
+    userId: string,
+  ): void {
+    const role = this.getUserRole(task, userId);
+
+    // Creator can update everything
+    if (role === TaskRole.CREATOR) {
+      return;
+    }
+
+    // Assignee can only update status and timeSpent
+    if (role === TaskRole.ASSIGNEE) {
+      const updateKeys = Object.keys(dto) as (keyof UpdateTaskDto)[];
+      const disallowedFields = updateKeys.filter(
+        (key) => !ASSIGNEE_ALLOWED_FIELDS.includes(key as (typeof ASSIGNEE_ALLOWED_FIELDS)[number]),
+      );
+
+      if (disallowedFields.length > 0) {
+        throw new ForbiddenException(
+          `Assignee can only update status and time spent. Cannot update: ${disallowedFields.join(', ')}`,
+        );
+      }
+      return;
+    }
+
+    // Viewer cannot update anything
+    throw new ForbiddenException('You do not have permission to update this task');
+  }
+
+  /**
+   * Check if parent task can be marked as DONE
+   * All subtasks must be DONE first
+   */
+  async validateParentStatusChange(taskId: string, newStatus: TaskStatus): Promise<void> {
+    if (newStatus !== TaskStatus.DONE) {
+      return;
+    }
+
+    const subtasks = await this.prisma.task.findMany({
+      where: {
+        parentId: taskId,
+        isArchived: false,
+      },
+      select: { id: true, title: true, status: true },
+    });
+
+    const incompleteSubtasks = subtasks.filter((st) => st.status !== TaskStatus.DONE);
+
+    if (incompleteSubtasks.length > 0) {
+      const subtaskTitles = incompleteSubtasks.map((st) => st.title).join(', ');
+      throw new BadRequestException(
+        `Cannot mark task as DONE. ${incompleteSubtasks.length} subtask(s) are not completed: ${subtaskTitles}`,
+      );
+    }
+  }
 
   async create(dto: CreateTaskDto, userId: string): Promise<Task> {
     // Calculate position (at the end of the list)
@@ -151,6 +247,8 @@ export class TasksService {
         take: limit,
         include: {
           project: { select: { id: true, name: true, color: true } },
+          parent: { select: { id: true, title: true } },
+          assignee: { select: { id: true, name: true, email: true, avatar: true } },
           _count: { select: { subtasks: true, comments: true, files: true, checklist: true } },
         },
       }),
@@ -201,6 +299,15 @@ export class TasksService {
 
   async update(id: string, dto: UpdateTaskDto, userId: string): Promise<Task> {
     const existing = await this.findOne(id);
+
+    // Check user permissions
+    this.validateUpdatePermissions(existing, dto, userId);
+
+    // Check if status change to DONE is allowed (all subtasks must be DONE)
+    if (dto.status && dto.status !== existing.status) {
+      await this.validateParentStatusChange(id, dto.status);
+    }
+
     const statusChanged = dto.status && dto.status !== existing.status;
 
     const task = await this.prisma.task.update({
@@ -220,23 +327,29 @@ export class TasksService {
       await this.projectsService.updateProgress(existing.projectId);
     }
 
-    this.logger.log('Task updated', { taskId: id, userId });
+    this.logger.log('Task updated', { taskId: id, userId, role: this.getUserRole(existing, userId) });
 
     return task;
   }
 
-  async remove(id: string, hard = false): Promise<void> {
+  async remove(id: string, userId: string, hard = false): Promise<void> {
     const task = await this.findOne(id);
+
+    // Only creator can delete/archive tasks
+    const role = this.getUserRole(task, userId);
+    if (role !== TaskRole.CREATOR) {
+      throw new ForbiddenException('Only the task creator can delete or archive this task');
+    }
 
     if (hard) {
       await this.prisma.task.delete({ where: { id } });
-      this.logger.log('Task hard deleted', { taskId: id });
+      this.logger.log('Task hard deleted', { taskId: id, userId });
     } else {
       await this.prisma.task.update({
         where: { id },
         data: { isArchived: true },
       });
-      this.logger.log('Task archived', { taskId: id });
+      this.logger.log('Task archived', { taskId: id, userId });
     }
 
     // Update project progress
@@ -245,8 +358,19 @@ export class TasksService {
     }
   }
 
-  async moveTask(id: string, newStatus: TaskStatus, newPosition: number): Promise<Task> {
+  async moveTask(id: string, newStatus: TaskStatus, newPosition: number, userId: string): Promise<Task> {
     const task = await this.findOne(id);
+
+    // Check permissions - creator and assignee can change status
+    const role = this.getUserRole(task, userId);
+    if (role === TaskRole.VIEWER) {
+      throw new ForbiddenException('You do not have permission to move this task');
+    }
+
+    // Check if status change to DONE is allowed (all subtasks must be DONE)
+    if (newStatus !== task.status) {
+      await this.validateParentStatusChange(id, newStatus);
+    }
 
     // Update positions of other tasks
     await this.prisma.task.updateMany({
@@ -261,7 +385,7 @@ export class TasksService {
       },
     });
 
-    return this.prisma.task.update({
+    const updatedTask = await this.prisma.task.update({
       where: { id },
       data: {
         status: newStatus,
@@ -269,6 +393,15 @@ export class TasksService {
         completedAt: newStatus === TaskStatus.DONE ? new Date() : null,
       },
     });
+
+    // Update project progress if status changed
+    if (newStatus !== task.status && task.projectId) {
+      await this.projectsService.updateProgress(task.projectId);
+    }
+
+    this.logger.log('Task moved', { taskId: id, userId, newStatus, newPosition });
+
+    return updatedTask;
   }
 
   async addChecklistItem(taskId: string, title: string): Promise<void> {

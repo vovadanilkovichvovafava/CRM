@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, User } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, User, ListChecks, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -62,14 +62,18 @@ interface Task {
   priority: string;
   dueDate?: string;
   startDate?: string;
+  createdAt?: string;
+  createdBy: string;
   project?: { id: string; name: string; color?: string };
+  parent?: { id: string; title: string };
+  parentId?: string;
   assignee?: { id: string; name?: string; email?: string; avatar?: string };
   assigneeId?: string;
   labels?: string[];
   position?: number;
   subtasks?: Task[];
   checklist?: Array<{ id: string; title: string; isCompleted: boolean }>;
-  _count?: { subtasks: number; comments: number };
+  _count?: { subtasks: number; comments: number; files?: number };
 }
 
 const columns = [
@@ -129,6 +133,13 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
                 </Badge>
               </div>
               {task.description && <p className="text-xs text-white/50 line-clamp-2 mb-2">{task.description}</p>}
+              {/* Parent task indicator */}
+              {task.parent && (
+                <div className="flex items-center gap-1 text-xs text-indigo-400 mb-2">
+                  <span className="opacity-60">Subtask of</span>
+                  <span className="truncate">{task.parent.title}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs text-white/40">
                 <div className="flex items-center gap-2">
                   {task.project && (
@@ -141,6 +152,20 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
                     <span className="flex items-center gap-1">
                       <CalendarDays className="h-3 w-3" />
                       {format(new Date(task.dueDate), 'MMM d')}
+                    </span>
+                  )}
+                  {/* Subtask count */}
+                  {(task._count?.subtasks || 0) > 0 && (
+                    <span className="flex items-center gap-1 text-indigo-400">
+                      <ListChecks className="h-3 w-3" />
+                      {task._count?.subtasks}
+                    </span>
+                  )}
+                  {/* Comment count */}
+                  {(task._count?.comments || 0) > 0 && (
+                    <span className="flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      {task._count?.comments}
                     </span>
                   )}
                 </div>
