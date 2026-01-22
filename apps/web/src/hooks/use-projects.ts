@@ -32,7 +32,7 @@ export function useCreateProject() {
   return useMutation({
     mutationFn: (data: Partial<Project>) => api.projects.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'], refetchType: 'all' });
     },
   });
 }

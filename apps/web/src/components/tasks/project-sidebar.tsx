@@ -37,10 +37,15 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectColor, setNewProjectColor] = useState('#6366f1');
 
-  const { data: projectsData, isLoading } = useProjects({ limit: 100 });
+  const { data: projectsData, isLoading, error } = useProjects({ limit: 100 });
   const createProjectMutation = useCreateProject();
 
   const projects = (projectsData?.data as Project[]) || [];
+
+  // Log errors for debugging
+  if (error) {
+    console.error('Projects fetch error:', error);
+  }
 
   const handleCreateProject = () => {
     if (!newProjectName.trim()) return;
@@ -53,8 +58,10 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
           setIsCreateDialogOpen(false);
           setNewProjectName('');
         },
-        onError: () => {
-          toast.error('Failed to create project');
+        onError: (error) => {
+          console.error('Project creation error:', error);
+          const message = error instanceof Error ? error.message : 'Failed to create project';
+          toast.error(message);
         },
       }
     );
@@ -105,6 +112,13 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-400 text-sm">
+              <p>Error loading projects</p>
+              <p className="text-xs mt-1 text-red-400/70">
+                {error instanceof Error ? error.message : 'Unknown error'}
+              </p>
             </div>
           ) : projects.length === 0 ? (
             <div className="text-center py-8 text-white/40 text-sm">

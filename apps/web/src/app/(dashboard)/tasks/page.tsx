@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -249,11 +249,19 @@ export default function TasksPage() {
   // Fetch data
   const { data: currentUser } = useCurrentUser();
   const { data: users } = useUsers();
-  const { data, isLoading } = useTasks({
+  const { data, isLoading, error: tasksError } = useTasks({
     projectId: selectedProjectId || undefined,
     search: search || undefined,
     limit: 200,
   });
+
+  // Show toast for API errors
+  useEffect(() => {
+    if (tasksError) {
+      console.error('Tasks fetch error:', tasksError);
+      toast.error('Failed to load tasks: ' + (tasksError instanceof Error ? tasksError.message : 'Unknown error'));
+    }
+  }, [tasksError]);
 
   const createTaskMutation = useCreateTask();
   const moveTaskMutation = useMoveTask();
@@ -355,7 +363,11 @@ export default function TasksPage() {
           setIsCreateDialogOpen(false);
           resetForm();
         },
-        onError: () => toast.error('Failed to create task'),
+        onError: (error) => {
+          console.error('Task creation error:', error);
+          const message = error instanceof Error ? error.message : 'Failed to create task';
+          toast.error(message);
+        },
       }
     );
   };
