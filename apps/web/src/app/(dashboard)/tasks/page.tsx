@@ -729,12 +729,15 @@ export default function TasksPage() {
 
               <div className="space-y-2">
                 <Label>Assignee</Label>
-                <Select value={newAssigneeId} onValueChange={setNewAssigneeId}>
+                <Select
+                  value={newAssigneeId || '__none__'}
+                  onValueChange={(val) => setNewAssigneeId(val === '__none__' ? '' : val)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select assignee" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">
+                    <SelectItem value="__none__">
                       <span className="text-white/50">Unassigned</span>
                     </SelectItem>
                     {(users as Array<{ id: string; name?: string; email: string; avatar?: string }> || []).map((user) => (
@@ -840,13 +843,14 @@ export default function TasksPage() {
                 <div className="space-y-2">
                   <Label>Assignee</Label>
                   <Select
-                    value={selectedTask.assigneeId || ''}
+                    value={selectedTask.assigneeId || '__none__'}
                     onValueChange={(value) => {
-                      handleUpdateTask(selectedTask.id, { assigneeId: value || null } as Partial<TaskType>);
-                      const user = (users as Array<{ id: string; name?: string; email: string; avatar?: string }> || []).find(u => u.id === value);
+                      const actualValue = value === '__none__' ? null : value;
+                      handleUpdateTask(selectedTask.id, { assigneeId: actualValue } as Partial<TaskType>);
+                      const user = actualValue ? (users as Array<{ id: string; name?: string; email: string; avatar?: string }> || []).find(u => u.id === actualValue) : undefined;
                       setSelectedTask({
                         ...selectedTask,
-                        assigneeId: value || undefined,
+                        assigneeId: actualValue || undefined,
                         assignee: user ? { id: user.id, name: user.name, email: user.email, avatar: user.avatar } : undefined,
                       });
                     }}
@@ -855,7 +859,7 @@ export default function TasksPage() {
                       <SelectValue placeholder="Unassigned" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">
+                      <SelectItem value="__none__">
                         <span className="text-white/50">Unassigned</span>
                       </SelectItem>
                       {(users as Array<{ id: string; name?: string; email: string; avatar?: string }> || []).map((user) => (
