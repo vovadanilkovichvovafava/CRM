@@ -101,8 +101,8 @@ export class TasksService {
   }
 
   async findAll(query: QueryTasksDto, userId: string) {
-    const page = query.page || 1;
-    const limit = query.limit || 100;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 100;
     const skip = (page - 1) * limit;
 
     const where: Prisma.TaskWhereInput = {};

@@ -93,8 +93,8 @@ export class ProjectsService {
   }
 
   async findAll(query: QueryProjectsDto, userId: string) {
-    const page = query.page || 1;
-    const limit = query.limit || 50;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
 
     const where: Prisma.ProjectWhereInput = {
