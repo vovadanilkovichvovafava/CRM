@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, FolderKanban, User } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -264,13 +264,12 @@ export default function TasksPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const allTasks = (data?.data as Task[]) || [];
-
   // Filter tasks by "My Tasks" if enabled
   const tasks = useMemo(() => {
+    const allTasks = (data?.data as Task[]) || [];
     if (!showMyTasks || !currentUser) return allTasks;
     return allTasks.filter((t) => t.assigneeId === (currentUser as { id: string }).id);
-  }, [allTasks, showMyTasks, currentUser]);
+  }, [data?.data, showMyTasks, currentUser]);
 
   const tasksByStatus = useMemo(() => {
     return columns.reduce(

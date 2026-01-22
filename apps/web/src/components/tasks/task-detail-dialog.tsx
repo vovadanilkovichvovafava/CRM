@@ -3,16 +3,13 @@
 import { useState } from 'react';
 import {
   CalendarDays,
-  FolderKanban,
   MessageSquare,
   Send,
   Plus,
   Check,
-  Trash2,
   ListTodo,
   ChevronDown,
   ChevronRight,
-  User,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

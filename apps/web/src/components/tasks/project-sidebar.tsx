@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, FolderKanban, ChevronRight, Settings, MoreHorizontal } from 'lucide-react';
+import { Plus, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
