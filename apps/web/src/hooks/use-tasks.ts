@@ -34,7 +34,8 @@ export function useCreateTask() {
   return useMutation({
     mutationFn: (data: Partial<Task>) => api.tasks.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      // Invalidate all task queries regardless of params
+      queryClient.invalidateQueries({ queryKey: ['tasks'], refetchType: 'all' });
     },
   });
 }
