@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   CalendarDays,
   MessageSquare,
   Send,
   Plus,
-  Check,
   ListTodo,
   ChevronDown,
   ChevronRight,
+  Paperclip,
+  Image,
+  File,
+  X,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +43,7 @@ import { useTaskComments, useCreateComment } from '@/hooks/use-comments';
 import { useUpdateTask, useCreateTask } from '@/hooks/use-tasks';
 import { toast } from 'sonner';
 import type { Task as TaskType } from '@/types';
+import { api } from '@/lib/api';
 
 interface User {
   id: string;
@@ -59,15 +64,16 @@ interface Task {
   assignee?: User;
   assigneeId?: string;
   subtasks?: Task[];
-  checklist?: Array<{ id: string; title: string; isCompleted: boolean }>;
-  _count?: { subtasks: number; comments: number };
+  files?: Array<{ id: string; name: string; originalName: string; url: string; mimeType: string; size: number }>;
+  _count?: { subtasks: number; comments: number; files?: number };
 }
 
 interface Comment {
   id: string;
   content: string;
-  author?: User;
+  authorId: string;
   createdAt: string;
+  files?: Array<{ id: string; name: string; originalName: string; url: string; mimeType: string; size: number }>;
 }
 
 interface TaskDetailDialogProps {
@@ -91,19 +97,35 @@ const priorityColors: Record<string, string> = {
   LOW: 'bg-gray-500',
 };
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function isImageFile(mimeType: string): boolean {
+  return mimeType.startsWith('image/');
+}
+
 export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailDialogProps) {
   const [newComment, setNewComment] = useState('');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [newChecklistItem, setNewChecklistItem] = useState('');
   const [showSubtasks, setShowSubtasks] = useState(true);
-  const [showChecklist, setShowChecklist] = useState(true);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: taskComments, isLoading: commentsLoading } = useTaskComments(task?.id || '');
+  const { data: taskComments, isLoading: commentsLoading, refetch: refetchComments } = useTaskComments(task?.id || '');
   const createCommentMutation = useCreateComment();
   const updateTaskMutation = useUpdateTask();
   const createTaskMutation = useCreateTask();
 
   const comments = (taskComments as Comment[]) || [];
+
+  // Get user by ID
+  const getUserById = (userId: string): User | undefined => {
+    return users.find(u => u.id === userId);
+  };
 
   const handleUpdateTask = (updates: Partial<TaskType>) => {
     if (!task) return;
@@ -117,21 +139,42 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
     );
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!newComment.trim() || !task) return;
 
-    createCommentMutation.mutate(
-      { content: newComment, taskId: task.id },
-      {
-        onSuccess: () => {
-          toast.success('Comment added');
-          setNewComment('');
-        },
-        onError: () => {
-          toast.error('Failed to add comment');
-        },
+    setIsUploading(true);
+    try {
+      // First upload files if any
+      const uploadedFileIds: string[] = [];
+      for (const file of attachedFiles) {
+        try {
+          const result = await api.files.upload(file, { taskId: task.id });
+          if (result?.id) {
+            uploadedFileIds.push(result.id);
+          }
+        } catch (error) {
+          console.error('File upload failed:', error);
+        }
       }
-    );
+
+      // Then create comment
+      createCommentMutation.mutate(
+        { content: newComment, taskId: task.id },
+        {
+          onSuccess: () => {
+            toast.success('Comment added');
+            setNewComment('');
+            setAttachedFiles([]);
+            refetchComments();
+          },
+          onError: () => {
+            toast.error('Failed to add comment');
+          },
+        }
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleAddSubtask = () => {
@@ -155,6 +198,18 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         },
       }
     );
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setAttachedFiles(prev => [...prev, ...files]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachedFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   if (!task) return null;
@@ -293,7 +348,6 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
               {showSubtasks && (
                 <div className="space-y-2 ml-6">
-                  {/* Existing subtasks would be listed here */}
                   {task.subtasks?.map((subtask) => (
                     <div key={subtask.id} className="flex items-center gap-2 p-2 rounded bg-white/5">
                       <Checkbox
@@ -335,132 +389,224 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
               )}
             </div>
 
-            {/* Checklist Section */}
-            <div className="border-t border-white/10 pt-4">
-              <button
-                onClick={() => setShowChecklist(!showChecklist)}
-                className="flex items-center gap-2 mb-3 text-sm font-medium hover:text-white/80 transition-colors"
-              >
-                {showChecklist ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                <Check className="h-4 w-4 text-white/60" />
-                Checklist
-                <Badge variant="secondary" className="bg-white/10 ml-1">
-                  {task.checklist?.filter(i => i.isCompleted).length || 0}/{task.checklist?.length || 0}
-                </Badge>
-              </button>
-
-              {showChecklist && (
-                <div className="space-y-2 ml-6">
-                  {task.checklist?.map((item) => (
-                    <div key={item.id} className="flex items-center gap-2">
-                      <Checkbox
-                        checked={item.isCompleted}
-                        onCheckedChange={() => {
-                          // Would call API to toggle checklist item
-                        }}
-                      />
-                      <span className={cn('text-sm', item.isCompleted && 'line-through text-white/50')}>
-                        {item.title}
-                      </span>
-                    </div>
-                  ))}
-
-                  {/* Add checklist item input */}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add checklist item..."
-                      value={newChecklistItem}
-                      onChange={(e) => setNewChecklistItem(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          // Would call API to add checklist item
-                          setNewChecklistItem('');
-                        }
-                      }}
-                      className="h-8 text-sm"
-                    />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={!newChecklistItem.trim()}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Comments Section */}
             <div className="border-t border-white/10 pt-4">
               <div className="flex items-center gap-2 mb-4">
                 <MessageSquare className="h-4 w-4 text-white/60" />
-                <h3 className="font-medium text-sm">Comments</h3>
+                <h3 className="font-medium text-sm">Comments & Discussion</h3>
                 <Badge variant="secondary" className="bg-white/10">
-                  {comments.length}
+                  {task._count?.comments || comments.length}
                 </Badge>
               </div>
 
               {/* Comments List */}
-              <div className="space-y-3 mb-4 max-h-48 overflow-y-auto">
+              <div className="space-y-4 mb-4">
                 {commentsLoading ? (
                   <div className="flex items-center justify-center h-16">
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" />
                   </div>
                 ) : comments.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-16 text-white/40">
+                  <div className="flex flex-col items-center justify-center py-8 text-white/40 bg-white/5 rounded-lg">
+                    <MessageSquare className="h-8 w-8 mb-2 opacity-50" />
                     <p className="text-sm">No comments yet</p>
+                    <p className="text-xs mt-1">Be the first to comment</p>
                   </div>
                 ) : (
-                  comments.map((comment) => (
-                    <div key={comment.id} className="flex gap-3 p-3 rounded-lg bg-white/5">
-                      <Avatar className="h-8 w-8 shrink-0">
-                        <AvatarImage src={comment.author?.avatar} />
-                        <AvatarFallback className="text-xs bg-indigo-500">
-                          {comment.author?.name?.charAt(0) || comment.author?.email?.charAt(0) || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm">
-                            {comment.author?.name || comment.author?.email || 'Unknown'}
-                          </span>
-                          <span className="text-xs text-white/40">
-                            {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
-                          </span>
+                  comments.map((comment) => {
+                    const author = getUserById(comment.authorId);
+                    return (
+                      <div key={comment.id} className="flex gap-3 p-4 rounded-lg bg-white/5">
+                        <Avatar className="h-9 w-9 shrink-0">
+                          <AvatarImage src={author?.avatar} />
+                          <AvatarFallback className="text-xs bg-indigo-500">
+                            {author?.name?.charAt(0) || author?.email?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm">
+                              {author?.name || author?.email || 'Unknown User'}
+                            </span>
+                            <span className="text-xs text-white/40">
+                              {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                          <p className="text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
+                            {comment.content}
+                          </p>
+
+                          {/* Comment attachments */}
+                          {comment.files && comment.files.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {comment.files.map((file) => (
+                                <div key={file.id}>
+                                  {isImageFile(file.mimeType) ? (
+                                    <a
+                                      href={file.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="block rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-colors"
+                                    >
+                                      <img
+                                        src={file.url}
+                                        alt={file.originalName}
+                                        className="max-w-[200px] max-h-[150px] object-cover"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <a
+                                      href={file.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-2 px-3 py-2 rounded bg-white/10 hover:bg-white/15 transition-colors text-xs"
+                                    >
+                                      <File className="h-4 w-4 text-white/60" />
+                                      <span className="truncate max-w-[150px]">{file.originalName}</span>
+                                      <Download className="h-3 w-3 text-white/40" />
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm text-white/70 whitespace-pre-wrap">{comment.content}</p>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
-              {/* Add Comment */}
-              <div className="flex gap-2">
+              {/* Add Comment Form */}
+              <div className="space-y-3 bg-white/5 rounded-lg p-4">
                 <Textarea
-                  placeholder="Write a comment..."
+                  placeholder="Write a comment... Share updates, ask questions, or provide feedback"
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
-                  rows={2}
-                  className="resize-none"
+                  rows={3}
+                  className="resize-none bg-transparent border-white/10 focus:border-indigo-500"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                       handleAddComment();
                     }
                   }}
                 />
-                <Button
-                  size="icon"
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim() || createCommentMutation.isPending}
-                  className="shrink-0"
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+
+                {/* Attached files preview */}
+                {attachedFiles.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {attachedFiles.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 px-2 py-1 rounded bg-white/10 text-xs"
+                      >
+                        {file.type.startsWith('image/') ? (
+                          <Image className="h-3 w-3 text-green-400" />
+                        ) : (
+                          <File className="h-3 w-3 text-blue-400" />
+                        )}
+                        <span className="truncate max-w-[100px]">{file.name}</span>
+                        <span className="text-white/40">{formatFileSize(file.size)}</span>
+                        <button
+                          onClick={() => removeAttachedFile(index)}
+                          className="p-0.5 hover:bg-white/10 rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-white/60 hover:text-white"
+                    >
+                      <Paperclip className="h-4 w-4 mr-1" />
+                      Attach
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (fileInputRef.current) {
+                          fileInputRef.current.accept = 'image/*';
+                          fileInputRef.current.click();
+                          fileInputRef.current.accept = 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt';
+                        }
+                      }}
+                      className="text-white/60 hover:text-white"
+                    >
+                      <Image className="h-4 w-4 mr-1" />
+                      Image
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-white/40">⌘+Enter to send</span>
+                    <Button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || createCommentMutation.isPending || isUploading}
+                      size="sm"
+                    >
+                      {isUploading || createCommentMutation.isPending ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Send
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-white/40 mt-1">Press Cmd+Enter to send</p>
             </div>
+
+            {/* Task Files Section */}
+            {task.files && task.files.length > 0 && (
+              <div className="border-t border-white/10 pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Paperclip className="h-4 w-4 text-white/60" />
+                  <h3 className="font-medium text-sm">Attachments</h3>
+                  <Badge variant="secondary" className="bg-white/10">
+                    {task.files.length}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {task.files.map((file) => (
+                    <a
+                      key={file.id}
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 p-2 rounded bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      {isImageFile(file.mimeType) ? (
+                        <Image className="h-4 w-4 text-green-400" />
+                      ) : (
+                        <File className="h-4 w-4 text-blue-400" />
+                      )}
+                      <span className="text-sm truncate flex-1">{file.originalName}</span>
+                      <span className="text-xs text-white/40">{formatFileSize(file.size)}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
 
