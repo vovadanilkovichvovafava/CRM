@@ -664,20 +664,18 @@ export default function ProjectsPage() {
                 const user = getUserById(member.userId);
                 return (
                   <Card key={member.id}>
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={user?.avatar} />
-                          <AvatarFallback>
-                            {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{user?.name || 'Unknown'}</p>
-                          <p className="text-sm text-muted-foreground">{user?.email}</p>
-                        </div>
+                    <CardContent className="flex items-center gap-3 p-4">
+                      <Avatar className="h-10 w-10 flex-shrink-0">
+                        <AvatarImage src={user?.avatar} />
+                        <AvatarFallback>
+                          {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">{user?.name || 'Unknown'}</p>
+                        <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge variant={member.role === 'OWNER' ? 'default' : 'secondary'}>
                           {member.role}
                         </Badge>
