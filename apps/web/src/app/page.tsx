@@ -135,7 +135,7 @@ function HeroSection() {
         </h1>
 
         <p className="text-base sm:text-lg text-white/60 max-w-2xl mx-auto mb-2 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-          Как бог Янус — анализируем историю и прогнозируем результат
+          Анализируем историю и прогнозируем результат
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
@@ -154,22 +154,7 @@ function HeroSection() {
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 mt-8 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
-          <div className="flex items-center gap-2 text-white/50 text-sm">
-            <CheckCircle2 className="w-4 h-4 text-green-400" />
-            <span>Без кредитной карты</span>
-          </div>
-          <div className="flex items-center gap-2 text-white/50 text-sm">
-            <CheckCircle2 className="w-4 h-4 text-green-400" />
-            <span>Онбординг за 15 минут</span>
-          </div>
-          <div className="flex items-center gap-2 text-white/50 text-sm">
-            <CheckCircle2 className="w-4 h-4 text-green-400" />
-            <span>Поддержка в Telegram</span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16 mt-12 pt-10 border-t border-white/5 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+        <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16 mt-10 pt-10 border-t border-white/5 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <div className="text-center">
             <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">+32%</div>
             <div className="text-sm text-white/50 mt-1">к ROI с авто-скорингом</div>
@@ -553,14 +538,148 @@ function DemoSection() {
 
   const [activeTab, setActiveTab] = useState('partners');
 
-  const demoData = {
-    partners: [
-      { name: 'TrafficMaster', status: 'Gold', score: 95, revenue: '$124,500', cr: '4.2%', trend: '+23%' },
-      { name: 'AffiliateKing', status: 'Silver', score: 78, revenue: '$89,200', cr: '3.1%', trend: '+18%' },
-      { name: 'LeadGen Pro', status: 'Gold', score: 92, revenue: '$156,000', cr: '3.8%', trend: '+31%' },
-      { name: 'ConvertMax', status: 'Bronze', score: 65, revenue: '$45,800', cr: '2.4%', trend: '+8%' },
-    ],
-  };
+  const partnersData = [
+    { name: 'TrafficMaster', status: 'Gold', score: 95, revenue: '$124,500', cr: '4.2%', trend: '+23%' },
+    { name: 'AffiliateKing', status: 'Silver', score: 78, revenue: '$89,200', cr: '3.1%', trend: '+18%' },
+    { name: 'LeadGen Pro', status: 'Gold', score: 92, revenue: '$156,000', cr: '3.8%', trend: '+31%' },
+    { name: 'ConvertMax', status: 'Bronze', score: 65, revenue: '$45,800', cr: '2.4%', trend: '+8%' },
+  ];
+
+  const analyticsData = [
+    { campaign: 'FB Casino DE', clicks: '45,230', conversions: '1,892', revenue: '$78,400', roi: '+156%', status: 'Active' },
+    { campaign: 'Google Dating US', clicks: '32,100', conversions: '956', revenue: '$42,100', roi: '+89%', status: 'Active' },
+    { campaign: 'TikTok Nutra ES', clicks: '28,750', conversions: '1,245', revenue: '$61,200', roi: '+124%', status: 'Paused' },
+    { campaign: 'Native Finance UK', clicks: '18,920', conversions: '634', revenue: '$35,800', roi: '+67%', status: 'Active' },
+  ];
+
+  const tasksData = [
+    { task: 'Согласовать ставки с TrafficMaster', assignee: 'Алексей', priority: 'High', due: 'Сегодня', status: 'In Progress' },
+    { task: 'Проверить креативы для FB Casino', assignee: 'Мария', priority: 'Medium', due: 'Завтра', status: 'Todo' },
+    { task: 'Настроить postback для LeadGen Pro', assignee: 'Дмитрий', priority: 'High', due: 'Сегодня', status: 'Done' },
+    { task: 'Анализ ROI за прошлую неделю', assignee: 'Алексей', priority: 'Low', due: '25 янв', status: 'Todo' },
+  ];
+
+  const renderPartnersTable = () => (
+    <div className="bg-black/60 rounded-xl overflow-hidden backdrop-blur-sm">
+      <div className="grid grid-cols-6 gap-4 px-6 py-4 border-b border-white/5 text-sm font-medium text-white/50">
+        <div>Партнёр</div>
+        <div>Статус</div>
+        <div>Score</div>
+        <div>Revenue</div>
+        <div>CR</div>
+        <div>Тренд</div>
+      </div>
+      {partnersData.map((row) => (
+        <div
+          key={row.name}
+          className="grid grid-cols-6 gap-4 px-6 py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="font-medium text-white/90">{row.name}</div>
+          <div>
+            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+              row.status === 'Gold'
+                ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                : row.status === 'Silver'
+                ? 'bg-slate-400/10 text-slate-300 border border-slate-400/20'
+                : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+            }`}>
+              {row.status}
+            </span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${
+                    row.score >= 90 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+                    row.score >= 70 ? 'bg-gradient-to-r from-indigo-500 to-purple-500' :
+                    'bg-gradient-to-r from-orange-500 to-red-500'
+                  }`}
+                  style={{ width: `${row.score}%` }}
+                />
+              </div>
+              <span className="text-sm text-white/60">{row.score}</span>
+            </div>
+          </div>
+          <div className="text-white/80">{row.revenue}</div>
+          <div className="text-white/60">{row.cr}</div>
+          <div className="text-green-400 font-medium">{row.trend}</div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderAnalyticsTable = () => (
+    <div className="bg-black/60 rounded-xl overflow-hidden backdrop-blur-sm">
+      <div className="grid grid-cols-6 gap-4 px-6 py-4 border-b border-white/5 text-sm font-medium text-white/50">
+        <div>Кампания</div>
+        <div>Клики</div>
+        <div>Конверсии</div>
+        <div>Revenue</div>
+        <div>ROI</div>
+        <div>Статус</div>
+      </div>
+      {analyticsData.map((row) => (
+        <div
+          key={row.campaign}
+          className="grid grid-cols-6 gap-4 px-6 py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="font-medium text-white/90">{row.campaign}</div>
+          <div className="text-white/60">{row.clicks}</div>
+          <div className="text-white/60">{row.conversions}</div>
+          <div className="text-white/80">{row.revenue}</div>
+          <div className="text-green-400 font-medium">{row.roi}</div>
+          <div>
+            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+              row.status === 'Active'
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+            }`}>
+              {row.status}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderTasksTable = () => (
+    <div className="bg-black/60 rounded-xl overflow-hidden backdrop-blur-sm">
+      <div className="grid grid-cols-5 gap-4 px-6 py-4 border-b border-white/5 text-sm font-medium text-white/50">
+        <div className="col-span-2">Задача</div>
+        <div>Исполнитель</div>
+        <div>Срок</div>
+        <div>Статус</div>
+      </div>
+      {tasksData.map((row) => (
+        <div
+          key={row.task}
+          className="grid grid-cols-5 gap-4 px-6 py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="col-span-2 flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${
+              row.priority === 'High' ? 'bg-red-400' :
+              row.priority === 'Medium' ? 'bg-yellow-400' : 'bg-slate-400'
+            }`} />
+            <span className="font-medium text-white/90">{row.task}</span>
+          </div>
+          <div className="text-white/60">{row.assignee}</div>
+          <div className={`${row.due === 'Сегодня' ? 'text-red-400' : 'text-white/60'}`}>{row.due}</div>
+          <div>
+            <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+              row.status === 'Done'
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                : row.status === 'In Progress'
+                ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+            }`}>
+              {row.status}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <section id="demo" className="relative py-32 overflow-hidden">
@@ -596,54 +715,9 @@ function DemoSection() {
         <div className="relative">
           <div className="absolute -inset-4 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 rounded-3xl blur-2xl" />
           <div className="relative glass-card p-1">
-            <div className="bg-black/60 rounded-xl overflow-hidden backdrop-blur-sm">
-              <div className="grid grid-cols-6 gap-4 px-6 py-4 border-b border-white/5 text-sm font-medium text-white/50">
-                <div>Партнёр</div>
-                <div>Статус</div>
-                <div>Score</div>
-                <div>Revenue</div>
-                <div>CR</div>
-                <div>Тренд</div>
-              </div>
-
-              {demoData.partners.map((row, index) => (
-                <div
-                  key={row.name}
-                  className="grid grid-cols-6 gap-4 px-6 py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors"
-                >
-                  <div className="font-medium text-white/90">{row.name}</div>
-                  <div>
-                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                      row.status === 'Gold'
-                        ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                        : row.status === 'Silver'
-                        ? 'bg-slate-400/10 text-slate-300 border border-slate-400/20'
-                        : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
-                    }`}>
-                      {row.status}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            row.score >= 90 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
-                            row.score >= 70 ? 'bg-gradient-to-r from-indigo-500 to-purple-500' :
-                            'bg-gradient-to-r from-orange-500 to-red-500'
-                          }`}
-                          style={{ width: `${row.score}%` }}
-                        />
-                      </div>
-                      <span className="text-sm text-white/60">{row.score}</span>
-                    </div>
-                  </div>
-                  <div className="text-white/80">{row.revenue}</div>
-                  <div className="text-white/60">{row.cr}</div>
-                  <div className="text-green-400 font-medium">{row.trend}</div>
-                </div>
-              ))}
-            </div>
+            {activeTab === 'partners' && renderPartnersTable()}
+            {activeTab === 'analytics' && renderAnalyticsTable()}
+            {activeTab === 'tasks' && renderTasksTable()}
           </div>
         </div>
       </div>
