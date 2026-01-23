@@ -211,6 +211,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   const [activeTab, setActiveTab] = useState<'details' | 'subtasks'>('details');
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
+  // Description editing state
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState('');
   // Navigation state for viewing subtasks
   const [taskHistory, setTaskHistory] = useState<string[]>([]);
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null);
@@ -223,13 +226,19 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   const { data: viewingSubtaskData, refetch: refetchViewingTask } = useTask(viewingTaskId || '');
   const deleteTaskMutation = useDeleteTask();
 
-  // Reset navigation when dialog closes or task changes
+  // Reset navigation and editing state when dialog closes or task changes
   useEffect(() => {
     if (!task) {
       setViewingTaskId(null);
       setTaskHistory([]);
+      setIsEditingDescription(false);
     }
   }, [task]);
+
+  // Reset editing state when switching between tasks/subtasks
+  useEffect(() => {
+    setIsEditingDescription(false);
+  }, [viewingTaskId]);
 
   // Determine which task to display
   const displayTask = viewingTaskId && viewingSubtaskData ? viewingSubtaskData : (fullTaskData || task);
@@ -681,16 +690,75 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
                   {/* Description */}
                   <div className="space-y-2">
-                    <Label className="text-white/50 text-xs">Description</Label>
-                    <div className="min-h-[100px] p-3 rounded-lg bg-white/5 border border-white/10">
-                      {displayTask.description ? (
-                        <p className="text-sm text-white/80 whitespace-pre-wrap">
-                          {parseLinks(displayTask.description)}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-white/30 italic">No description</p>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-white/50 text-xs">Description</Label>
+                      {canEditAllFields && !isEditingDescription && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDescriptionDraft(displayTask.description || '');
+                            setIsEditingDescription(true);
+                          }}
+                          className="text-white/50 hover:text-white text-xs h-6"
+                        >
+                          Edit
+                        </Button>
                       )}
                     </div>
+                    {isEditingDescription ? (
+                      <div className="space-y-2">
+                        <Textarea
+                          value={descriptionDraft}
+                          onChange={(e) => setDescriptionDraft(e.target.value)}
+                          placeholder="Add a description..."
+                          rows={4}
+                          className="bg-white/5 border-white/10 text-sm resize-none"
+                          autoFocus
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsEditingDescription(false)}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              handleUpdateTask({ description: descriptionDraft });
+                              setIsEditingDescription(false);
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className={cn(
+                          'min-h-[100px] p-3 rounded-lg bg-white/5 border border-white/10',
+                          canEditAllFields && 'cursor-pointer hover:bg-white/10 transition-colors'
+                        )}
+                        onClick={() => {
+                          if (canEditAllFields) {
+                            setDescriptionDraft(displayTask.description || '');
+                            setIsEditingDescription(true);
+                          }
+                        }}
+                      >
+                        {displayTask.description ? (
+                          <p className="text-sm text-white/80 whitespace-pre-wrap">
+                            {parseLinks(displayTask.description)}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-white/30 italic">
+                            {canEditAllFields ? 'Click to add description...' : 'No description'}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Attachments */}

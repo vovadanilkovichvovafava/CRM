@@ -1,10 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import {
   CalendarDays,
   Flag,
-  ChevronRight,
   MoreHorizontal,
   Trash2,
 } from 'lucide-react';
@@ -59,7 +57,6 @@ function formatDueDate(dateStr: string): { text: string; className: string } {
 }
 
 export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: SubtaskCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const isDone = subtask.status === 'DONE';
   const currentStatus = columns.find(c => c.id === subtask.status);
   const currentPriority = priorities.find(p => p.id === subtask.priority);
@@ -70,12 +67,10 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
   return (
     <div
       className={cn(
-        'group relative flex items-start gap-3 p-3 rounded-lg transition-all cursor-pointer',
+        'group relative flex items-center gap-3 p-3 rounded-lg transition-all cursor-pointer',
         'bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10',
         isDone && 'opacity-60'
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       onClick={() => onClick(subtask)}
     >
       {/* Checkbox */}
@@ -99,17 +94,11 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
         {/* Title row */}
         <div className="flex items-center gap-2">
           <span className={cn(
-            'text-sm font-medium flex-1 truncate',
+            'text-sm font-medium flex-1',
             isDone && 'line-through text-white/50'
           )}>
             {subtask.title}
           </span>
-
-          {/* Open indicator */}
-          <ChevronRight className={cn(
-            'h-4 w-4 text-white/30 transition-all',
-            isHovered && 'text-white/60 translate-x-0.5'
-          )} />
         </div>
 
         {/* Meta row */}
@@ -180,13 +169,13 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
       </div>
 
       {/* Actions menu */}
-      {isHovered && onDelete && (
+      {onDelete && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0"
             >
               <MoreHorizontal className="h-3 w-3" />
             </Button>
