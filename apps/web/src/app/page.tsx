@@ -103,10 +103,10 @@ function NavBar() {
             Войти
           </Link>
           <Link
-            href="/dashboard"
+            href="/auth/register"
             className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25"
           >
-            Начать работу
+            Регистрация
           </Link>
         </div>
       </div>
@@ -116,47 +116,44 @@ function NavBar() {
 
 function HeroSection() {
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+    <section className="relative overflow-hidden pt-24 pb-12">
       <div className="absolute inset-0 bg-grid opacity-30" />
       <div className="absolute inset-0 radial-gradient" />
 
-      <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-sky-500/10 rounded-full blur-[150px] animate-pulse-glow" />
-      <div className="absolute bottom-1/3 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[150px] animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
+      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-sky-500/10 rounded-full blur-[120px] animate-pulse-glow" />
+      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[120px] animate-pulse-glow" style={{ animationDelay: '1.5s' }} />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-6 py-32 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8 animate-fade-in">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 py-12 text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-6 animate-fade-in">
           <Target className="w-4 h-4 text-indigo-400" />
           <span className="text-sm text-white/70">CRM для арбитражных команд</span>
         </div>
 
-        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6 animate-fade-in-up">
-          <span className="text-white">Партнёры, лиды, выплаты —</span>
-          <br />
-          <span className="bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">полный контроль</span>
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4 animate-fade-in-up">
+          <span className="bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Партнёрка под контролем</span>
         </h1>
 
-        <p className="text-lg sm:text-xl text-white/60 max-w-3xl mx-auto mb-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
-          Единая система для управления партнёрами, скоринга качества трафика,
-          контроля выплат и real-time аналитики. Без Excel и хаоса.
+        <p className="text-base sm:text-lg text-white/60 max-w-2xl mx-auto mb-2 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          Партнёры, выплаты, скоринг, аналитика — всё в одном месте
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <Link
-            href="/dashboard"
+            href="/auth/register"
             className="group px-6 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25"
           >
-            Начать работу
+            Зарегистрироваться
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
             href="/auth/login"
-            className="px-6 py-3.5 text-white/80 font-medium rounded-xl border border-white/10 hover:bg-white/5 transition-all flex items-center gap-2"
+            className="px-6 py-3.5 text-white/80 font-medium rounded-xl border border-white/10 hover:bg-white/5 transition-all"
           >
-            Войти в систему
+            Войти
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 mt-12 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10 mt-8 animate-fade-in-up" style={{ animationDelay: '300ms' }}>
           <div className="flex items-center gap-2 text-white/50 text-sm">
             <CheckCircle2 className="w-4 h-4 text-green-400" />
             <span>Без кредитной карты</span>
@@ -171,7 +168,7 @@ function HeroSection() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16 mt-20 pt-16 border-t border-white/5 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
+        <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-16 mt-12 pt-10 border-t border-white/5 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
           <div className="text-center">
             <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">+32%</div>
             <div className="text-sm text-white/50 mt-1">к ROI с авто-скорингом</div>
@@ -675,17 +672,17 @@ function CTASection() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/dashboard"
+            href="/auth/register"
             className="group px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25"
           >
-            Начать работу
+            Зарегистрироваться
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
             href="/auth/login"
             className="px-8 py-4 text-white/80 font-medium rounded-xl border border-white/10 hover:bg-white/5 transition-all"
           >
-            Войти в систему
+            Войти
           </Link>
         </div>
 
