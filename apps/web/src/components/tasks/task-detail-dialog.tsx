@@ -521,22 +521,25 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 >
                   Details
                 </button>
-                <button
-                  onClick={() => setActiveTab('subtasks')}
-                  className={cn(
-                    'pb-2 text-sm font-medium border-b-2 transition-colors',
-                    activeTab === 'subtasks'
-                      ? 'border-indigo-500 text-white'
-                      : 'border-transparent text-white/50 hover:text-white'
-                  )}
-                >
-                  Subtasks
-                  {((displayTask._count?.subtasks || 0) > 0 || (taskWithSubtasks.subtasks?.length || 0) > 0) && (
-                    <Badge variant="secondary" className="ml-2 bg-white/10 text-xs">
-                      {displayTask._count?.subtasks || taskWithSubtasks.subtasks?.length || 0}
-                    </Badge>
-                  )}
-                </button>
+                {/* Hide subtasks tab for subtasks - subtasks cannot have nested subtasks */}
+                {!isViewingSubtask && (
+                  <button
+                    onClick={() => setActiveTab('subtasks')}
+                    className={cn(
+                      'pb-2 text-sm font-medium border-b-2 transition-colors',
+                      activeTab === 'subtasks'
+                        ? 'border-indigo-500 text-white'
+                        : 'border-transparent text-white/50 hover:text-white'
+                    )}
+                  >
+                    Subtasks
+                    {((displayTask._count?.subtasks || 0) > 0 || (taskWithSubtasks.subtasks?.length || 0) > 0) && (
+                      <Badge variant="secondary" className="ml-2 bg-white/10 text-xs">
+                        {displayTask._count?.subtasks || taskWithSubtasks.subtasks?.length || 0}
+                      </Badge>
+                    )}
+                  </button>
+                )}
               </div>
 
               {activeTab === 'details' && (
@@ -817,7 +820,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 </>
               )}
 
-              {activeTab === 'subtasks' && (
+              {activeTab === 'subtasks' && !isViewingSubtask && (
                 <div className="space-y-3">
                   {/* Empty state */}
                   {(!taskWithSubtasks.subtasks || taskWithSubtasks.subtasks.length === 0) && (

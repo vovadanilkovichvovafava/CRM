@@ -61,7 +61,6 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
   const currentStatus = columns.find(c => c.id === subtask.status);
   const currentPriority = priorities.find(p => p.id === subtask.priority);
   const dueInfo = subtask.dueDate ? formatDueDate(subtask.dueDate) : null;
-  const subtaskCount = subtask._count?.subtasks || 0;
   const commentCount = subtask._count?.comments || 0;
 
   return (
@@ -147,16 +146,6 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
                 {subtask.assignee.name?.charAt(0) || subtask.assignee.email?.charAt(0) || 'U'}
               </AvatarFallback>
             </Avatar>
-          )}
-
-          {/* Subtasks count */}
-          {subtaskCount > 0 && (
-            <span className="text-[10px] text-white/40 flex items-center gap-1">
-              <span className="w-3 h-3 flex items-center justify-center rounded bg-white/10 text-[8px]">
-                {subtaskCount}
-              </span>
-              subtasks
-            </span>
           )}
 
           {/* Comments count */}
