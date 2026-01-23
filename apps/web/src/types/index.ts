@@ -157,6 +157,8 @@ export interface Task {
   createdBy: string;
   project?: { id: string; name: string; color?: string };
   assignee?: { id: string; name?: string; email: string; avatar?: string };
+  subtasks?: Task[];
+  files?: Array<{ id: string; name: string; originalName: string; url: string; mimeType: string; size: number }>;
   _count?: {
     subtasks: number;
     comments: number;

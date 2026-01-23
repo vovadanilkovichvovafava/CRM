@@ -57,7 +57,7 @@ import {
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useTaskComments, useCreateComment } from '@/hooks/use-comments';
-import { useUpdateTask, useCreateTask } from '@/hooks/use-tasks';
+import { useUpdateTask, useCreateTask, useTask } from '@/hooks/use-tasks';
 import { toast } from 'sonner';
 import type { Task as TaskType } from '@/types';
 import { api } from '@/lib/api';
@@ -222,6 +222,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   const fileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
+  // Fetch full task data to get subtasks
+  const { data: fullTaskData, refetch: refetchTask } = useTask(task?.id || '');
+
   // Get current user for permission checks
   const currentUser = useAuthStore((state) => state.user);
   const userRole = task ? getUserRole(task, currentUser?.id) : 'viewer';
@@ -230,13 +233,20 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   const canEditStatus = isCreator || isAssignee;
   const canEditAllFields = isCreator;
   const canAddAttachments = isCreator || isAssignee;
-  const canAddComments = true; // Everyone can add comments
-  const hasIncompleteSubtasks = task ? !areAllSubtasksDone(task.subtasks) : false;
+  // Use fullTaskData subtasks if available for accurate status check
+  const subtasksForCheck = fullTaskData?.subtasks || task?.subtasks;
+  const hasIncompleteSubtasks = task ? !areAllSubtasksDone(subtasksForCheck) : false;
 
   const { data: taskComments, isLoading: commentsLoading, refetch: refetchComments } = useTaskComments(task?.id || '');
   const createCommentMutation = useCreateComment();
   const updateTaskMutation = useUpdateTask();
   const createTaskMutation = useCreateTask();
+
+  // Merge task data with full data (subtasks from fullTaskData)
+  const taskWithSubtasks = {
+    ...task,
+    subtasks: fullTaskData?.subtasks || task?.subtasks || [],
+  };
 
   const comments = (taskComments as Comment[]) || [];
 
@@ -315,6 +325,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         onSuccess: () => {
           toast.success('Subtask added');
           setNewSubtaskTitle('');
+          refetchTask(); // Refresh to show new subtask
         },
         onError: () => {
           toast.error('Failed to add subtask');
@@ -632,15 +643,22 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
               {activeTab === 'subtasks' && (
                 <div className="space-y-3">
-                  {task.subtasks?.map((subtask) => (
+                  {taskWithSubtasks.subtasks?.map((subtask) => (
                     <div key={subtask.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
                       <Checkbox
                         checked={subtask.status === 'DONE'}
                         onCheckedChange={(checked) => {
-                          updateTaskMutation.mutate({
-                            id: subtask.id,
-                            data: { status: checked ? 'DONE' : 'TODO' } as Partial<TaskType>,
-                          });
+                          updateTaskMutation.mutate(
+                            {
+                              id: subtask.id,
+                              data: { status: checked ? 'DONE' : 'TODO' } as Partial<TaskType>,
+                            },
+                            {
+                              onSuccess: () => {
+                                refetchTask(); // Refresh subtasks list
+                              },
+                            }
+                          );
                         }}
                       />
                       <span className={cn('text-sm flex-1', subtask.status === 'DONE' && 'line-through text-white/50')}>

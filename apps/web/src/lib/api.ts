@@ -153,6 +153,14 @@ export const api = {
     update: (id: string, data: unknown) =>
       request<unknown>(`/projects/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => request<void>(`/projects/${id}`, { method: 'DELETE' }),
+    // Project Members
+    addMember: (projectId: string, userId: string, role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER' = 'MEMBER') =>
+      request<{ id: string; projectId: string; userId: string; role: string }>(
+        `/projects/${projectId}/members`,
+        { method: 'POST', body: JSON.stringify({ userId, role }) }
+      ),
+    removeMember: (projectId: string, userId: string) =>
+      request<void>(`/projects/${projectId}/members/${userId}`, { method: 'DELETE' }),
   },
 
   // Tasks

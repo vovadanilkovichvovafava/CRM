@@ -143,12 +143,17 @@ export class ProjectsService {
     };
   }
 
-  async findOne(id: string): Promise<Project> {
+  async findOne(id: string) {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
         _count: {
           select: { tasks: true },
+        },
+        members: {
+          include: {
+            project: false,
+          },
         },
       },
     });

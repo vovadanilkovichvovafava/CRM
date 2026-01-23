@@ -60,3 +60,36 @@ export function useDeleteProject() {
     },
   });
 }
+
+export function useAddProjectMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      userId,
+      role,
+    }: {
+      projectId: string;
+      userId: string;
+      role?: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+    }) => api.projects.addMember(projectId, userId, role),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] });
+    },
+  });
+}
+
+export function useRemoveProjectMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, userId }: { projectId: string; userId: string }) =>
+      api.projects.removeMember(projectId, userId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', projectId] });
+    },
+  });
+}
