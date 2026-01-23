@@ -3,12 +3,10 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   CalendarDays,
-  MessageSquare,
   Send,
   Plus,
   ListTodo,
-  ChevronDown,
-  ChevronRight,
+  ChevronLeft,
   Paperclip,
   Image as ImageIcon,
   File,
@@ -31,7 +29,6 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -49,19 +46,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { useTaskComments, useCreateComment } from '@/hooks/use-comments';
-import { useUpdateTask, useCreateTask, useTask } from '@/hooks/use-tasks';
+import { useUpdateTask, useCreateTask, useTask, useDeleteTask } from '@/hooks/use-tasks';
 import { toast } from 'sonner';
 import type { Task as TaskType } from '@/types';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
+import { SubtaskCard } from './subtask-card';
 
 /**
  * Task role for permission checks
@@ -213,39 +206,73 @@ function parseLinks(content: string): React.ReactNode {
 export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailDialogProps) {
   const [newComment, setNewComment] = useState('');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [showSubtasks, setShowSubtasks] = useState(true);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'subtasks'>('details');
   const [showMentions, setShowMentions] = useState(false);
   const [mentionFilter, setMentionFilter] = useState('');
+  // Navigation state for viewing subtasks
+  const [taskHistory, setTaskHistory] = useState<string[]>([]);
+  const [viewingTaskId, setViewingTaskId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch full task data to get subtasks
   const { data: fullTaskData, refetch: refetchTask } = useTask(task?.id || '');
+  // Fetch the subtask data when viewing a subtask
+  const { data: viewingSubtaskData, refetch: refetchViewingTask } = useTask(viewingTaskId || '');
+  const deleteTaskMutation = useDeleteTask();
+
+  // Reset navigation when dialog closes or task changes
+  useEffect(() => {
+    if (!task) {
+      setViewingTaskId(null);
+      setTaskHistory([]);
+    }
+  }, [task]);
+
+  // Determine which task to display
+  const displayTask = viewingTaskId && viewingSubtaskData ? viewingSubtaskData : (fullTaskData || task);
+  const isViewingSubtask = !!viewingTaskId;
+
+  // Navigate to a subtask
+  const navigateToSubtask = (subtask: Task) => {
+    if (displayTask) {
+      setTaskHistory(prev => [...prev, displayTask.id]);
+    }
+    setViewingTaskId(subtask.id);
+    setActiveTab('details');
+  };
+
+  // Navigate back to parent
+  const navigateBack = () => {
+    const newHistory = [...taskHistory];
+    const previousTaskId = newHistory.pop();
+    setTaskHistory(newHistory);
+    setViewingTaskId(previousTaskId === task?.id ? null : previousTaskId || null);
+  };
 
   // Get current user for permission checks
   const currentUser = useAuthStore((state) => state.user);
-  const userRole = task ? getUserRole(task, currentUser?.id) : 'viewer';
+  const userRole = displayTask ? getUserRole(displayTask as Task, currentUser?.id) : 'viewer';
   const isCreator = userRole === 'creator';
   const isAssignee = userRole === 'assignee';
   const canEditStatus = isCreator || isAssignee;
   const canEditAllFields = isCreator;
   const canAddAttachments = isCreator || isAssignee;
   // Use fullTaskData subtasks if available for accurate status check
-  const subtasksForCheck = fullTaskData?.subtasks || task?.subtasks;
-  const hasIncompleteSubtasks = task ? !areAllSubtasksDone(subtasksForCheck) : false;
+  const subtasksForCheck = displayTask?.subtasks;
+  const hasIncompleteSubtasks = displayTask ? !areAllSubtasksDone(subtasksForCheck as Task[] | undefined) : false;
 
-  const { data: taskComments, isLoading: commentsLoading, refetch: refetchComments } = useTaskComments(task?.id || '');
+  const { data: taskComments, isLoading: commentsLoading, refetch: refetchComments } = useTaskComments(displayTask?.id || '');
   const createCommentMutation = useCreateComment();
   const updateTaskMutation = useUpdateTask();
   const createTaskMutation = useCreateTask();
 
   // Merge task data with full data (subtasks from fullTaskData)
   const taskWithSubtasks = {
-    ...task,
-    subtasks: fullTaskData?.subtasks || task?.subtasks || [],
+    ...displayTask,
+    subtasks: displayTask?.subtasks || [],
   };
 
   const comments = (taskComments as Comment[]) || [];
@@ -256,7 +283,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   };
 
   const handleUpdateTask = (updates: Partial<TaskType>) => {
-    if (!task) return;
+    if (!displayTask) return;
 
     // Check if trying to set status to DONE with incomplete subtasks
     if (updates.status === 'DONE' && hasIncompleteSubtasks) {
@@ -265,10 +292,16 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
     }
 
     updateTaskMutation.mutate(
-      { id: task.id, data: updates },
+      { id: displayTask.id, data: updates },
       {
         onSuccess: () => {
           toast.success('Task updated');
+          // Refresh the current task data
+          if (viewingTaskId) {
+            refetchViewingTask();
+          } else {
+            refetchTask();
+          }
         },
         onError: (error: Error) => {
           toast.error(error.message || 'Failed to update task');
@@ -278,21 +311,21 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   };
 
   const handleAddComment = async () => {
-    if (!newComment.trim() || !task) return;
+    if (!newComment.trim() || !displayTask) return;
 
     setIsUploading(true);
     try {
       // Upload files if any
       for (const file of attachedFiles) {
         try {
-          await api.files.upload(file, { taskId: task.id });
+          await api.files.upload(file, { taskId: displayTask.id });
         } catch (error) {
           console.error('File upload failed:', error);
         }
       }
 
       createCommentMutation.mutate(
-        { content: newComment, taskId: task.id },
+        { content: newComment, taskId: displayTask.id },
         {
           onSuccess: () => {
             toast.success('Comment added');
@@ -311,13 +344,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   };
 
   const handleAddSubtask = () => {
-    if (!newSubtaskTitle.trim() || !task) return;
+    if (!newSubtaskTitle.trim() || !displayTask) return;
 
     createTaskMutation.mutate(
       {
         title: newSubtaskTitle,
-        parentId: task.id,
-        projectId: task.project?.id,
+        parentId: displayTask.id,
+        projectId: displayTask.project?.id,
         status: 'TODO',
         priority: 'MEDIUM',
       } as Partial<TaskType>,
@@ -325,10 +358,51 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         onSuccess: () => {
           toast.success('Subtask added');
           setNewSubtaskTitle('');
-          refetchTask(); // Refresh to show new subtask
+          // Refresh the current task data
+          if (viewingTaskId) {
+            refetchViewingTask();
+          } else {
+            refetchTask();
+          }
         },
         onError: () => {
           toast.error('Failed to add subtask');
+        },
+      }
+    );
+  };
+
+  // Handle subtask deletion
+  const handleDeleteSubtask = (subtaskId: string) => {
+    deleteTaskMutation.mutate(subtaskId, {
+      onSuccess: () => {
+        toast.success('Subtask deleted');
+        if (viewingTaskId) {
+          refetchViewingTask();
+        } else {
+          refetchTask();
+        }
+      },
+      onError: () => {
+        toast.error('Failed to delete subtask');
+      },
+    });
+  };
+
+  // Handle subtask status change
+  const handleSubtaskStatusChange = (subtaskId: string, done: boolean) => {
+    updateTaskMutation.mutate(
+      {
+        id: subtaskId,
+        data: { status: done ? 'DONE' : 'TODO' } as Partial<TaskType>,
+      },
+      {
+        onSuccess: () => {
+          if (viewingTaskId) {
+            refetchViewingTask();
+          } else {
+            refetchTask();
+          }
         },
       }
     );
@@ -372,10 +446,10 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
     u.email?.toLowerCase().includes(mentionFilter.toLowerCase())
   );
 
-  if (!task) return null;
+  if (!task || !displayTask) return null;
 
-  const currentStatus = columns.find(c => c.id === task.status);
-  const currentPriority = priorities.find(p => p.id === task.priority);
+  const currentStatus = columns.find(c => c.id === displayTask.status);
+  const currentPriority = priorities.find(p => p.id === displayTask.priority);
 
   return (
     <Dialog open={!!task} onOpenChange={() => onClose()}>
@@ -383,12 +457,40 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-3">
+            {/* Back button when viewing subtask */}
+            {isViewingSubtask && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={navigateBack}
+                className="h-8 w-8 mr-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
             <div className={cn('w-3 h-3 rounded-full', currentStatus?.color)} />
-            <span className="text-lg font-semibold">{task.title}</span>
+            <div className="flex flex-col">
+              {/* Breadcrumb showing parent task when viewing subtask */}
+              {isViewingSubtask && task && (
+                <button
+                  onClick={navigateBack}
+                  className="text-xs text-white/40 hover:text-white/60 text-left truncate max-w-[300px]"
+                >
+                  {task.title}
+                </button>
+              )}
+              <span className="text-lg font-semibold">{displayTask.title}</span>
+            </div>
+            {/* Subtask badge */}
+            {isViewingSubtask && (
+              <Badge variant="outline" className="text-[10px] text-white/50">
+                Subtask
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2 text-xs text-white/50">
-            {task.createdAt && (
-              <span>Created {format(new Date(task.createdAt), 'MMM d, yyyy')}</span>
+            {displayTask.createdAt && (
+              <span>Created {format(new Date(displayTask.createdAt), 'MMM d, yyyy')}</span>
             )}
           </div>
         </div>
@@ -420,9 +522,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   )}
                 >
                   Subtasks
-                  {(task._count?.subtasks || 0) > 0 && (
+                  {((displayTask._count?.subtasks || 0) > 0 || (taskWithSubtasks.subtasks?.length || 0) > 0) && (
                     <Badge variant="secondary" className="ml-2 bg-white/10 text-xs">
-                      {task._count?.subtasks}
+                      {displayTask._count?.subtasks || taskWithSubtasks.subtasks?.length || 0}
                     </Badge>
                   )}
                 </button>
@@ -442,11 +544,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         )}
                       </div>
                       <Select
-                        value={task.status}
+                        value={displayTask.status}
                         disabled={!canEditStatus}
                         onValueChange={(value) => {
                           handleUpdateTask({ status: value as TaskType['status'] });
-                          onUpdate({ ...task, status: value });
+                          if (!isViewingSubtask) {
+                            onUpdate({ ...task, status: value });
+                          }
                         }}
                       >
                         <SelectTrigger className={cn('h-9 w-full', currentStatus?.textColor, !canEditStatus && 'opacity-60')}>
@@ -482,17 +586,19 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         )}
                       </div>
                       <Select
-                        value={task.assigneeId || '__none__'}
+                        value={displayTask.assigneeId || '__none__'}
                         disabled={!canEditAllFields}
                         onValueChange={(value) => {
                           const actualValue = value === '__none__' ? null : value;
                           handleUpdateTask({ assigneeId: actualValue } as Partial<TaskType>);
                           const user = actualValue ? users.find(u => u.id === actualValue) : undefined;
-                          onUpdate({
-                            ...task,
-                            assigneeId: actualValue || undefined,
-                            assignee: user,
-                          });
+                          if (!isViewingSubtask) {
+                            onUpdate({
+                              ...task,
+                              assigneeId: actualValue || undefined,
+                              assignee: user,
+                            });
+                          }
                         }}
                       >
                         <SelectTrigger className={cn('h-9 w-full', !canEditAllFields && 'opacity-60')}>
@@ -529,8 +635,8 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         <span>Dates</span>
                       </div>
                       <div className="text-sm">
-                        {task.dueDate ? (
-                          <span>Due {format(new Date(task.dueDate), 'MMM d, yyyy')}</span>
+                        {displayTask.dueDate ? (
+                          <span>Due {format(new Date(displayTask.dueDate), 'MMM d, yyyy')}</span>
                         ) : (
                           <span className="text-white/40">No due date</span>
                         )}
@@ -547,11 +653,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         )}
                       </div>
                       <Select
-                        value={task.priority}
+                        value={displayTask.priority}
                         disabled={!canEditAllFields}
                         onValueChange={(value) => {
                           handleUpdateTask({ priority: value as TaskType['priority'] });
-                          onUpdate({ ...task, priority: value });
+                          if (!isViewingSubtask) {
+                            onUpdate({ ...task, priority: value });
+                          }
                         }}
                       >
                         <SelectTrigger className={cn('h-9 w-full', currentPriority?.color, !canEditAllFields && 'opacity-60')}>
@@ -575,9 +683,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <div className="space-y-2">
                     <Label className="text-white/50 text-xs">Description</Label>
                     <div className="min-h-[100px] p-3 rounded-lg bg-white/5 border border-white/10">
-                      {task.description ? (
+                      {displayTask.description ? (
                         <p className="text-sm text-white/80 whitespace-pre-wrap">
-                          {parseLinks(task.description)}
+                          {parseLinks(displayTask.description)}
                         </p>
                       ) : (
                         <p className="text-sm text-white/30 italic">No description</p>
@@ -616,9 +724,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                       </div>
                     )}
 
-                    {task.files && task.files.length > 0 && (
+                    {displayTask.files && displayTask.files.length > 0 && (
                       <div className="grid grid-cols-2 gap-2">
-                        {task.files.map((file) => (
+                        {displayTask.files.map((file) => (
                           <a
                             key={file.id}
                             href={file.url}
@@ -643,34 +751,28 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
               {activeTab === 'subtasks' && (
                 <div className="space-y-3">
-                  {taskWithSubtasks.subtasks?.map((subtask) => (
-                    <div key={subtask.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                      <Checkbox
-                        checked={subtask.status === 'DONE'}
-                        onCheckedChange={(checked) => {
-                          updateTaskMutation.mutate(
-                            {
-                              id: subtask.id,
-                              data: { status: checked ? 'DONE' : 'TODO' } as Partial<TaskType>,
-                            },
-                            {
-                              onSuccess: () => {
-                                refetchTask(); // Refresh subtasks list
-                              },
-                            }
-                          );
-                        }}
-                      />
-                      <span className={cn('text-sm flex-1', subtask.status === 'DONE' && 'line-through text-white/50')}>
-                        {subtask.title}
-                      </span>
-                      <Badge variant="outline" className="text-xs">
-                        {columns.find(c => c.id === subtask.status)?.name}
-                      </Badge>
+                  {/* Empty state */}
+                  {(!taskWithSubtasks.subtasks || taskWithSubtasks.subtasks.length === 0) && (
+                    <div className="text-center py-8 text-white/40">
+                      <ListTodo className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No subtasks yet</p>
+                      <p className="text-xs mt-1">Add subtasks to break down this task</p>
                     </div>
+                  )}
+
+                  {/* Subtasks list using SubtaskCard */}
+                  {taskWithSubtasks.subtasks?.map((subtask) => (
+                    <SubtaskCard
+                      key={subtask.id}
+                      subtask={subtask as TaskType}
+                      onClick={navigateToSubtask}
+                      onStatusChange={handleSubtaskStatusChange}
+                      onDelete={canEditAllFields ? handleDeleteSubtask : undefined}
+                    />
                   ))}
 
-                  <div className="flex gap-2 mt-4">
+                  {/* Add subtask input */}
+                  <div className="flex gap-2 mt-4 pt-4 border-t border-white/10">
                     <Input
                       placeholder="Add subtask..."
                       value={newSubtaskTitle}
@@ -719,19 +821,19 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <div className="w-1 h-1 rounded-full bg-white/30 mt-1.5" />
                   <div>
                     <span>
-                      {getUserById(task.createdBy)?.name || getUserById(task.createdBy)?.email || 'Someone'} created this task
+                      {getUserById(displayTask.createdBy)?.name || getUserById(displayTask.createdBy)?.email || 'Someone'} created this {isViewingSubtask ? 'subtask' : 'task'}
                     </span>
-                    {task.createdAt && (
-                      <span className="ml-2">{format(new Date(task.createdAt), 'MMM d, yyyy')}</span>
+                    {displayTask.createdAt && (
+                      <span className="ml-2">{format(new Date(displayTask.createdAt), 'MMM d, yyyy')}</span>
                     )}
                   </div>
                 </div>
 
-                {task.assigneeId && (
+                {displayTask.assigneeId && (
                   <div className="flex items-start gap-3 text-xs text-white/50">
                     <div className="w-1 h-1 rounded-full bg-white/30 mt-1.5" />
                     <div>
-                      <span>Assigned to: {getUserById(task.assigneeId)?.name || 'User'}</span>
+                      <span>Assigned to: {getUserById(displayTask.assigneeId)?.name || 'User'}</span>
                     </div>
                   </div>
                 )}
