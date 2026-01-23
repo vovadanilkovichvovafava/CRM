@@ -34,8 +34,8 @@ export interface CreateTaskDto {
   parentId?: string;
   assigneeId?: string;
   recordId?: string;
-  startDate?: Date;
-  dueDate?: Date;
+  startDate?: Date | string;
+  dueDate?: Date | string;
   timeEstimate?: number;
   labels?: string[];
 }
@@ -46,8 +46,8 @@ export interface UpdateTaskDto {
   status?: TaskStatus;
   priority?: Priority;
   assigneeId?: string;
-  startDate?: Date;
-  dueDate?: Date;
+  startDate?: Date | string;
+  dueDate?: Date | string;
   timeEstimate?: number;
   position?: number;
   labels?: string[];
@@ -152,6 +152,16 @@ export class TasksService {
     }
   }
 
+  /**
+   * Convert string date to Date object if needed
+   */
+  private parseDate(date: Date | string | undefined): Date | undefined {
+    if (!date) return undefined;
+    if (date instanceof Date) return date;
+    const parsed = new Date(date);
+    return isNaN(parsed.getTime()) ? undefined : parsed;
+  }
+
   async create(dto: CreateTaskDto, userId: string): Promise<Task> {
     // Calculate position (at the end of the list)
     const maxPosition = await this.prisma.task.aggregate({
@@ -161,6 +171,10 @@ export class TasksService {
       },
       _max: { position: true },
     });
+
+    // Parse dates from string if needed
+    const startDate = this.parseDate(dto.startDate);
+    const dueDate = this.parseDate(dto.dueDate);
 
     const task = await this.prisma.task.create({
       data: {
@@ -172,8 +186,8 @@ export class TasksService {
         parentId: dto.parentId,
         assigneeId: dto.assigneeId,
         recordId: dto.recordId,
-        startDate: dto.startDate,
-        dueDate: dto.dueDate,
+        startDate,
+        dueDate,
         timeEstimate: dto.timeEstimate,
         labels: dto.labels || [],
         position: (maxPosition._max.position || 0) + 1,
@@ -310,12 +324,17 @@ export class TasksService {
 
     const statusChanged = dto.status && dto.status !== existing.status;
 
+    // Parse dates from string if needed
+    const updateData: Prisma.TaskUpdateInput = {
+      ...dto,
+      startDate: dto.startDate !== undefined ? this.parseDate(dto.startDate) : undefined,
+      dueDate: dto.dueDate !== undefined ? this.parseDate(dto.dueDate) : undefined,
+      completedAt: dto.status === TaskStatus.DONE ? new Date() : undefined,
+    };
+
     const task = await this.prisma.task.update({
       where: { id },
-      data: {
-        ...dto,
-        completedAt: dto.status === TaskStatus.DONE ? new Date() : undefined,
-      },
+      data: updateData,
       include: {
         project: { select: { id: true, name: true } },
         _count: { select: { subtasks: true, comments: true, files: true } },
