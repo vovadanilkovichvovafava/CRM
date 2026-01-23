@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ArrowRight,
   Zap,
@@ -35,39 +36,16 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
-function JanusLogo({ className = "w-10 h-10" }: { className?: string }) {
+function JanusLogo({ className = "w-10 h-10", size = 40 }: { className?: string; size?: number }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="janusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#818cf8" />
-          <stop offset="50%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#c084fc" />
-        </linearGradient>
-        <linearGradient id="janusGradient2" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#38bdf8" />
-          <stop offset="100%" stopColor="#818cf8" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M24 4C13 4 4 13 4 24C4 35 13 44 24 44"
-        stroke="url(#janusGradient2)"
-        strokeWidth="3"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <path
-        d="M24 4C35 4 44 13 44 24C44 35 35 44 24 44"
-        stroke="url(#janusGradient)"
-        strokeWidth="3"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <line x1="24" y1="8" x2="24" y2="40" stroke="url(#janusGradient)" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="16" cy="20" r="3" fill="url(#janusGradient2)" />
-      <circle cx="32" cy="20" r="3" fill="url(#janusGradient)" />
-      <circle cx="24" cy="32" r="4" fill="url(#janusGradient)" />
-    </svg>
+    <Image
+      src="/logo.png"
+      alt="Janus CRM"
+      width={size}
+      height={size}
+      className={className}
+      priority
+    />
   );
 }
 
@@ -76,7 +54,7 @@ function NavBar() {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <JanusLogo className="w-9 h-9" />
+          <JanusLogo size={36} />
           <span className="font-bold text-xl tracking-tight">Janus</span>
         </Link>
 
@@ -735,7 +713,7 @@ function CTASection() {
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
-        <JanusLogo className="w-16 h-16 mx-auto mb-8" />
+        <div className="mx-auto mb-8"><JanusLogo size={64} /></div>
 
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
           Готовы навести порядок
@@ -776,7 +754,7 @@ function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-12">
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <JanusLogo className="w-8 h-8" />
+              <JanusLogo size={32} />
               <span className="font-bold text-lg">Janus</span>
             </div>
             <p className="text-sm text-white/50 mb-4">
