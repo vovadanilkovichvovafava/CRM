@@ -11,7 +11,6 @@ import {
   Layers,
   Shield,
   CheckCircle2,
-  Play,
   TrendingUp,
   Target,
   Clock,
@@ -23,16 +22,16 @@ import {
   FileSpreadsheet,
   LineChart,
   UserCheck,
-  Calendar,
   MessageSquare,
-  Bell,
   Lock,
   Gauge,
   Award,
-  ChevronRight,
   Mail,
   LayoutDashboard,
-  KanbanSquare
+  KanbanSquare,
+  Link2,
+  Wrench,
+  type LucideIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth';
 
@@ -104,10 +103,10 @@ function NavBar() {
             Войти
           </Link>
           <Link
-            href="/auth/register"
+            href="/dashboard"
             className="px-4 py-2 text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25"
           >
-            Запросить демо
+            Начать работу
           </Link>
         </div>
       </div>
@@ -143,18 +142,17 @@ function HeroSection() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
           <Link
-            href="/auth/register"
+            href="/dashboard"
             className="group px-6 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25"
           >
-            Запросить демо
+            Начать работу
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
-            href="/dashboard"
+            href="/auth/login"
             className="px-6 py-3.5 text-white/80 font-medium rounded-xl border border-white/10 hover:bg-white/5 transition-all flex items-center gap-2"
           >
-            <Play className="w-4 h-4" />
-            Попробовать бесплатно
+            Войти в систему
           </Link>
         </div>
 
@@ -446,13 +444,13 @@ function UseCasesSection() {
 }
 
 function IntegrationsSection() {
-  const integrations = [
-    { name: 'Keitaro', description: 'Real-time трекинг', icon: '📊' },
-    { name: 'Telegram', description: 'Алерты и уведомления', icon: '💬' },
-    { name: 'Postback/S2S', description: 'Любые партнёрки', icon: '🔗' },
-    { name: 'Webhooks', description: 'Custom интеграции', icon: '⚡' },
-    { name: 'REST API', description: 'Полный доступ', icon: '🛠' },
-    { name: 'Email', description: 'Resend, SMTP', icon: '📧' },
+  const integrations: { name: string; description: string; icon: LucideIcon; gradient: string }[] = [
+    { name: 'Keitaro', description: 'Real-time трекинг', icon: BarChart3, gradient: 'from-green-500 to-emerald-500' },
+    { name: 'Telegram', description: 'Алерты и уведомления', icon: MessageSquare, gradient: 'from-sky-500 to-blue-500' },
+    { name: 'Postback/S2S', description: 'Любые партнёрки', icon: Link2, gradient: 'from-purple-500 to-pink-500' },
+    { name: 'Webhooks', description: 'Custom интеграции', icon: Zap, gradient: 'from-yellow-500 to-amber-500' },
+    { name: 'REST API', description: 'Полный доступ', icon: Wrench, gradient: 'from-slate-400 to-slate-500' },
+    { name: 'Email', description: 'Resend, SMTP', icon: Mail, gradient: 'from-indigo-500 to-violet-500' },
   ];
 
   return (
@@ -501,9 +499,11 @@ function IntegrationsSection() {
             {integrations.map((integration) => (
               <div
                 key={integration.name}
-                className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/10 transition-all text-center"
+                className="p-5 rounded-xl bg-white/[0.02] border border-white/[0.05] hover:border-white/10 transition-all text-center group"
               >
-                <div className="text-3xl mb-3">{integration.icon}</div>
+                <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br ${integration.gradient} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                  <integration.icon className="w-6 h-6 text-white" />
+                </div>
                 <div className="font-medium text-white mb-1">{integration.name}</div>
                 <div className="text-xs text-white/50">{integration.description}</div>
               </div>
@@ -670,28 +670,27 @@ function CTASection() {
           <span className="bg-gradient-to-r from-sky-400 to-purple-400 bg-clip-text text-transparent"> в партнёрке?</span>
         </h2>
         <p className="text-lg text-white/60 mb-10 max-w-2xl mx-auto">
-          Запросите демо и мы покажем как Janus решит ваши задачи.
-          Или попробуйте бесплатно — без карты, без обязательств.
+          Начните использовать Janus прямо сейчас — регистрация займёт меньше минуты.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            href="/auth/register"
+            href="/dashboard"
             className="group px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25"
           >
-            Запросить демо
+            Начать работу
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
-            href="/dashboard"
+            href="/auth/login"
             className="px-8 py-4 text-white/80 font-medium rounded-xl border border-white/10 hover:bg-white/5 transition-all"
           >
-            Попробовать бесплатно
+            Войти в систему
           </Link>
         </div>
 
         <p className="text-sm text-white/40 mt-6">
-          14 дней бесплатно. Без кредитной карты. Отмена в любой момент.
+          Полный доступ ко всем функциям. Без ограничений.
         </p>
       </div>
     </section>
@@ -792,9 +791,9 @@ export default function LandingPage() {
       <HeroSection />
       <ProblemsSection />
       <FeaturesSection />
+      <IntegrationsSection />
       <UseCasesSection />
       <DemoSection />
-      <IntegrationsSection />
       <TrustSection />
       <CTASection />
       <Footer />
