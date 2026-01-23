@@ -90,6 +90,14 @@ const priorityColors: Record<string, string> = {
   LOW: 'bg-gray-500',
 };
 
+// Priority weights for sorting (higher = more important = should appear first)
+const priorityWeights: Record<string, number> = {
+  URGENT: 4,
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1,
+};
+
 const priorityOptions = [
   { value: 'URGENT', label: 'Urgent' },
   { value: 'HIGH', label: 'High' },
@@ -307,7 +315,15 @@ export default function TasksPage() {
   const tasksByStatus = useMemo(() => {
     return columns.reduce(
       (acc, col) => {
-        acc[col.id] = tasks.filter((t) => t.status === col.id).sort((a, b) => (a.position || 0) - (b.position || 0));
+        acc[col.id] = tasks
+          .filter((t) => t.status === col.id)
+          .sort((a, b) => {
+            // Sort by priority first (URGENT on top)
+            const priorityDiff = (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0);
+            if (priorityDiff !== 0) return priorityDiff;
+            // Then by position
+            return (a.position || 0) - (b.position || 0);
+          });
         return acc;
       },
       {} as Record<string, Task[]>
@@ -371,6 +387,17 @@ export default function TasksPage() {
 
   const handleCreateTask = () => {
     if (!newTitle.trim()) return;
+
+    // Validate due date is not in the past
+    if (newDueDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(newDueDate);
+      if (dueDate < today) {
+        toast.error('Due date cannot be in the past');
+        return;
+      }
+    }
 
     createTaskMutation.mutate(
       {
@@ -516,7 +543,7 @@ export default function TasksPage() {
                         </td>
                       </tr>
                     ) : (
-                      tasks.map((task) => (
+                      [...tasks].sort((a, b) => (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0)).map((task) => (
                         <tr key={task.id} className="border-b border-white/5 hover:bg-white/5 cursor-pointer" onClick={() => setSelectedTask(task)}>
                           <td className="px-4 py-3">
                             <span className="font-medium">{task.title}</span>
@@ -637,7 +664,13 @@ export default function TasksPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="dueDate">Due Date</Label>
-                <Input id="dueDate" type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} />
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={newDueDate}
+                  onChange={(e) => setNewDueDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
               </div>
 
               <div className="space-y-2">

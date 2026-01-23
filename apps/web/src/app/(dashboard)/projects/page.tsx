@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -109,6 +109,19 @@ const priorityColors: Record<string, string> = {
   URGENT: 'text-red-500',
 };
 
+// Priority weights for sorting (higher = more important = should appear first)
+const priorityWeights: Record<string, number> = {
+  URGENT: 4,
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1,
+};
+
+// Sort tasks by priority (URGENT on top)
+function sortByPriority(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0));
+}
+
 export default function ProjectsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -149,10 +162,10 @@ export default function ProjectsPage() {
   };
 
   const tasksByStatus = {
-    TODO: tasks.filter(t => t.status === 'TODO'),
-    IN_PROGRESS: tasks.filter(t => t.status === 'IN_PROGRESS'),
-    IN_REVIEW: tasks.filter(t => t.status === 'IN_REVIEW'),
-    DONE: tasks.filter(t => t.status === 'DONE'),
+    TODO: sortByPriority(tasks.filter(t => t.status === 'TODO')),
+    IN_PROGRESS: sortByPriority(tasks.filter(t => t.status === 'IN_PROGRESS')),
+    IN_REVIEW: sortByPriority(tasks.filter(t => t.status === 'IN_REVIEW')),
+    DONE: sortByPriority(tasks.filter(t => t.status === 'DONE')),
   };
 
   const handleCreateProject = () => {
@@ -535,7 +548,7 @@ export default function ProjectsPage() {
                   </CardContent>
                 </Card>
               ) : (
-                tasks.map((task) => (
+                sortByPriority(tasks).map((task) => (
                   <Card key={task.id} className="hover:shadow-sm transition-shadow cursor-pointer">
                     <CardContent className="flex items-center justify-between py-3">
                       <div className="flex items-center gap-3">
@@ -582,36 +595,54 @@ export default function ProjectsPage() {
 
           {/* Board Tab */}
           <TabsContent value="board">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="flex gap-4 overflow-x-auto pb-4">
               {Object.entries(tasksByStatus).map(([status, statusTasks]) => (
-                <div key={status} className="space-y-2">
+                <div key={status} className="flex-shrink-0 w-72 space-y-2">
                   <div className="flex items-center justify-between px-2">
-                    <h4 className="font-medium text-sm">
-                      {status.replace('_', ' ')}
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <div className={`h-3 w-3 rounded-full ${
+                        status === 'DONE' ? 'bg-green-500' :
+                        status === 'IN_PROGRESS' ? 'bg-blue-500' :
+                        status === 'IN_REVIEW' ? 'bg-yellow-500' : 'bg-gray-500'
+                      }`} />
+                      <h4 className="font-medium text-sm">
+                        {status.replace('_', ' ')}
+                      </h4>
+                    </div>
                     <Badge variant="secondary">{statusTasks.length}</Badge>
                   </div>
-                  <div className="space-y-2 min-h-[200px] p-2 rounded-lg bg-muted/30">
-                    {statusTasks.map((task) => (
-                      <Card key={task.id} className="cursor-pointer hover:shadow-sm">
-                        <CardContent className="p-3">
-                          <p className="text-sm font-medium">{task.title}</p>
-                          <div className="flex items-center justify-between mt-2">
-                            {task.assigneeId && (
-                              <Avatar className="h-5 w-5">
-                                <AvatarImage src={getUserById(task.assigneeId)?.avatar} />
-                                <AvatarFallback className="text-[9px]">
-                                  {getUserById(task.assigneeId)?.name?.charAt(0) || 'U'}
-                                </AvatarFallback>
-                              </Avatar>
-                            )}
-                            <Badge variant="outline" className={`text-xs ${priorityColors[task.priority]}`}>
-                              {task.priority}
-                            </Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="space-y-2 min-h-[300px] p-2 rounded-lg border-2 border-dashed border-white/10 bg-white/[0.02]">
+                    {statusTasks.length === 0 ? (
+                      <div className="flex h-full min-h-[200px] items-center justify-center text-center text-sm text-muted-foreground">
+                        <div>
+                          <p>No tasks</p>
+                          <p className="text-xs">Drag here to move</p>
+                        </div>
+                      </div>
+                    ) : (
+                      statusTasks.map((task) => (
+                        <Card key={task.id} className="cursor-pointer hover:shadow-sm border-white/10 bg-white/5">
+                          <CardContent className="p-3">
+                            <p className="text-sm font-medium">{task.title}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              {task.assigneeId ? (
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={getUserById(task.assigneeId)?.avatar} />
+                                  <AvatarFallback className="text-[9px]">
+                                    {getUserById(task.assigneeId)?.name?.charAt(0) || 'U'}
+                                  </AvatarFallback>
+                                </Avatar>
+                              ) : (
+                                <span />
+                              )}
+                              <Badge variant="outline" className={`text-xs ${priorityColors[task.priority]}`}>
+                                {task.priority}
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
                   </div>
                 </div>
               ))}
