@@ -35,6 +35,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -543,7 +544,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
   return (
     <Dialog open={!!task} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col" hideCloseButton>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -658,6 +659,12 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+            {/* Close button */}
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
           </div>
         </div>
 
