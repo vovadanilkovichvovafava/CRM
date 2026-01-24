@@ -21,6 +21,9 @@ import {
   Upload,
   AtSign,
   Link2,
+  Trash2,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,8 +47,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTaskComments, useCreateComment } from '@/hooks/use-comments';
@@ -104,10 +118,20 @@ interface Task {
   _count?: { subtasks: number; comments: number; files?: number };
 }
 
+interface CommentAuthor {
+  id: string;
+  name?: string;
+  email?: string;
+  avatar?: string;
+}
+
 interface Comment {
   id: string;
   content: string;
   authorId: string;
+  parentId?: string;
+  author?: CommentAuthor;
+  replies?: Comment[];
   createdAt: string;
   files?: Array<{ id: string; name: string; originalName: string; url: string; mimeType: string; size: number }>;
 }
@@ -214,6 +238,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   // Description editing state
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  // Title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
+  // Delete confirmation dialog state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Reply state
+  const [replyingTo, setReplyingTo] = useState<{ id: string; authorName: string } | null>(null);
   // Navigation state for viewing subtasks
   const [taskHistory, setTaskHistory] = useState<string[]>([]);
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null);
@@ -232,12 +263,15 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
       setViewingTaskId(null);
       setTaskHistory([]);
       setIsEditingDescription(false);
+      setIsEditingTitle(false);
+      setShowDeleteConfirm(false);
     }
   }, [task]);
 
   // Reset editing state when switching between tasks/subtasks
   useEffect(() => {
     setIsEditingDescription(false);
+    setIsEditingTitle(false);
   }, [viewingTaskId]);
 
   // Determine which task to display
@@ -319,6 +353,38 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
     );
   };
 
+  const handleSaveTitle = () => {
+    if (!titleDraft.trim() || !displayTask) return;
+
+    handleUpdateTask({ title: titleDraft.trim() });
+    if (!isViewingSubtask) {
+      onUpdate({ ...task!, title: titleDraft.trim() });
+    }
+    setIsEditingTitle(false);
+  };
+
+  const handleDeleteTask = () => {
+    if (!displayTask) return;
+
+    deleteTaskMutation.mutate(displayTask.id, {
+      onSuccess: () => {
+        toast.success(isViewingSubtask ? 'Subtask deleted' : 'Task deleted');
+        setShowDeleteConfirm(false);
+        if (isViewingSubtask) {
+          // Navigate back to parent task
+          navigateBack();
+          refetchTask();
+        } else {
+          // Close the dialog
+          onClose();
+        }
+      },
+      onError: () => {
+        toast.error('Failed to delete task');
+      },
+    });
+  };
+
   const handleAddComment = async () => {
     if (!newComment.trim() || !displayTask) return;
 
@@ -334,12 +400,17 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
       }
 
       createCommentMutation.mutate(
-        { content: newComment, taskId: displayTask.id },
+        {
+          content: newComment,
+          taskId: displayTask.id,
+          parentId: replyingTo?.id,
+        },
         {
           onSuccess: () => {
-            toast.success('Comment added');
+            toast.success(replyingTo ? 'Reply added' : 'Comment added');
             setNewComment('');
             setAttachedFiles([]);
+            setReplyingTo(null);
             refetchComments();
           },
           onError: () => {
@@ -350,6 +421,16 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleReply = (comment: Comment) => {
+    const authorName = comment.author?.name || comment.author?.email || getUserById(comment.authorId)?.name || 'User';
+    setReplyingTo({ id: comment.id, authorName });
+    commentInputRef.current?.focus();
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
   };
 
   const handleAddSubtask = () => {
@@ -465,20 +546,20 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
       <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Back button when viewing subtask */}
             {isViewingSubtask && (
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={navigateBack}
-                className="h-8 w-8 mr-1"
+                className="h-8 w-8 mr-1 flex-shrink-0"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
-            <div className={cn('w-3 h-3 rounded-full', currentStatus?.color)} />
-            <div className="flex flex-col">
+            <div className={cn('w-3 h-3 rounded-full flex-shrink-0', currentStatus?.color)} />
+            <div className="flex flex-col flex-1 min-w-0">
               {/* Breadcrumb showing parent task when viewing subtask */}
               {isViewingSubtask && task && (
                 <button
@@ -488,21 +569,127 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   {task.title}
                 </button>
               )}
-              <span className="text-lg font-semibold">{displayTask.title}</span>
+              {/* Editable title */}
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={titleDraft}
+                    onChange={(e) => setTitleDraft(e.target.value)}
+                    className="h-8 text-lg font-semibold bg-white/5 border-white/20"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveTitle();
+                      if (e.key === 'Escape') setIsEditingTitle(false);
+                    }}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 flex-shrink-0"
+                    onClick={handleSaveTitle}
+                  >
+                    <Check className="h-4 w-4 text-green-400" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 flex-shrink-0"
+                    onClick={() => setIsEditingTitle(false)}
+                  >
+                    <X className="h-4 w-4 text-white/50" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group/title">
+                  <span className="text-lg font-semibold truncate">{displayTask.title}</span>
+                  {canEditAllFields && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0"
+                      onClick={() => {
+                        setTitleDraft(displayTask.title);
+                        setIsEditingTitle(true);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 text-white/50" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
             {/* Subtask badge */}
             {isViewingSubtask && (
-              <Badge variant="outline" className="text-[10px] text-white/50">
+              <Badge variant="outline" className="text-[10px] text-white/50 flex-shrink-0">
                 Subtask
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2 text-xs text-white/50">
-            {displayTask.createdAt && (
-              <span>Created {format(new Date(displayTask.createdAt), 'MMM d, yyyy')}</span>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-xs text-white/50">
+              {displayTask.createdAt && `Created ${format(new Date(displayTask.createdAt), 'MMM d, yyyy')}`}
+            </span>
+            {/* Task actions dropdown */}
+            {canEditAllFields && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setTitleDraft(displayTask.title);
+                      setIsEditingTitle(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit title
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-400 focus:text-red-400"
+                    onClick={() => setShowDeleteConfirm(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete {isViewingSubtask ? 'subtask' : 'task'}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
         </div>
+
+        {/* Delete confirmation dialog */}
+        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete {isViewingSubtask ? 'subtask' : 'task'}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete &ldquo;{displayTask.title}&rdquo;? This action cannot be undone.
+                {!isViewingSubtask && taskWithSubtasks.subtasks && taskWithSubtasks.subtasks.length > 0 && (
+                  <span className="block mt-2 text-yellow-400">
+                    Warning: This task has {taskWithSubtasks.subtasks.length} subtask(s) that will also be deleted.
+                  </span>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteTask}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                {deleteTaskMutation.isPending ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
+                ) : (
+                  'Delete'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Task Details */}
@@ -916,74 +1103,129 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   </div>
                 ) : (
                   comments.map((comment) => {
-                    const author = getUserById(comment.authorId);
+                    const author = comment.author || getUserById(comment.authorId);
                     return (
-                      <div key={comment.id} className="bg-white/5 rounded-lg p-4 space-y-3">
-                        {/* Comment Header */}
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={author?.avatar} />
-                            <AvatarFallback className="text-xs bg-indigo-500">
-                              {author?.name?.charAt(0) || author?.email?.charAt(0) || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <span className="font-medium text-sm">
-                              {author?.name || author?.email || 'Unknown'}
-                            </span>
-                            <span className="text-xs text-white/40 ml-2">
-                              {format(new Date(comment.createdAt), 'MMM d, yyyy \'at\' h:mm a')}
-                            </span>
+                      <div key={comment.id} className="space-y-2">
+                        {/* Main Comment */}
+                        <div className="bg-white/5 rounded-lg p-4 space-y-3 group">
+                          {/* Comment Header */}
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={author?.avatar} />
+                              <AvatarFallback className="text-xs bg-indigo-500">
+                                {author?.name?.charAt(0) || author?.email?.charAt(0) || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <span className="font-medium text-sm">
+                                {author?.name || author?.email || 'Unknown'}
+                              </span>
+                              <span className="text-xs text-white/40 ml-2">
+                                {format(new Date(comment.createdAt), 'MMM d, yyyy \'at\' h:mm a')}
+                              </span>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                                  <MoreHorizontal className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-400">Delete</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
-                                <MoreHorizontal className="h-3 w-3" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-400">Delete</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+
+                          {/* Comment Content */}
+                          <div className="text-sm text-white/80 whitespace-pre-wrap pl-11">
+                            {parseContent(comment.content, users)}
+                          </div>
+
+                          {/* Comment Images */}
+                          {comment.files && comment.files.filter(f => isImageFile(f.mimeType)).length > 0 && (
+                            <div className="pl-11 space-y-2">
+                              {comment.files.filter(f => isImageFile(f.mimeType)).map((file) => (
+                                <a
+                                  key={file.id}
+                                  href={file.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-colors max-w-xs"
+                                >
+                                  <img
+                                    src={file.url}
+                                    alt={file.originalName}
+                                    className="max-w-full h-auto"
+                                  />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Comment Actions */}
+                          <div className="flex items-center gap-4 pl-11">
+                            <button className="flex items-center gap-1 text-xs text-white/40 hover:text-white/60 transition-colors">
+                              <ThumbsUp className="h-3 w-3" />
+                            </button>
+                            <button
+                              className="flex items-center gap-1 text-xs text-white/40 hover:text-white/60 transition-colors"
+                              onClick={() => handleReply(comment)}
+                            >
+                              <Reply className="h-3 w-3" />
+                              <span>Reply</span>
+                            </button>
+                          </div>
                         </div>
 
-                        {/* Comment Content */}
-                        <div className="text-sm text-white/80 whitespace-pre-wrap pl-11">
-                          {parseContent(comment.content, users)}
-                        </div>
+                        {/* Replies */}
+                        {comment.replies && comment.replies.length > 0 && (
+                          <div className="ml-8 space-y-2 border-l-2 border-white/10 pl-4">
+                            {comment.replies.map((reply) => {
+                              const replyAuthor = reply.author || getUserById(reply.authorId);
+                              return (
+                                <div key={reply.id} className="bg-white/[0.03] rounded-lg p-3 space-y-2 group">
+                                  {/* Reply Header */}
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={replyAuthor?.avatar} />
+                                      <AvatarFallback className="text-[10px] bg-indigo-500/70">
+                                        {replyAuthor?.name?.charAt(0) || replyAuthor?.email?.charAt(0) || 'U'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1">
+                                      <span className="font-medium text-xs">
+                                        {replyAuthor?.name || replyAuthor?.email || 'Unknown'}
+                                      </span>
+                                      <span className="text-[10px] text-white/40 ml-2">
+                                        {format(new Date(reply.createdAt), 'MMM d \'at\' h:mm a')}
+                                      </span>
+                                    </div>
+                                  </div>
 
-                        {/* Comment Images */}
-                        {comment.files && comment.files.filter(f => isImageFile(f.mimeType)).length > 0 && (
-                          <div className="pl-11 space-y-2">
-                            {comment.files.filter(f => isImageFile(f.mimeType)).map((file) => (
-                              <a
-                                key={file.id}
-                                href={file.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block rounded-lg overflow-hidden border border-white/10 hover:border-white/30 transition-colors max-w-xs"
-                              >
-                                <img
-                                  src={file.url}
-                                  alt={file.originalName}
-                                  className="max-w-full h-auto"
-                                />
-                              </a>
-                            ))}
+                                  {/* Reply Content */}
+                                  <div className="text-xs text-white/70 whitespace-pre-wrap pl-8">
+                                    {parseContent(reply.content, users)}
+                                  </div>
+
+                                  {/* Reply Actions */}
+                                  <div className="flex items-center gap-3 pl-8">
+                                    <button className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/50 transition-colors">
+                                      <ThumbsUp className="h-2.5 w-2.5" />
+                                    </button>
+                                    <button
+                                      className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/50 transition-colors"
+                                      onClick={() => handleReply(comment)}
+                                    >
+                                      <Reply className="h-2.5 w-2.5" />
+                                      <span>Reply</span>
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
-
-                        {/* Comment Actions */}
-                        <div className="flex items-center gap-4 pl-11">
-                          <button className="flex items-center gap-1 text-xs text-white/40 hover:text-white/60 transition-colors">
-                            <ThumbsUp className="h-3 w-3" />
-                          </button>
-                          <button className="flex items-center gap-1 text-xs text-white/40 hover:text-white/60 transition-colors">
-                            <Reply className="h-3 w-3" />
-                            <span>Reply</span>
-                          </button>
-                        </div>
                       </div>
                     );
                   })
@@ -993,6 +1235,23 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
             {/* Comment Input */}
             <div className="p-4 border-t border-white/10 space-y-3">
+              {/* Replying to indicator */}
+              {replyingTo && (
+                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Reply className="h-3 w-3 text-indigo-400" />
+                    <span className="text-white/60">Replying to</span>
+                    <span className="font-medium text-indigo-400">{replyingTo.authorName}</span>
+                  </div>
+                  <button
+                    onClick={cancelReply}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                  >
+                    <X className="h-3 w-3 text-white/50" />
+                  </button>
+                </div>
+              )}
+
               {/* Attached files preview */}
               {attachedFiles.length > 0 && (
                 <div className="flex flex-wrap gap-2 pb-2">

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectsService } from '../projects/projects.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Task, TaskStatus, Priority, Prisma } from '../../../generated/prisma';
 
 /**
@@ -76,6 +77,7 @@ export class TasksService {
     private readonly prisma: PrismaService,
     @Inject(forwardRef(() => ProjectsService))
     private readonly projectsService: ProjectsService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -205,6 +207,16 @@ export class TasksService {
       await this.projectsService.updateProgress(dto.projectId);
     }
 
+    // Send notification if task is assigned to someone
+    if (dto.assigneeId && dto.assigneeId !== userId) {
+      await this.notificationsService.notifyTaskAssigned(
+        dto.assigneeId,
+        task.title,
+        task.id,
+        userId,
+      );
+    }
+
     this.logger.log('Task created', { taskId: task.id, projectId: dto.projectId, userId });
 
     return task;
@@ -323,6 +335,7 @@ export class TasksService {
     }
 
     const statusChanged = dto.status && dto.status !== existing.status;
+    const assigneeChanged = dto.assigneeId !== undefined && dto.assigneeId !== existing.assigneeId;
 
     // Parse dates from string if needed
     const updateData: Prisma.TaskUpdateInput = {
@@ -346,9 +359,77 @@ export class TasksService {
       await this.projectsService.updateProgress(existing.projectId);
     }
 
+    // Send notifications
+    await this.sendTaskUpdateNotifications({
+      task,
+      existing,
+      userId,
+      statusChanged: statusChanged ?? false,
+      assigneeChanged,
+      newStatus: dto.status,
+    });
+
     this.logger.log('Task updated', { taskId: id, userId, role: this.getUserRole(existing, userId) });
 
     return task;
+  }
+
+  /**
+   * Send notifications when task is updated
+   */
+  private async sendTaskUpdateNotifications(params: {
+    task: Task;
+    existing: Task;
+    userId: string;
+    statusChanged: boolean;
+    assigneeChanged: boolean;
+    newStatus?: TaskStatus;
+  }): Promise<void> {
+    const { task, existing, userId, statusChanged, assigneeChanged, newStatus } = params;
+
+    // Notify new assignee when task is assigned
+    if (assigneeChanged && task.assigneeId && task.assigneeId !== userId) {
+      await this.notificationsService.notifyTaskAssigned(
+        task.assigneeId,
+        task.title,
+        task.id,
+        userId,
+      );
+    }
+
+    // Notify about status change
+    if (statusChanged && newStatus) {
+      const statusLabels: Record<TaskStatus, string> = {
+        [TaskStatus.TODO]: 'To Do',
+        [TaskStatus.IN_PROGRESS]: 'In Progress',
+        [TaskStatus.IN_REVIEW]: 'In Review',
+        [TaskStatus.BLOCKED]: 'Blocked',
+        [TaskStatus.DONE]: 'Done',
+        [TaskStatus.CANCELLED]: 'Cancelled',
+      };
+
+      // Notify creator if they didn't make the change
+      if (existing.createdBy !== userId) {
+        await this.notificationsService.create({
+          userId: existing.createdBy,
+          type: 'task_status_changed',
+          title: 'Task status changed',
+          message: `"${task.title}" was moved to ${statusLabels[newStatus]}`,
+          data: { taskId: task.id, taskTitle: task.title, newStatus, changedBy: userId },
+        });
+      }
+
+      // Notify assignee if they didn't make the change
+      if (existing.assigneeId && existing.assigneeId !== userId && existing.assigneeId !== existing.createdBy) {
+        await this.notificationsService.create({
+          userId: existing.assigneeId,
+          type: 'task_status_changed',
+          title: 'Task status changed',
+          message: `"${task.title}" was moved to ${statusLabels[newStatus]}`,
+          data: { taskId: task.id, taskTitle: task.title, newStatus, changedBy: userId },
+        });
+      }
+    }
   }
 
   async remove(id: string, userId: string, hard = false): Promise<void> {

@@ -209,20 +209,24 @@ model Comment {
   recordId  String?
   taskId    String?
   projectId String?
+  parentId  String?  // For reply threads
   authorId  String
   mentions  String[] // User IDs mentioned with @
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  record  Record?  @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  task    Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  author  User     @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  record  Record?   @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  task    Task?     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project Project?  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies Comment[] @relation("CommentReplies")
+  author  User      @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([recordId])
   @@index([taskId])
   @@index([projectId])
   @@index([authorId])
+  @@index([parentId])
 }
 
 model File {

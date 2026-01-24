@@ -3,18 +3,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 
+export interface CommentAuthor {
+  id: string;
+  name?: string;
+  email: string;
+  avatar?: string;
+}
+
 export interface Comment {
   id: string;
   content: string;
   taskId?: string;
   recordId?: string;
+  projectId?: string;
+  parentId?: string;
   authorId: string;
-  author?: {
+  author?: CommentAuthor;
+  parent?: {
     id: string;
-    name?: string;
-    email: string;
-    avatar?: string;
+    content: string;
+    authorId: string;
+    author?: CommentAuthor;
   };
+  replies?: Comment[];
   createdAt: string;
   updatedAt: string;
 }
@@ -35,11 +46,19 @@ export function useRecordComments(recordId: string) {
   });
 }
 
+export interface CreateCommentData {
+  content: string;
+  taskId?: string;
+  recordId?: string;
+  projectId?: string;
+  parentId?: string;
+}
+
 export function useCreateComment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { content: string; taskId?: string; recordId?: string }) =>
+    mutationFn: (data: CreateCommentData) =>
       api.comments.create(data),
     onSuccess: (_, variables) => {
       if (variables.taskId) {
@@ -47,6 +66,9 @@ export function useCreateComment() {
       }
       if (variables.recordId) {
         queryClient.invalidateQueries({ queryKey: ['comments', 'record', variables.recordId] });
+      }
+      if (variables.projectId) {
+        queryClient.invalidateQueries({ queryKey: ['comments', 'project', variables.projectId] });
       }
     },
   });
