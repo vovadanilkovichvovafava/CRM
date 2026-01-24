@@ -151,7 +151,7 @@ export function Navbar() {
     // Navigate based on notification type
     const data = notification.data as Record<string, unknown> | null;
     if (data?.taskId) {
-      router.push('/tasks');
+      router.push(`/tasks/${data.taskId}`);
       setIsOpen(false);
     } else if (data?.recordId) {
       setIsOpen(false);
