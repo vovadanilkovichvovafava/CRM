@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
@@ -45,6 +46,7 @@ function getNotificationIcon(type: string) {
 }
 
 export function NotificationBell() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -109,7 +111,23 @@ export function NotificationBell() {
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
     }
-    // Could navigate to relevant page based on notification.data
+
+    // Navigate based on notification type and data
+    const data = notification.data as { taskId?: string; recordId?: string; objectId?: string } | null;
+
+    if (data?.taskId) {
+      // Task-related notifications (task_assigned, task_due_soon, comment_mention on task)
+      setIsOpen(false);
+      router.push(`/tasks?taskId=${data.taskId}`);
+      return;
+    }
+
+    if (data?.recordId && data?.objectId) {
+      // Record-related notifications
+      setIsOpen(false);
+      router.push(`/records/${data.objectId}/${data.recordId}`);
+      return;
+    }
   };
 
   return (

@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, User, ListChecks, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useTasks, useCreateTask, useMoveTask, useUpdateTask } from '@/hooks/use-tasks';
+import { useTasks, useCreateTask, useMoveTask, useUpdateTask, useTask } from '@/hooks/use-tasks';
 import { useUsers, useCurrentUser } from '@/hooks/use-users';
 import { cn } from '@/lib/utils';
 import type { Task as TaskType } from '@/types';
@@ -263,6 +264,10 @@ function TaskCardOverlay({ task }: { task: Task }) {
 }
 
 export default function TasksPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const taskIdFromUrl = searchParams.get('taskId');
+
   const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [search, setSearch] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -271,6 +276,9 @@ export default function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [showMyTasks, setShowMyTasks] = useState(false);
+
+  // Fetch task from URL parameter
+  const { data: taskFromUrl } = useTask(taskIdFromUrl || '');
 
   // Form state
   const [newTitle, setNewTitle] = useState('');
@@ -295,6 +303,15 @@ export default function TasksPage() {
       toast.error('Failed to load tasks: ' + (tasksError instanceof Error ? tasksError.message : 'Unknown error'));
     }
   }, [tasksError]);
+
+  // Open task from URL parameter
+  useEffect(() => {
+    if (taskFromUrl && taskIdFromUrl) {
+      setSelectedTask(taskFromUrl as Task);
+      // Clear the URL parameter after opening
+      router.replace('/tasks', { scroll: false });
+    }
+  }, [taskFromUrl, taskIdFromUrl, router]);
 
   const createTaskMutation = useCreateTask();
   const moveTaskMutation = useMoveTask();
