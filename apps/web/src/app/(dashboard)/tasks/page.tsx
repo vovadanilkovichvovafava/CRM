@@ -33,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useNavigationStore } from '@/stores/navigation';
 import {
   DndContext,
   DragOverlay,
@@ -267,6 +268,13 @@ export default function TasksPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const taskIdFromUrl = searchParams.get('taskId');
+  const { pendingTaskId, clearPendingTaskId } = useNavigationStore();
+
+  // Use pending task ID from store or URL parameter
+  const targetTaskId = pendingTaskId || taskIdFromUrl;
+
+  // Debug logging
+  console.log('[TasksPage] targetTaskId:', targetTaskId, 'pendingTaskId:', pendingTaskId, 'taskIdFromUrl:', taskIdFromUrl);
 
   const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [search, setSearch] = useState('');
@@ -277,8 +285,8 @@ export default function TasksPage() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [showMyTasks, setShowMyTasks] = useState(false);
 
-  // Fetch task from URL parameter
-  const { data: taskFromUrl } = useTask(taskIdFromUrl || '');
+  // Fetch task from URL parameter or pending navigation
+  const { data: taskFromUrl } = useTask(targetTaskId || '');
 
   // Form state
   const [newTitle, setNewTitle] = useState('');
@@ -304,14 +312,21 @@ export default function TasksPage() {
     }
   }, [tasksError]);
 
-  // Open task from URL parameter
+  // Open task from URL parameter or pending navigation
   useEffect(() => {
-    if (taskFromUrl && taskIdFromUrl) {
+    console.log('[TasksPage] useEffect - taskFromUrl:', taskFromUrl, 'targetTaskId:', targetTaskId);
+    if (taskFromUrl && targetTaskId) {
+      console.log('[TasksPage] Opening task:', targetTaskId);
       setSelectedTask(taskFromUrl as Task);
-      // Clear the URL parameter after opening
-      router.replace('/tasks', { scroll: false });
+      // Clear the pending task and URL parameter
+      if (pendingTaskId) {
+        clearPendingTaskId();
+      }
+      if (taskIdFromUrl) {
+        router.replace('/tasks', { scroll: false });
+      }
     }
-  }, [taskFromUrl, taskIdFromUrl, router]);
+  }, [taskFromUrl, targetTaskId, pendingTaskId, taskIdFromUrl, router, clearPendingTaskId]);
 
   const createTaskMutation = useCreateTask();
   const moveTaskMutation = useMoveTask();

@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { api, ApiError } from '@/lib/api';
 import { formatRelativeTime, cn } from '@/lib/utils';
+import { useNavigationStore } from '@/stores/navigation';
 
 interface Notification {
   id: string;
@@ -48,6 +49,7 @@ function getNotificationIcon(type: string) {
 export function NotificationBell() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const setPendingTaskId = useNavigationStore((s) => s.setPendingTaskId);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -108,6 +110,12 @@ export function NotificationBell() {
   const unreadCount = countData?.count || 0;
 
   const handleNotificationClick = (notification: Notification) => {
+    console.log('[NotificationBell] Click notification:', {
+      id: notification.id,
+      type: notification.type,
+      data: notification.data,
+    });
+
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
     }
@@ -117,17 +125,23 @@ export function NotificationBell() {
 
     if (data?.taskId) {
       // Task-related notifications (task_assigned, task_due_soon, comment_mention on task)
+      console.log('[NotificationBell] Navigating to task:', data.taskId);
       setIsOpen(false);
-      router.push(`/tasks?taskId=${data.taskId}`);
+      // Store taskId in global state for the tasks page to pick up
+      setPendingTaskId(data.taskId);
+      router.push('/tasks');
       return;
     }
 
     if (data?.recordId && data?.objectId) {
       // Record-related notifications
+      console.log('[NotificationBell] Navigating to record:', data.recordId);
       setIsOpen(false);
       router.push(`/records/${data.objectId}/${data.recordId}`);
       return;
     }
+
+    console.log('[NotificationBell] No navigation - data does not contain taskId or recordId/objectId');
   };
 
   return (
