@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
 import { File } from '../../../generated/prisma';
@@ -18,13 +18,43 @@ export interface FileWithUrl extends File {
 }
 
 @Injectable()
-export class FilesService {
+export class FilesService implements OnModuleInit {
   private readonly logger = new Logger(FilesService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
   ) {}
+
+  /**
+   * Migrate file URLs from absolute localhost URLs to relative paths
+   * This runs once on application startup
+   */
+  async onModuleInit(): Promise<void> {
+    await this.migrateFileUrls();
+  }
+
+  /**
+   * Update all file URLs that contain localhost to relative paths
+   */
+  private async migrateFileUrls(): Promise<void> {
+    try {
+      // Find all files with absolute localhost URLs
+      const result = await this.prisma.$executeRaw`
+        UPDATE "File"
+        SET url = REPLACE(url, 'http://localhost:3001/api/files/local/', '/api/files/local/')
+        WHERE url LIKE 'http://localhost:3001/api/files/local/%'
+      `;
+
+      if (result > 0) {
+        this.logger.log(`Migrated ${result} file URLs from localhost to relative paths`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to migrate file URLs', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   /**
    * Generate current URL for a file (handles both stored URLs and dynamic generation)

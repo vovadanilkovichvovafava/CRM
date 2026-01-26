@@ -12,7 +12,6 @@ export class StorageService {
   private readonly bucket: string;
   private readonly useLocalStorage: boolean;
   private readonly localStoragePath: string;
-  private readonly apiBaseUrl: string;
 
   constructor(private readonly config: ConfigService) {
     const endpoint = this.config.get<string>('MINIO_ENDPOINT');
@@ -20,7 +19,6 @@ export class StorageService {
     const accessKey = this.config.get<string>('MINIO_ACCESS_KEY');
     const secretKey = this.config.get<string>('MINIO_SECRET_KEY');
     this.bucket = this.config.get<string>('MINIO_BUCKET') || 'crm-files';
-    this.apiBaseUrl = this.config.get<string>('API_BASE_URL') || 'http://localhost:3001';
 
     // Local storage fallback path
     this.localStoragePath = path.join(process.cwd(), 'uploads');
@@ -114,13 +112,15 @@ export class StorageService {
 
     this.logger.log(`File saved locally: ${name}`);
 
-    const url = `${this.apiBaseUrl}/api/files/local/${name}`;
+    // Use relative URL - works with any domain (localhost, Railway, etc.)
+    const url = `/api/files/local/${name}`;
     return { name, url };
   }
 
   async getUrl(name: string): Promise<string> {
     if (this.useLocalStorage) {
-      return `${this.apiBaseUrl}/api/files/local/${name}`;
+      // Use relative URL - works with any domain (localhost, Railway, etc.)
+      return `/api/files/local/${name}`;
     }
 
     if (!this.client) {
