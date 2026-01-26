@@ -79,7 +79,7 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
       {/* Header */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm text-white/70">{t('projects.title')}</h2>
+          <h2 className="font-semibold text-sm text-white">{t('projects.title')}</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -101,10 +101,10 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
               'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors',
               selectedProjectId === null
                 ? 'bg-indigo-500/20 text-white'
-                : 'text-white/70 hover:bg-white/5 hover:text-white'
+                : 'text-white/90 hover:bg-white/5 hover:text-white'
             )}
           >
-            <FolderKanban className="h-4 w-4 text-white/50" />
+            <FolderKanban className="h-4 w-4 text-white/70" />
             <span className="flex-1 text-sm font-medium">{t('tasks.allTasks')}</span>
           </button>
 
@@ -145,7 +145,7 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
                     'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors group',
                     selectedProjectId === project.id
                       ? 'bg-indigo-500/20 text-white'
-                      : 'text-white/70 hover:bg-white/5 hover:text-white'
+                      : 'text-white/90 hover:bg-white/5 hover:text-white'
                   )}
                 >
                   <div
@@ -156,7 +156,7 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
                     {project.emoji && <span className="mr-1">{project.emoji}</span>}
                     {project.name}
                   </span>
-                  <span className="text-xs text-white/40">
+                  <span className="text-xs text-white/60">
                     {project._count?.tasks || 0}
                   </span>
                 </button>

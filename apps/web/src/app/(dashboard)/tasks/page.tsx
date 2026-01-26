@@ -218,8 +218,8 @@ function DroppableColumn({
     <div className="flex-shrink-0 w-72">
       <div className="mb-3 flex items-center gap-2">
         <div className={cn('h-3 w-3 rounded-full', column.color)} />
-        <span className="font-medium text-sm">{column.name}</span>
-        <Badge variant="secondary" className="ml-auto bg-white/10 text-xs">
+        <span className="font-medium text-sm text-white">{column.name}</span>
+        <Badge variant="secondary" className="ml-auto bg-white/10 text-white/80 text-xs">
           {tasks.length}
         </Badge>
       </div>
@@ -236,7 +236,7 @@ function DroppableColumn({
 
         <Button
           variant="ghost"
-          className="w-full justify-start text-white/40 hover:text-white/60 hover:bg-white/5"
+          className="w-full justify-start text-white/60 hover:text-white hover:bg-white/5"
           onClick={() => onAddTask(column.id)}
         >
           <Plus className="mr-2 h-4 w-4" />

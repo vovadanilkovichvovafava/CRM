@@ -26,6 +26,31 @@ export class SpaFallbackMiddleware implements NestMiddleware {
       pattern: /^\/contacts\/([^/]+)\/?$/,
       fallbackPath: '/contacts/_placeholder/index.html',
     },
+    {
+      // /tasks/:id -> /tasks/_placeholder/
+      pattern: /^\/tasks\/([^/]+)\/?$/,
+      fallbackPath: '/tasks/_placeholder/index.html',
+    },
+    {
+      // /companies/:id -> /companies/_placeholder/
+      pattern: /^\/companies\/([^/]+)\/?$/,
+      fallbackPath: '/companies/_placeholder/index.html',
+    },
+    {
+      // /deals/:id -> /deals/_placeholder/
+      pattern: /^\/deals\/([^/]+)\/?$/,
+      fallbackPath: '/deals/_placeholder/index.html',
+    },
+    {
+      // /webmasters/:id -> /webmasters/_placeholder/
+      pattern: /^\/webmasters\/([^/]+)\/?$/,
+      fallbackPath: '/webmasters/_placeholder/index.html',
+    },
+    {
+      // /projects/:id -> /projects/_placeholder/
+      pattern: /^\/projects\/([^/]+)\/?$/,
+      fallbackPath: '/projects/_placeholder/index.html',
+    },
   ];
 
   constructor() {
