@@ -152,17 +152,17 @@ interface TaskDetailDialogProps {
 }
 
 const columns = [
-  { id: 'TODO', name: 'To Do', color: 'bg-gray-500', textColor: 'text-gray-400' },
-  { id: 'IN_PROGRESS', name: 'In Progress', color: 'bg-blue-500', textColor: 'text-blue-400' },
-  { id: 'IN_REVIEW', name: 'In Review', color: 'bg-yellow-500', textColor: 'text-yellow-400' },
-  { id: 'DONE', name: 'Done', color: 'bg-green-500', textColor: 'text-green-400' },
+  { id: 'TODO', name: 'To Do', color: 'bg-slate-400', textColor: 'text-slate-600' },
+  { id: 'IN_PROGRESS', name: 'In Progress', color: 'bg-blue-500', textColor: 'text-blue-600' },
+  { id: 'IN_REVIEW', name: 'In Review', color: 'bg-amber-500', textColor: 'text-amber-600' },
+  { id: 'DONE', name: 'Done', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
 ];
 
 const priorities = [
-  { id: 'URGENT', name: 'Urgent', color: 'text-red-500', bgColor: 'bg-red-500' },
-  { id: 'HIGH', name: 'High', color: 'text-orange-500', bgColor: 'bg-orange-500' },
-  { id: 'MEDIUM', name: 'Medium', color: 'text-yellow-500', bgColor: 'bg-yellow-500' },
-  { id: 'LOW', name: 'Low', color: 'text-gray-400', bgColor: 'bg-gray-500' },
+  { id: 'URGENT', name: 'Urgent', color: 'text-red-600', bgColor: 'bg-red-500' },
+  { id: 'HIGH', name: 'High', color: 'text-orange-600', bgColor: 'bg-orange-500' },
+  { id: 'MEDIUM', name: 'Medium', color: 'text-amber-600', bgColor: 'bg-amber-400' },
+  { id: 'LOW', name: 'Low', color: 'text-slate-600', bgColor: 'bg-slate-400' },
 ];
 
 function formatFileSize(bytes: number): string {
@@ -636,9 +636,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
   return (
     <Dialog open={!!task} onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col" hideCloseButton>
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
+      <DialogContent className="max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col bg-white" hideCloseButton>
+        {/* Header - Salesforce Light Theme */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {/* Back button when viewing subtask */}
             {isViewingSubtask && (
@@ -646,7 +646,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 variant="ghost"
                 size="icon"
                 onClick={navigateBack}
-                className="h-8 w-8 mr-1 flex-shrink-0"
+                className="h-8 w-8 mr-1 flex-shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -657,7 +657,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
               {isViewingSubtask && task && (
                 <button
                   onClick={navigateBack}
-                  className="text-xs text-white/40 hover:text-white/60 text-left truncate max-w-[300px]"
+                  className="text-xs text-gray-400 hover:text-[#0070d2] text-left truncate max-w-[300px]"
                 >
                   {task.title}
                 </button>
@@ -668,7 +668,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <Input
                     value={titleDraft}
                     onChange={(e) => setTitleDraft(e.target.value)}
-                    className="h-8 text-lg font-semibold bg-white/5 border-white/20"
+                    className="h-8 text-lg font-semibold bg-white border-gray-300 text-gray-900 focus:border-[#0070d2]"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSaveTitle();
@@ -678,34 +678,34 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 flex-shrink-0"
+                    className="h-7 w-7 flex-shrink-0 hover:bg-green-50"
                     onClick={handleSaveTitle}
                   >
-                    <Check className="h-4 w-4 text-green-400" />
+                    <Check className="h-4 w-4 text-green-600" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 flex-shrink-0"
+                    className="h-7 w-7 flex-shrink-0 hover:bg-gray-100"
                     onClick={() => setIsEditingTitle(false)}
                   >
-                    <X className="h-4 w-4 text-white/50" />
+                    <X className="h-4 w-4 text-gray-400" />
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 group/title">
-                  <span className="text-lg font-semibold truncate">{displayTask.title}</span>
+                  <span className="text-lg font-semibold truncate text-gray-900">{displayTask.title}</span>
                   {canEditAllFields && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0"
+                      className="h-6 w-6 opacity-0 group-hover/title:opacity-100 transition-opacity flex-shrink-0 hover:bg-gray-100"
                       onClick={() => {
                         setTitleDraft(displayTask.title);
                         setIsEditingTitle(true);
                       }}
                     >
-                      <Pencil className="h-3 w-3 text-white/50" />
+                      <Pencil className="h-3 w-3 text-gray-400" />
                     </Button>
                   )}
                 </div>
@@ -713,13 +713,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
             </div>
             {/* Subtask badge */}
             {isViewingSubtask && (
-              <Badge variant="outline" className="text-[10px] text-white/50 flex-shrink-0">
+              <Badge variant="outline" className="text-[10px] text-gray-500 border-gray-300 flex-shrink-0">
                 Subtask
               </Badge>
             )}
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
-            <span className="text-xs text-white/50">
+            <span className="text-xs text-gray-500">
               {displayTask.createdAt && `Created ${format(new Date(displayTask.createdAt), 'MMM d, yyyy')}`}
             </span>
             {/* Task actions dropdown */}
@@ -792,17 +792,17 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
         <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Task Details */}
-          <div className="flex-1 overflow-y-auto border-r border-white/10">
+          <div className="flex-1 overflow-y-auto border-r border-gray-200 bg-gray-50">
             <div className="p-6 space-y-6">
-              {/* Tabs */}
-              <div className="flex gap-4 border-b border-white/10 pb-2">
+              {/* Tabs - Salesforce Style */}
+              <div className="flex gap-6 border-b border-gray-200 pb-0">
                 <button
                   onClick={() => setActiveTab('details')}
                   className={cn(
-                    'pb-2 text-sm font-medium border-b-2 transition-colors',
+                    'pb-3 text-sm font-medium border-b-2 transition-colors',
                     activeTab === 'details'
-                      ? 'border-indigo-500 text-white'
-                      : 'border-transparent text-white/50 hover:text-white'
+                      ? 'border-[#0070d2] text-[#0070d2]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700'
                   )}
                 >
                   {t('common.details')}
@@ -812,15 +812,15 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <button
                     onClick={() => setActiveTab('subtasks')}
                     className={cn(
-                      'pb-2 text-sm font-medium border-b-2 transition-colors',
+                      'pb-3 text-sm font-medium border-b-2 transition-colors',
                       activeTab === 'subtasks'
-                        ? 'border-indigo-500 text-white'
-                        : 'border-transparent text-white/50 hover:text-white'
+                        ? 'border-[#0070d2] text-[#0070d2]'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
                     )}
                   >
                     {t('tasks.fields.subtasks')}
                     {((displayTask._count?.subtasks || 0) > 0 || (taskWithSubtasks.subtasks?.length || 0) > 0) && (
-                      <Badge variant="secondary" className="ml-2 bg-white/10 text-xs">
+                      <Badge variant="secondary" className="ml-2 bg-[#0070d2]/10 text-[#0070d2] text-xs">
                         {displayTask._count?.subtasks || taskWithSubtasks.subtasks?.length || 0}
                       </Badge>
                     )}
@@ -834,11 +834,11 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <div className="grid grid-cols-2 gap-6">
                     {/* Status */}
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-white/50 text-xs">
+                      <div className="flex items-center gap-2 text-gray-500 text-xs font-medium">
                         <Clock className="h-3 w-3" />
                         <span>{t('tasks.fields.status')}</span>
                         {!canEditStatus && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">{t('common.view')}</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 border-gray-300 text-gray-400">{t('common.view')}</Badge>
                         )}
                       </div>
                       <Select
@@ -1278,27 +1278,27 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
             </div>
           </div>
 
-          {/* Right Panel - Activity */}
-          <div className="w-96 flex flex-col bg-[#0d0d15]">
+          {/* Right Panel - Activity - Light Theme */}
+          <div className="w-96 flex flex-col bg-white border-l border-gray-200">
             {/* Activity Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
               <div className="flex items-center gap-2">
-                <Activity className="h-4 w-4 text-white/60" />
-                <span className="font-medium text-sm">{t('tasks.fields.activity')}</span>
+                <Activity className="h-4 w-4 text-gray-500" />
+                <span className="font-medium text-sm text-gray-800">{t('tasks.fields.activity')}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="bg-white/10 text-xs">
+                <Badge variant="secondary" className="bg-gray-100 text-gray-600 text-xs">
                   {comments.length}
                 </Badge>
                 {/* Show user role */}
                 {userRole === 'creator' && (
-                  <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 text-[10px]">{t('team.roles.owner')}</Badge>
+                  <Badge variant="secondary" className="bg-[#0070d2]/10 text-[#0070d2] text-[10px]">{t('team.roles.owner')}</Badge>
                 )}
                 {userRole === 'project_owner' && (
-                  <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 text-[10px]">{t('team.roles.owner')}</Badge>
+                  <Badge variant="secondary" className="bg-purple-100 text-purple-600 text-[10px]">{t('team.roles.owner')}</Badge>
                 )}
                 {isAssignee && !isCreator && (
-                  <Badge variant="secondary" className="bg-green-500/20 text-green-400 text-[10px]">{t('tasks.fields.assignee')}</Badge>
+                  <Badge variant="secondary" className="bg-green-100 text-green-600 text-[10px]">{t('tasks.fields.assignee')}</Badge>
                 )}
               </div>
             </div>
@@ -1307,21 +1307,21 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-4">
                 {/* Activity items (task created, assigned, etc.) */}
-                <div className="flex items-start gap-3 text-xs text-white/50">
-                  <div className="w-1 h-1 rounded-full bg-white/30 mt-1.5" />
+                <div className="flex items-start gap-3 text-xs text-gray-500">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5" />
                   <div>
                     <span>
                       {getUserById(displayTask.createdBy)?.name || getUserById(displayTask.createdBy)?.email || t('common.unknown')} - {t('activity.types.taskCreated')}
                     </span>
                     {displayTask.createdAt && (
-                      <span className="ml-2">{format(new Date(displayTask.createdAt), 'MMM d, yyyy')}</span>
+                      <span className="ml-2 text-gray-400">{format(new Date(displayTask.createdAt), 'MMM d, yyyy')}</span>
                     )}
                   </div>
                 </div>
 
                 {displayTask.assigneeId && (
-                  <div className="flex items-start gap-3 text-xs text-white/50">
-                    <div className="w-1 h-1 rounded-full bg-white/30 mt-1.5" />
+                  <div className="flex items-start gap-3 text-xs text-gray-500">
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-1.5" />
                     <div>
                       <span>{t('tasks.fields.assignee')}: {getUserById(displayTask.assigneeId)?.name || t('common.unknown')}</span>
                     </div>
@@ -1331,46 +1331,46 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 {/* Comments */}
                 {commentsLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" />
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-[#0070d2]" />
                   </div>
                 ) : (
                   comments.map((comment) => {
                     const author = comment.author || getUserById(comment.authorId);
                     return (
                       <div key={comment.id} className="space-y-2">
-                        {/* Main Comment */}
-                        <div className="bg-white/5 rounded-lg p-4 space-y-3 group">
+                        {/* Main Comment - Light Theme */}
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3 group hover:border-gray-300 transition-colors">
                           {/* Comment Header */}
                           <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
                               <AvatarImage src={author?.avatar} />
-                              <AvatarFallback className="text-xs bg-indigo-500">
+                              <AvatarFallback className="text-xs bg-[#0070d2] text-white">
                                 {author?.name?.charAt(0) || author?.email?.charAt(0) || 'U'}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
-                              <span className="font-medium text-sm">
+                              <span className="font-medium text-sm text-gray-900">
                                 {author?.name || author?.email || 'Unknown'}
                               </span>
-                              <span className="text-xs text-white/40 ml-2">
+                              <span className="text-xs text-gray-400 ml-2">
                                 {format(new Date(comment.createdAt), 'MMM d, yyyy \'at\' h:mm a')}
                               </span>
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
-                                  <MoreHorizontal className="h-3 w-3" />
+                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-gray-200">
+                                  <MoreHorizontal className="h-3 w-3 text-gray-500" />
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem>{t('comments.edit')}</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-400">{t('comments.delete')}</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-600">{t('comments.delete')}</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
 
                           {/* Comment Content */}
-                          <div className="text-sm text-white/80 whitespace-pre-wrap pl-11">
+                          <div className="text-sm text-gray-700 whitespace-pre-wrap pl-11">
                             {parseContent(comment.content, users)}
                           </div>
 
@@ -1465,21 +1465,21 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
               </div>
             </ScrollArea>
 
-            {/* Comment Input */}
-            <div className="p-4 border-t border-white/10 space-y-3">
+            {/* Comment Input - Light Theme */}
+            <div className="p-4 border-t border-gray-200 space-y-3 bg-white">
               {/* Replying to indicator */}
               {replyingTo && (
-                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+                <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-blue-50 border border-blue-200">
                   <div className="flex items-center gap-2 text-xs">
-                    <Reply className="h-3 w-3 text-indigo-400" />
-                    <span className="text-white/60">{t('comments.reply')}</span>
-                    <span className="font-medium text-indigo-400">{replyingTo.authorName}</span>
+                    <Reply className="h-3 w-3 text-[#0070d2]" />
+                    <span className="text-gray-500">{t('comments.reply')}</span>
+                    <span className="font-medium text-[#0070d2]">{replyingTo.authorName}</span>
                   </div>
                   <button
                     onClick={cancelReply}
-                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    className="p-1 hover:bg-blue-100 rounded transition-colors"
                   >
-                    <X className="h-3 w-3 text-white/50" />
+                    <X className="h-3 w-3 text-gray-400" />
                   </button>
                 </div>
               )}
@@ -1490,19 +1490,19 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   {attachedFiles.map((file, index) => (
                     <div
                       key={index}
-                      className="flex items-center gap-2 px-2 py-1 rounded bg-white/10 text-xs"
+                      className="flex items-center gap-2 px-2 py-1 rounded bg-gray-100 border border-gray-200 text-xs"
                     >
                       {file.type.startsWith('image/') ? (
-                        <ImageIcon className="h-3 w-3 text-green-400" />
+                        <ImageIcon className="h-3 w-3 text-green-600" />
                       ) : (
-                        <File className="h-3 w-3 text-blue-400" />
+                        <File className="h-3 w-3 text-blue-600" />
                       )}
-                      <span className="truncate max-w-[80px]">{file.name}</span>
+                      <span className="truncate max-w-[80px] text-gray-700">{file.name}</span>
                       <button
                         onClick={() => removeAttachedFile(index)}
-                        className="p-0.5 hover:bg-white/10 rounded"
+                        className="p-0.5 hover:bg-gray-200 rounded"
                       >
-                        <X className="h-3 w-3" />
+                        <X className="h-3 w-3 text-gray-400" />
                       </button>
                     </div>
                   ))}
@@ -1511,20 +1511,20 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
               {/* Mentions Popover */}
               {showMentions && (
-                <div className="bg-[#1a1a2e] border border-white/10 rounded-lg p-2 space-y-1 max-h-40 overflow-y-auto">
+                <div className="bg-white border border-gray-200 rounded-lg p-2 space-y-1 max-h-40 overflow-y-auto shadow-lg">
                   {filteredUsers.map((user) => (
                     <button
                       key={user.id}
                       onClick={() => insertMention(user)}
-                      className="flex items-center gap-2 w-full px-2 py-1.5 rounded hover:bg-white/10 text-left"
+                      className="flex items-center gap-2 w-full px-2 py-1.5 rounded hover:bg-gray-100 text-left"
                     >
                       <Avatar className="h-5 w-5">
                         <AvatarImage src={user.avatar} />
-                        <AvatarFallback className="text-[8px] bg-indigo-500">
+                        <AvatarFallback className="text-[8px] bg-[#0070d2] text-white">
                           {user.name?.charAt(0) || user.email?.charAt(0) || 'U'}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-sm">{user.name || user.email}</span>
+                      <span className="text-sm text-gray-700">{user.name || user.email}</span>
                     </button>
                   ))}
                 </div>
@@ -1537,7 +1537,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={handleCommentKeyDown}
                 rows={2}
-                className="resize-none bg-transparent border-white/10 text-sm"
+                className="resize-none bg-white border-gray-300 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#0070d2] focus:ring-[#0070d2]"
               />
 
               {/* Input Actions */}
@@ -1551,14 +1551,14 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     multiple
                     accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                   />
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowMentions(!showMentions)}>
-                    <AtSign className="h-4 w-4 text-white/50" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100" onClick={() => setShowMentions(!showMentions)}>
+                    <AtSign className="h-4 w-4 text-gray-400 hover:text-[#0070d2]" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => fileInputRef.current?.click()}>
-                    <Paperclip className="h-4 w-4 text-white/50" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100" onClick={() => fileInputRef.current?.click()}>
+                    <Paperclip className="h-4 w-4 text-gray-400 hover:text-[#0070d2]" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <Link2 className="h-4 w-4 text-white/50" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:bg-gray-100">
+                    <Link2 className="h-4 w-4 text-gray-400 hover:text-[#0070d2]" />
                   </Button>
                 </div>
 
@@ -1566,6 +1566,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   onClick={handleAddComment}
                   disabled={!newComment.trim() || createCommentMutation.isPending || isUploading}
                   size="sm"
+                  className="bg-[#0070d2] hover:bg-[#005fb2] text-white"
                 >
                   {isUploading || createCommentMutation.isPending ? (
                     <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />

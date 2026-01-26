@@ -80,17 +80,24 @@ interface Task {
 }
 
 const columnDefinitions = [
-  { id: 'TODO', nameKey: 'tasks.status.todo', color: 'bg-gray-500' },
-  { id: 'IN_PROGRESS', nameKey: 'tasks.status.inProgress', color: 'bg-blue-500' },
-  { id: 'IN_REVIEW', nameKey: 'tasks.status.inReview', color: 'bg-yellow-500' },
-  { id: 'DONE', nameKey: 'tasks.status.done', color: 'bg-green-500' },
+  { id: 'TODO', nameKey: 'tasks.status.todo', color: 'bg-slate-400', headerBg: 'bg-slate-100', borderColor: 'border-slate-300' },
+  { id: 'IN_PROGRESS', nameKey: 'tasks.status.inProgress', color: 'bg-blue-500', headerBg: 'bg-blue-50', borderColor: 'border-blue-200' },
+  { id: 'IN_REVIEW', nameKey: 'tasks.status.inReview', color: 'bg-amber-500', headerBg: 'bg-amber-50', borderColor: 'border-amber-200' },
+  { id: 'DONE', nameKey: 'tasks.status.done', color: 'bg-emerald-500', headerBg: 'bg-emerald-50', borderColor: 'border-emerald-200' },
 ];
 
 const priorityColors: Record<string, string> = {
   URGENT: 'bg-red-500',
   HIGH: 'bg-orange-500',
-  MEDIUM: 'bg-yellow-500',
-  LOW: 'bg-gray-500',
+  MEDIUM: 'bg-amber-400',
+  LOW: 'bg-slate-400',
+};
+
+const priorityTextColors: Record<string, string> = {
+  URGENT: 'text-red-700 bg-red-50 border-red-200',
+  HIGH: 'text-orange-700 bg-orange-50 border-orange-200',
+  MEDIUM: 'text-amber-700 bg-amber-50 border-amber-200',
+  LOW: 'text-slate-600 bg-slate-50 border-slate-200',
 };
 
 // Priority weights for sorting (higher = more important = should appear first)
@@ -108,7 +115,7 @@ const priorityOptionDefinitions = [
   { value: 'LOW', labelKey: 'tasks.priority.low' },
 ];
 
-// Sortable Task Card Component
+// Sortable Task Card Component - Salesforce Light Theme
 function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
@@ -123,68 +130,68 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
     <div ref={setNodeRef} style={style} {...attributes}>
       <Card
         className={cn(
-          'cursor-pointer hover:shadow-md transition-all border-white/10 bg-white/5',
-          isDragging && 'shadow-lg ring-2 ring-indigo-500'
+          'cursor-pointer hover:shadow-lg transition-all duration-200 bg-white border border-gray-200 hover:border-[#0070d2]/30',
+          isDragging && 'shadow-xl ring-2 ring-[#0070d2]'
         )}
         onClick={onClick}
       >
-        <CardContent className="p-3">
-          <div className="flex items-start gap-2">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
             <button
               {...listeners}
-              className="mt-1 cursor-grab active:cursor-grabbing text-white/30 hover:text-white/60"
+              className="mt-0.5 cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 transition-colors"
               onClick={(e) => e.stopPropagation()}
             >
               <GripVertical className="h-4 w-4" />
             </button>
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <h3 className="font-medium text-sm truncate">{task.title}</h3>
-                <Badge variant="secondary" className={cn('text-white text-[10px] shrink-0', priorityColors[task.priority])}>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3 className="font-semibold text-sm text-gray-900 truncate">{task.title}</h3>
+                <Badge variant="outline" className={cn('text-[10px] font-medium shrink-0 border', priorityTextColors[task.priority])}>
                   {task.priority}
                 </Badge>
               </div>
-              {task.description && <p className="text-xs text-white/50 line-clamp-2 mb-2">{task.description}</p>}
+              {task.description && <p className="text-xs text-gray-500 line-clamp-2 mb-3">{task.description}</p>}
               {/* Parent task indicator */}
               {task.parent && (
-                <div className="flex items-center gap-1 text-xs text-indigo-400 mb-2">
-                  <span className="opacity-60">{t('tasks.subtaskOf')}</span>
-                  <span className="truncate">{task.parent.title}</span>
+                <div className="flex items-center gap-1 text-xs text-[#0070d2] mb-2">
+                  <span className="text-gray-400">{t('tasks.subtaskOf')}</span>
+                  <span className="truncate font-medium">{task.parent.title}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between text-xs text-white/40">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3 text-gray-500">
                   {task.project && (
-                    <span className="flex items-center gap-1">
-                      <div className="w-2 h-2 rounded-sm" style={{ backgroundColor: task.project.color || '#6366f1' }} />
-                      {task.project.name}
+                    <span className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: task.project.color || '#0070d2' }} />
+                      <span className="font-medium">{task.project.name}</span>
                     </span>
                   )}
                   {task.dueDate && (
-                    <span className="flex items-center gap-1">
-                      <CalendarDays className="h-3 w-3" />
+                    <span className="flex items-center gap-1 text-gray-600">
+                      <CalendarDays className="h-3.5 w-3.5" />
                       {format(new Date(task.dueDate), 'MMM d')}
                     </span>
                   )}
                   {/* Subtask count */}
                   {(task._count?.subtasks || 0) > 0 && (
-                    <span className="flex items-center gap-1 text-indigo-400">
-                      <ListChecks className="h-3 w-3" />
+                    <span className="flex items-center gap-1 text-[#0070d2]">
+                      <ListChecks className="h-3.5 w-3.5" />
                       {task._count?.subtasks}
                     </span>
                   )}
                   {/* Comment count */}
                   {(task._count?.comments || 0) > 0 && (
-                    <span className="flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" />
+                    <span className="flex items-center gap-1 text-gray-500">
+                      <MessageSquare className="h-3.5 w-3.5" />
                       {task._count?.comments}
                     </span>
                   )}
                 </div>
                 {task.assignee && (
-                  <Avatar className="h-5 w-5">
+                  <Avatar className="h-6 w-6 border-2 border-white shadow-sm">
                     <AvatarImage src={task.assignee.avatar} />
-                    <AvatarFallback className="text-[9px] bg-indigo-500">
+                    <AvatarFallback className="text-[10px] bg-[#0070d2] text-white font-medium">
                       {task.assignee.name?.charAt(0) || task.assignee.email?.charAt(0) || 'U'}
                     </AvatarFallback>
                   </Avatar>
@@ -198,7 +205,7 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
   );
 }
 
-// Droppable Column Component
+// Droppable Column Component - Salesforce Light Theme
 function DroppableColumn({
   column,
   tasks,
@@ -215,18 +222,23 @@ function DroppableColumn({
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex-shrink-0 w-72">
-      <div className="mb-3 flex items-center gap-2">
+    <div className="flex-shrink-0 w-80">
+      {/* Column Header */}
+      <div className={cn('mb-3 px-3 py-2.5 rounded-lg flex items-center gap-2', column.headerBg, 'border', column.borderColor)}>
         <div className={cn('h-3 w-3 rounded-full', column.color)} />
-        <span className="font-medium text-sm text-white">{column.name}</span>
-        <Badge variant="secondary" className="ml-auto bg-white/10 text-white/80 text-xs">
+        <span className="font-semibold text-sm text-gray-800">{column.name}</span>
+        <Badge variant="secondary" className="ml-auto bg-white text-gray-700 text-xs font-semibold border border-gray-200">
           {tasks.length}
         </Badge>
       </div>
 
+      {/* Column Content */}
       <div
         ref={setNodeRef}
-        className={cn('space-y-2 min-h-[200px] p-2 rounded-lg transition-colors', isOver && 'bg-indigo-500/10 ring-2 ring-indigo-500/30')}
+        className={cn(
+          'space-y-3 min-h-[200px] p-2 rounded-lg transition-all duration-200 border-2 border-dashed border-transparent',
+          isOver && 'bg-[#0070d2]/5 border-[#0070d2]/30'
+        )}
       >
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
@@ -236,7 +248,7 @@ function DroppableColumn({
 
         <Button
           variant="ghost"
-          className="w-full justify-start text-white/60 hover:text-white hover:bg-white/5"
+          className="w-full justify-start text-gray-500 hover:text-[#0070d2] hover:bg-[#0070d2]/5 border border-dashed border-gray-300 hover:border-[#0070d2]/30"
           onClick={() => onAddTask(column.id)}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -247,17 +259,17 @@ function DroppableColumn({
   );
 }
 
-// Task Card for Drag Overlay
+// Task Card for Drag Overlay - Salesforce Light Theme
 function TaskCardOverlay({ task }: { task: Task }) {
   return (
-    <Card className="w-72 cursor-grabbing shadow-xl border-indigo-500 bg-[#1a1a2e]">
-      <CardContent className="p-3">
-        <div className="flex items-start gap-2">
-          <GripVertical className="h-4 w-4 mt-1 text-white/30" />
+    <Card className="w-80 cursor-grabbing shadow-2xl border-2 border-[#0070d2] bg-white">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <GripVertical className="h-4 w-4 mt-0.5 text-gray-400" />
           <div className="flex-1">
             <div className="flex items-start justify-between gap-2">
-              <h3 className="font-medium text-sm">{task.title}</h3>
-              <Badge variant="secondary" className={cn('text-white text-[10px]', priorityColors[task.priority])}>
+              <h3 className="font-semibold text-sm text-gray-900">{task.title}</h3>
+              <Badge variant="outline" className={cn('text-[10px] font-medium border', priorityTextColors[task.priority])}>
                 {task.priority}
               </Badge>
             </div>
@@ -494,22 +506,25 @@ export default function TasksPage() {
   const usersList = (users as Array<{ id: string; name?: string; email: string; avatar?: string }>) || [];
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] -m-6">
+    <div className="flex h-[calc(100vh-4rem)] -m-6 bg-[#f4f6f9]">
       {/* Project Sidebar */}
       <ProjectSidebar selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="p-6 border-b border-white/10">
+        {/* Header - Salesforce Light Theme */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">{t('tasks.title')}</h1>
-              <p className="text-sm text-white/50">
+              <h1 className="text-2xl font-bold text-gray-900">{t('tasks.title')}</h1>
+              <p className="text-sm text-gray-500">
                 {selectedProjectId ? t('tasks.projectTasks') : t('tasks.allTasks')}
               </p>
             </div>
-            <Button onClick={() => openCreateDialog()}>
+            <Button
+              onClick={() => openCreateDialog()}
+              className="bg-[#0070d2] hover:bg-[#005fb2] text-white shadow-sm"
+            >
               <Plus className="mr-2 h-4 w-4" />
               {t('tasks.addTask')}
             </Button>
@@ -519,15 +534,23 @@ export default function TasksPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder={t('tasks.searchTasks')} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  placeholder={t('tasks.searchTasks')}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-9 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400 focus:border-[#0070d2] focus:ring-[#0070d2]"
+                />
               </div>
 
               <Button
-                variant={showMyTasks ? 'secondary' : 'outline'}
+                variant={showMyTasks ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setShowMyTasks(!showMyTasks)}
-                className={cn(showMyTasks && 'bg-indigo-500 hover:bg-indigo-600', !showMyTasks && 'border-white/10 hover:bg-white/10')}
+                className={cn(
+                  showMyTasks && 'bg-[#0070d2] hover:bg-[#005fb2] text-white',
+                  !showMyTasks && 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                )}
               >
                 <User className="h-4 w-4 mr-2" />
                 {t('tasks.myTasks')}
@@ -535,14 +558,29 @@ export default function TasksPage() {
             </div>
 
             {/* View Toggle */}
-            <div className="flex items-center gap-1 rounded-lg border border-white/10 p-1 bg-white/5">
-              <Button variant={viewMode === 'board' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('board')}>
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 p-1 bg-gray-50">
+              <Button
+                variant={viewMode === 'board' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('board')}
+                className={cn(viewMode === 'board' ? 'bg-[#0070d2] text-white hover:bg-[#005fb2]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')}
+              >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
-              <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={cn(viewMode === 'list' ? 'bg-[#0070d2] text-white hover:bg-[#005fb2]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')}
+              >
                 <List className="h-4 w-4" />
               </Button>
-              <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')}>
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+                className={cn(viewMode === 'calendar' ? 'bg-[#0070d2] text-white hover:bg-[#005fb2]' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100')}
+              >
                 <Calendar className="h-4 w-4" />
               </Button>
             </div>
@@ -553,14 +591,14 @@ export default function TasksPage() {
         <div className="flex-1 overflow-auto p-6">
           {isLoading && (
             <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500" />
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#0070d2]" />
             </div>
           )}
 
           {/* Board View */}
           {!isLoading && viewMode === 'board' && (
             <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-              <div className="flex gap-4 overflow-x-auto pb-4">
+              <div className="flex gap-5 overflow-x-auto pb-4">
                 {columns.map((column) => (
                   <DroppableColumn key={column.id} column={column} tasks={tasksByStatus[column.id] || []} onAddTask={openCreateDialog} onTaskClick={setSelectedTask} addTaskLabel={t('tasks.addTask')} />
                 ))}
@@ -569,57 +607,58 @@ export default function TasksPage() {
             </DndContext>
           )}
 
-          {/* List View */}
+          {/* List View - Salesforce Light Theme */}
           {!isLoading && viewMode === 'list' && (
-            <Card className="border-white/10 bg-white/5">
+            <Card className="border-gray-200 bg-white shadow-sm">
               <CardContent className="p-0">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-white/10 bg-white/5">
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.title')}</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.status')}</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.priority')}</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.assignee')}</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.dueDate')}</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.project')}</th>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('tasks.fields.title')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('tasks.fields.status')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('tasks.fields.priority')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('tasks.fields.assignee')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('tasks.fields.dueDate')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('tasks.fields.project')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tasks.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-white/40">
+                        <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
                           {t('tasks.noTasks')}
                         </td>
                       </tr>
                     ) : (
                       [...tasks].sort((a, b) => (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0)).map((task) => (
-                        <tr key={task.id} className="border-b border-white/5 hover:bg-white/5 cursor-pointer" onClick={() => setSelectedTask(task)}>
-                          <td className="px-4 py-3">
-                            <span className="font-medium">{task.title}</span>
+                        <tr key={task.id} className="border-b border-gray-100 hover:bg-blue-50/50 cursor-pointer transition-colors" onClick={() => setSelectedTask(task)}>
+                          <td className="px-4 py-3.5">
+                            <span className="font-medium text-gray-900">{task.title}</span>
                           </td>
-                          <td className="px-4 py-3">
-                            <Badge variant="outline" className="bg-white/5">
+                          <td className="px-4 py-3.5">
+                            <Badge variant="outline" className={cn('font-medium', columns.find((c) => c.id === task.status)?.borderColor)}>
+                              <span className={cn('w-2 h-2 rounded-full mr-1.5', columns.find((c) => c.id === task.status)?.color)} />
                               {columns.find((c) => c.id === task.status)?.name}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3">
-                            <Badge className={cn('text-white', priorityColors[task.priority])}>{task.priority}</Badge>
+                          <td className="px-4 py-3.5">
+                            <Badge variant="outline" className={cn('font-medium border', priorityTextColors[task.priority])}>{task.priority}</Badge>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5">
                             {task.assignee ? (
                               <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
+                                <Avatar className="h-7 w-7 border-2 border-white shadow-sm">
                                   <AvatarImage src={task.assignee.avatar} />
-                                  <AvatarFallback className="text-[10px] bg-indigo-500">{task.assignee.name?.charAt(0) || 'U'}</AvatarFallback>
+                                  <AvatarFallback className="text-[10px] bg-[#0070d2] text-white font-medium">{task.assignee.name?.charAt(0) || 'U'}</AvatarFallback>
                                 </Avatar>
-                                <span className="text-sm text-white/60">{task.assignee.name || task.assignee.email}</span>
+                                <span className="text-sm text-gray-700">{task.assignee.name || task.assignee.email}</span>
                               </div>
                             ) : (
-                              <span className="text-sm text-white/40">-</span>
+                              <span className="text-sm text-gray-400">-</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 text-sm text-white/60">{task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : '-'}</td>
-                          <td className="px-4 py-3 text-sm text-white/60">{task.project?.name || '-'}</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600">{task.dueDate ? format(new Date(task.dueDate), 'MMM d, yyyy') : '-'}</td>
+                          <td className="px-4 py-3.5 text-sm text-gray-600">{task.project?.name || '-'}</td>
                         </tr>
                       ))
                     )}
@@ -629,9 +668,9 @@ export default function TasksPage() {
             </Card>
           )}
 
-          {/* Calendar View */}
+          {/* Calendar View - Salesforce Light Theme */}
           {!isLoading && viewMode === 'calendar' && (
-            <Card className="border-white/10 bg-white/5">
+            <Card className="border-gray-200 bg-white shadow-sm">
               <CardContent className="p-4">
                 <CalendarView
                   events={calendarEvents}

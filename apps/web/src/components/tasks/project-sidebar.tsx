@@ -75,15 +75,15 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
   ];
 
   return (
-    <div className="w-64 border-r border-white/10 flex flex-col h-full bg-white/[0.02]">
+    <div className="w-64 border-r border-gray-200 flex flex-col h-full bg-white">
       {/* Header */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm text-white">{t('projects.title')}</h2>
+          <h2 className="font-semibold text-sm text-gray-900">{t('projects.title')}</h2>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-white/50 hover:text-white"
+            className="h-7 w-7 text-gray-500 hover:text-[#0070d2] hover:bg-blue-50"
             onClick={() => setIsCreateDialogOpen(true)}
           >
             <Plus className="h-4 w-4" />
@@ -98,38 +98,38 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
           <button
             onClick={() => onSelectProject(null)}
             className={cn(
-              'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors',
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200',
               selectedProjectId === null
-                ? 'bg-indigo-500/20 text-white'
-                : 'text-white/90 hover:bg-white/5 hover:text-white'
+                ? 'bg-[#0070d2] text-white shadow-sm'
+                : 'text-gray-700 hover:bg-gray-100'
             )}
           >
-            <FolderKanban className="h-4 w-4 text-white/70" />
+            <FolderKanban className={cn('h-4 w-4', selectedProjectId === null ? 'text-white/80' : 'text-gray-400')} />
             <span className="flex-1 text-sm font-medium">{t('tasks.allTasks')}</span>
           </button>
 
           {/* Divider */}
-          <div className="my-2 border-t border-white/5" />
+          <div className="my-3 border-t border-gray-100" />
 
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" />
+              <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-[#0070d2]" />
             </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-400 text-sm">
+            <div className="text-center py-8 text-red-600 text-sm">
               <p>{t('errors.general')}</p>
-              <p className="text-xs mt-1 text-red-400/70">
+              <p className="text-xs mt-1 text-red-400">
                 {error instanceof Error ? error.message : t('common.unknown')}
               </p>
             </div>
           ) : projects.length === 0 ? (
-            <div className="text-center py-8 text-white/40 text-sm">
+            <div className="text-center py-8 text-gray-400 text-sm">
               <FolderKanban className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>{t('projects.noProjects')}</p>
               <Button
                 variant="link"
                 size="sm"
-                className="text-indigo-400"
+                className="text-[#0070d2]"
                 onClick={() => setIsCreateDialogOpen(true)}
               >
                 {t('projects.createFirstProject')}
@@ -142,21 +142,24 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
                   key={project.id}
                   onClick={() => onSelectProject(project.id)}
                   className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors group',
+                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200 group',
                     selectedProjectId === project.id
-                      ? 'bg-indigo-500/20 text-white'
-                      : 'text-white/90 hover:bg-white/5 hover:text-white'
+                      ? 'bg-blue-50 text-[#0070d2] border border-blue-200'
+                      : 'text-gray-700 hover:bg-gray-50 border border-transparent'
                   )}
                 >
                   <div
-                    className="h-3 w-3 rounded-sm shrink-0"
-                    style={{ backgroundColor: project.color || '#6366f1' }}
+                    className="h-3.5 w-3.5 rounded shrink-0 shadow-sm"
+                    style={{ backgroundColor: project.color || '#0070d2' }}
                   />
                   <span className="flex-1 text-sm font-medium truncate">
                     {project.emoji && <span className="mr-1">{project.emoji}</span>}
                     {project.name}
                   </span>
-                  <span className="text-xs text-white/60">
+                  <span className={cn(
+                    'text-xs font-medium px-1.5 py-0.5 rounded',
+                    selectedProjectId === project.id ? 'bg-blue-100 text-[#0070d2]' : 'bg-gray-100 text-gray-500'
+                  )}>
                     {project._count?.tasks || 0}
                   </span>
                 </button>
@@ -168,31 +171,33 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
 
       {/* Create Project Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
-            <DialogTitle>{t('projects.createNewProject')}</DialogTitle>
+            <DialogTitle className="text-gray-900">{t('projects.createNewProject')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="projectName">{t('projects.projectName')}</Label>
+              <Label htmlFor="projectName" className="text-gray-700">{t('projects.projectName')}</Label>
               <Input
                 id="projectName"
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
+                className="border-gray-300 focus:border-[#0070d2] focus:ring-[#0070d2]"
+                placeholder={t('projects.projectName')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>{t('projects.fields.color')}</Label>
+              <Label className="text-gray-700">{t('projects.fields.color')}</Label>
               <div className="flex gap-2">
                 {colors.map((color) => (
                   <button
                     key={color}
                     onClick={() => setNewProjectColor(color)}
                     className={cn(
-                      'h-8 w-8 rounded-lg transition-all',
-                      newProjectColor === color && 'ring-2 ring-offset-2 ring-offset-[#0a0a14] ring-white'
+                      'h-8 w-8 rounded-lg transition-all shadow-sm hover:scale-110',
+                      newProjectColor === color && 'ring-2 ring-offset-2 ring-offset-white ring-[#0070d2]'
                     )}
                     style={{ backgroundColor: color }}
                   />
@@ -202,12 +207,13 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-gray-300 text-gray-700 hover:bg-gray-50">
               {t('common.cancel')}
             </Button>
             <Button
               onClick={handleCreateProject}
               disabled={!newProjectName.trim() || createProjectMutation.isPending}
+              className="bg-[#0070d2] hover:bg-[#005fb2] text-white"
             >
               {createProjectMutation.isPending ? t('projects.creating') : t('projects.createProject')}
             </Button>
