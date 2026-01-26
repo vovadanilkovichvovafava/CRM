@@ -76,6 +76,7 @@
     "due": "Due",
     "new": "New",
     "created": "Created",
+    "owner": "Owner",
     "priorities": {
       "urgent": "Urgent",
       "high": "High",
@@ -370,7 +371,12 @@
       "industry": "Industry",
       "employees": "Employees",
       "revenue": "Revenue",
-      "address": "Address"
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "city": "City",
+      "country": "Country",
+      "description": "Description"
     }
   },
   "deals": {

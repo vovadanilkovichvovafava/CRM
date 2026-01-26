@@ -76,6 +76,7 @@
     "due": "Срок",
     "new": "Новый",
     "created": "Создано",
+    "owner": "Владелец",
     "priorities": {
       "urgent": "Срочно",
       "high": "Высокий",
@@ -370,7 +371,12 @@
       "industry": "Отрасль",
       "employees": "Сотрудники",
       "revenue": "Выручка",
-      "address": "Адрес"
+      "address": "Адрес",
+      "phone": "Телефон",
+      "email": "Email",
+      "city": "Город",
+      "country": "Страна",
+      "description": "Описание"
     }
   },
   "deals": {

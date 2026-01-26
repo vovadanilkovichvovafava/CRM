@@ -19,7 +19,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { api, ApiError } from '@/lib/api';
 import { formatRelativeTime, cn } from '@/lib/utils';
-import { useNavigationStore } from '@/stores/navigation';
 
 interface Notification {
   id: string;
@@ -49,7 +48,6 @@ function getNotificationIcon(type: string) {
 export function NotificationBell() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const setPendingTaskId = useNavigationStore((s) => s.setPendingTaskId);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -121,27 +119,39 @@ export function NotificationBell() {
     }
 
     // Navigate based on notification type and data
-    const data = notification.data as { taskId?: string; recordId?: string; objectId?: string } | null;
+    const data = notification.data as {
+      taskId?: string;
+      recordId?: string;
+      objectId?: string;
+      objectName?: string;
+    } | null;
 
     if (data?.taskId) {
-      // Task-related notifications (task_assigned, task_due_soon, comment_mention on task)
+      // Task-related notifications - navigate directly to task detail page
       console.log('[NotificationBell] Navigating to task:', data.taskId);
       setIsOpen(false);
-      // Store taskId in global state for the tasks page to pick up
-      setPendingTaskId(data.taskId);
-      router.push('/tasks');
+      router.push(`/tasks/${data.taskId}`);
       return;
     }
 
-    if (data?.recordId && data?.objectId) {
-      // Record-related notifications
-      console.log('[NotificationBell] Navigating to record:', data.recordId);
+    if (data?.recordId && data?.objectName) {
+      // Record-related notifications - navigate to the specific entity page
+      console.log('[NotificationBell] Navigating to record:', data.recordId, 'object:', data.objectName);
       setIsOpen(false);
-      router.push(`/records/${data.objectId}/${data.recordId}`);
+      // Map object names to routes
+      const objectRoutes: Record<string, string> = {
+        contacts: 'contacts',
+        companies: 'companies',
+        deals: 'deals',
+        webmasters: 'webmasters',
+        partners: 'partners',
+      };
+      const route = objectRoutes[data.objectName] || data.objectName;
+      router.push(`/${route}/${data.recordId}`);
       return;
     }
 
-    console.log('[NotificationBell] No navigation - data does not contain taskId or recordId/objectId');
+    console.log('[NotificationBell] No navigation - data does not contain taskId or recordId/objectName');
   };
 
   return (
