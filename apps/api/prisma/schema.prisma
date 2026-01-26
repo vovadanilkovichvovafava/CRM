@@ -700,9 +700,349 @@ enum WorkflowExecutionStatus {
 }
 
 // ============================================================================
-// TRAFFIC ARBITRAGE SPECIFIC
+// TRAFFIC ARBITRAGE & INTEGRATIONS
 // ============================================================================
 
+// Universal integration model for external services
+model Integration {
+  id          String            @id @default(cuid())
+  type        IntegrationType
+  name        String            // User-friendly name
+  config      Json              // API URL, keys, settings (encrypted sensitive data)
+  status      IntegrationStatus @default(INACTIVE)
+  lastSyncAt  DateTime?
+  syncError   String?
+  metadata    Json?             // Additional integration-specific data
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  createdBy   String
+
+  // Related data
+  campaigns   Campaign[]
+  conversions Conversion[]
+  syncLogs    IntegrationSyncLog[]
+
+  @@index([type])
+  @@index([status])
+  @@index([createdBy])
+}
+
+enum IntegrationType {
+  KEITARO
+  BINOM
+  REDTRACK
+  AFFISE
+  LEADBIT
+  CUSTOM_POSTBACK
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+  SYNCING
+}
+
+// Sync logs for debugging and monitoring
+model IntegrationSyncLog {
+  id            String   @id @default(cuid())
+  integrationId String
+  syncType      String   // "campaigns", "conversions", "stats", "full"
+  status        String   // "success", "error", "partial"
+  recordsCount  Int      @default(0)
+  duration      Int?     // milliseconds
+  error         String?
+  details       Json?    // Additional sync details
+  createdAt     DateTime @default(now())
+
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId])
+  @@index([createdAt])
+}
+
+// Traffic Sources (Facebook, Google, Push networks, etc.)
+model TrafficSource {
+  id          String            @id @default(cuid())
+  name        String
+  type        TrafficSourceType
+  description String?
+  config      Json?             // API credentials, tracking params
+  isActive    Boolean           @default(true)
+
+  // Statistics (aggregated)
+  totalSpent  Decimal           @default(0) @db.Decimal(15, 2)
+  totalClicks Int               @default(0)
+  totalLeads  Int               @default(0)
+  avgCpc      Decimal           @default(0) @db.Decimal(10, 4) // Cost per click
+  avgCpl      Decimal           @default(0) @db.Decimal(10, 2) // Cost per lead
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns Campaign[]
+
+  @@index([type])
+  @@index([isActive])
+}
+
+enum TrafficSourceType {
+  FACEBOOK
+  GOOGLE
+  TIKTOK
+  SNAPCHAT
+  TWITTER
+  PUSH
+  NATIVE
+  POPUP
+  SEO
+  EMAIL
+  TELEGRAM
+  INFLUENCER
+  OTHER
+}
+
+// Campaigns (from tracker or manually created)
+model Campaign {
+  id              String         @id @default(cuid())
+  externalId      String?        // ID in external tracker
+  integrationId   String?
+  name            String
+  status          CampaignStatus @default(ACTIVE)
+
+  // Relationships
+  offerId         String?
+  trafficSourceId String?
+  webmasterId     String?        // Record ID of webmaster
+
+  // Tracking
+  trackingUrl     String?
+  postbackUrl     String?
+
+  // Statistics (synced from tracker)
+  clicks          Int            @default(0)
+  uniqueClicks    Int            @default(0)
+  conversions     Int            @default(0)
+  approvedConv    Int            @default(0)
+  rejectedConv    Int            @default(0)
+  holdConv        Int            @default(0)
+  revenue         Decimal        @default(0) @db.Decimal(15, 2)
+  cost            Decimal        @default(0) @db.Decimal(15, 2)
+  profit          Decimal        @default(0) @db.Decimal(15, 2)
+
+  // Calculated metrics
+  roi             Decimal        @default(0) @db.Decimal(10, 2) // Return on investment %
+  cr              Decimal        @default(0) @db.Decimal(10, 4) // Conversion rate %
+  epc             Decimal        @default(0) @db.Decimal(10, 4) // Earnings per click
+  cpc             Decimal        @default(0) @db.Decimal(10, 4) // Cost per click
+  cpa             Decimal        @default(0) @db.Decimal(10, 2) // Cost per action
+  approveRate     Decimal        @default(0) @db.Decimal(5, 2)  // Approve rate %
+
+  // Metadata
+  geos            String[]       // Target countries
+  landings        Json?          // Landing pages rotation
+  metadata        Json?
+
+  lastSyncAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  integration   Integration?   @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  offer         Offer?         @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  trafficSource TrafficSource? @relation(fields: [trafficSourceId], references: [id], onDelete: SetNull)
+  conversionsList Conversion[]
+  dailyStats    CampaignDailyStat[]
+
+  @@unique([integrationId, externalId])
+  @@index([status])
+  @@index([offerId])
+  @@index([trafficSourceId])
+  @@index([webmasterId])
+  @@index([createdAt])
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  DRAFT
+}
+
+// Daily statistics for campaigns (for charts and trends)
+model CampaignDailyStat {
+  id          String   @id @default(cuid())
+  campaignId  String
+  date        DateTime @db.Date
+
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  revenue     Decimal  @default(0) @db.Decimal(15, 2)
+  cost        Decimal  @default(0) @db.Decimal(15, 2)
+  profit      Decimal  @default(0) @db.Decimal(15, 2)
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, date])
+  @@index([campaignId])
+  @@index([date])
+}
+
+// Conversions (leads, deposits, etc.)
+model Conversion {
+  id              String           @id @default(cuid())
+  externalId      String?          // click_id from tracker
+  integrationId   String?
+  campaignId      String?
+  offerId         String?
+  webmasterId     String?          // Record ID of webmaster
+
+  // Conversion data
+  status          ConversionStatus @default(HOLD)
+  type            ConversionType   @default(LEAD)
+  revenue         Decimal          @db.Decimal(15, 2)
+  payout          Decimal          @default(0) @db.Decimal(15, 2)
+  currency        String           @default("USD")
+
+  // Sub IDs from tracker (for detailed analytics)
+  subId1          String?
+  subId2          String?
+  subId3          String?
+  subId4          String?
+  subId5          String?
+
+  // User data
+  ip              String?
+  userAgent       String?
+  country         String?
+  city            String?
+  region          String?
+  device          String?          // desktop, mobile, tablet
+  os              String?
+  browser         String?
+  language        String?
+
+  // Extra data
+  landingId       String?          // Which landing was used
+  prelanding      String?          // Which prelanding was used
+  referer         String?
+  comment         String?          // Operator comment for rejected
+
+  // Timestamps
+  clickedAt       DateTime?
+  convertedAt     DateTime         @default(now())
+  processedAt     DateTime?        // When status was changed from HOLD
+  statusChangedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  integration Integration? @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  offer       Offer?       @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([type])
+  @@index([webmasterId])
+  @@index([campaignId])
+  @@index([offerId])
+  @@index([country])
+  @@index([convertedAt])
+  @@unique([integrationId, externalId])
+}
+
+enum ConversionStatus {
+  HOLD        // Pending moderation
+  APPROVED    // Confirmed
+  REJECTED    // Declined
+  TRASH       // Fraud
+}
+
+enum ConversionType {
+  LEAD        // Registration
+  FTD         // First time deposit
+  DEPOSIT     // Repeated deposit
+  PURCHASE    // Purchase
+  UPSELL      // Upsell
+  REBILL      // Subscription rebill
+}
+
+// Webmaster scoring for quality assessment
+model WebmasterScore {
+  id                 String   @id @default(cuid())
+  recordId           String   @unique // Webmaster record
+  volumeScore        Float    @default(0)
+  qualityScore       Float    @default(0)
+  reliabilityScore   Float    @default(0)
+  communicationScore Float    @default(0)
+  totalScore         Float    @default(0)
+  grade              String   // "Gold", "Silver", "Bronze"
+  gradeColor         String?  // Hex color for UI
+  factors            Json     // Detailed breakdown
+  calculatedAt       DateTime @default(now())
+
+  @@index([totalScore])
+  @@index([grade])
+}
+
+// Offers from advertisers/affiliate networks
+model Offer {
+  id           String      @id @default(cuid())
+  externalId   String?     // ID in affiliate network
+  name         String
+  description  String?
+  partnerId    String      // Record ID of partner/advertiser
+  vertical     String      // "gambling", "betting", "nutra", "finance", "crypto", etc.
+  geos         Json        // Array of {geo, payout, cap, current, approveRate}
+  payoutType   PayoutType  @default(CPA)
+  basePayout   Decimal     @default(0) @db.Decimal(10, 2)
+  currency     String      @default("USD")
+  status       OfferStatus @default(ACTIVE)
+
+  // Offer details
+  requirements   String?   // What is required for approval
+  restrictions   String?   // What is forbidden
+  landingUrls    Json?     // Available landing pages
+  previewUrl     String?   // Offer preview link
+  trackingLink   String?   // Base tracking link
+
+  // Statistics (aggregated)
+  totalLeads     Int       @default(0)
+  approvedLeads  Int       @default(0)
+  rejectedLeads  Int       @default(0)
+  holdLeads      Int       @default(0)
+  approveRate    Decimal   @default(0) @db.Decimal(5, 2)
+  avgPayout      Decimal   @default(0) @db.Decimal(10, 2)
+  epc            Decimal   @default(0) @db.Decimal(10, 4)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaigns   Campaign[]
+  conversions Conversion[]
+
+  @@index([partnerId])
+  @@index([vertical])
+  @@index([status])
+  @@index([payoutType])
+}
+
+enum OfferStatus {
+  ACTIVE
+  PAUSED
+  ARCHIVED
+  TESTING
+}
+
+enum PayoutType {
+  CPA        // Cost Per Action
+  CPL        // Cost Per Lead
+  CPS        // Cost Per Sale
+  CPI        // Cost Per Install
+  REVSHARE   // Revenue Share
+  HYBRID     // CPA + RevShare
+}
+
+// Legacy Keitaro integration (for backward compatibility)
 model KeitaroIntegration {
   id        String   @id @default(cuid())
   userId    String   @unique
@@ -737,45 +1077,6 @@ model KeitaroCampaign {
   @@unique([integrationId, keitaroId])
   @@index([integrationId])
   @@index([recordId])
-}
-
-model WebmasterScore {
-  id                 String   @id @default(cuid())
-  recordId           String   @unique // Webmaster record
-  volumeScore        Float    @default(0)
-  qualityScore       Float    @default(0)
-  reliabilityScore   Float    @default(0)
-  communicationScore Float    @default(0)
-  totalScore         Float    @default(0)
-  grade              String   // "Gold", "Silver", "Bronze"
-  factors            Json     // Detailed breakdown
-  calculatedAt       DateTime @default(now())
-
-  @@index([totalScore])
-  @@index([grade])
-}
-
-model Offer {
-  id           String      @id @default(cuid())
-  name         String
-  partnerId    String      // Record ID of partner network
-  vertical     String      // "casino", "betting", "finance", etc.
-  geos         Json        // Array of {geo, payout, cap, current, cr}
-  status       OfferStatus @default(ACTIVE)
-  requirements String?
-  landingUrl   String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  @@index([partnerId])
-  @@index([vertical])
-  @@index([status])
-}
-
-enum OfferStatus {
-  ACTIVE
-  PAUSED
-  ARCHIVED
 }
 
 // ============================================================================

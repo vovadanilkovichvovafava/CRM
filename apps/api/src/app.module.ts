@@ -25,6 +25,7 @@ import { SystemSettingsModule } from './modules/system-settings/system-settings.
 import { ImportExportModule } from './modules/import-export/import-export.module';
 import { LeadScoringModule } from './modules/lead-scoring/lead-scoring.module';
 import { WebmasterScoringModule } from './modules/webmaster-scoring/webmaster-scoring.module';
+import { IntegrationsModule } from './modules/integrations/integrations.module';
 
 const logger = new Logger('AppModule');
 
@@ -110,6 +111,9 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
 
     // Webmaster Scoring
     WebmasterScoringModule,
+
+    // Integrations & Analytics (Keitaro, etc.)
+    IntegrationsModule,
   ],
 })
 export class AppModule {}

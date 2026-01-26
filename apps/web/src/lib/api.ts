@@ -941,6 +941,143 @@ export const api = {
     getGradeThresholds: () => request<Record<string, number>>('/lead-scoring/grades'),
   },
 
+  // Integrations (Keitaro, etc.)
+  integrations: {
+    list: () =>
+      request<Array<{
+        id: string;
+        type: string;
+        name: string;
+        config: Record<string, unknown>;
+        status: string;
+        lastSyncAt: string | null;
+        syncError: string | null;
+        createdAt: string;
+      }>>('/integrations'),
+    get: (id: string) =>
+      request<{
+        id: string;
+        type: string;
+        name: string;
+        config: Record<string, unknown>;
+        status: string;
+        lastSyncAt: string | null;
+        syncError: string | null;
+        createdAt: string;
+      }>(`/integrations/${id}`),
+    create: (data: {
+      type: 'KEITARO' | 'BINOM' | 'REDTRACK' | 'AFFISE' | 'CUSTOM_POSTBACK';
+      name: string;
+      config: { apiUrl: string; apiKey: string; syncInterval?: number; autoSync?: boolean };
+    }) => request<unknown>('/integrations', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: { name?: string; config?: Record<string, unknown>; status?: string }) =>
+      request<unknown>(`/integrations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/integrations/${id}`, { method: 'DELETE' }),
+    testConnection: (id: string) =>
+      request<{ connected: boolean }>(`/integrations/${id}/test`, { method: 'POST' }),
+    sync: (id: string) =>
+      request<{
+        success: boolean;
+        campaignsCount: number;
+        conversionsCount: number;
+        error?: string;
+        duration: number;
+      }>(`/integrations/${id}/sync`, { method: 'POST' }),
+    getStats: (id: string) =>
+      request<{
+        campaigns: number;
+        conversions: number;
+        revenue: number;
+        profit: number;
+        lastSync: string | null;
+      }>(`/integrations/${id}/stats`),
+    getSyncLogs: (id: string) =>
+      request<Array<{
+        id: string;
+        syncType: string;
+        status: string;
+        recordsCount: number;
+        duration: number | null;
+        error: string | null;
+        createdAt: string;
+      }>>(`/integrations/${id}/logs`),
+  },
+
+  // Analytics (Arbitrage)
+  analytics: {
+    getSummary: (params?: { from?: string; to?: string }) =>
+      request<{
+        revenue: number;
+        cost: number;
+        profit: number;
+        roi: number;
+        clicks: number;
+        conversions: number;
+        cr: number;
+        epc: number;
+        cpa: number;
+        approvedConversions: number;
+        rejectedConversions: number;
+        holdConversions: number;
+        approveRate: number;
+      }>('/analytics/summary', { params }),
+    getTrend: (days?: number) =>
+      request<Array<{
+        date: string;
+        revenue: number;
+        cost: number;
+        profit: number;
+        clicks: number;
+        conversions: number;
+      }>>('/analytics/trend', { params: days ? { days } : undefined }),
+    getTopCampaigns: (limit?: number) =>
+      request<Array<{
+        id: string;
+        name: string;
+        revenue: number;
+        profit: number;
+        roi: number;
+        conversions: number;
+      }>>('/analytics/top-campaigns', { params: limit ? { limit } : undefined }),
+    getTopOffers: (limit?: number) =>
+      request<Array<{
+        id: string;
+        name: string;
+        revenue: number;
+        profit: number;
+        roi: number;
+        conversions: number;
+      }>>('/analytics/top-offers', { params: limit ? { limit } : undefined }),
+    getGeoDistribution: (limit?: number) =>
+      request<Array<{
+        country: string;
+        conversions: number;
+        revenue: number;
+        percentage: number;
+      }>>('/analytics/geo', { params: limit ? { limit } : undefined }),
+    getStatusDistribution: () =>
+      request<Array<{
+        status: string;
+        count: number;
+        percentage: number;
+      }>>('/analytics/status-distribution'),
+    getWebmasterStats: (limit?: number) =>
+      request<Array<{
+        webmasterId: string;
+        conversions: number;
+        revenue: number;
+        approveRate: number;
+      }>>('/analytics/webmasters', { params: limit ? { limit } : undefined }),
+    getHourlyDistribution: () =>
+      request<Array<{ hour: number; conversions: number }>>('/analytics/hourly'),
+    compare: (params: { from1: string; to1: string; from2: string; to2: string }) =>
+      request<{
+        current: Record<string, number>;
+        previous: Record<string, number>;
+        changes: { revenue: number; profit: number; conversions: number; roi: number };
+      }>('/analytics/compare', { params }),
+  },
+
   // Webmaster Scoring
   webmasterScoring: {
     getScore: (recordId: string) =>
