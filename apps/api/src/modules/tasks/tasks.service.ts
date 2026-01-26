@@ -10,7 +10,8 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ProjectsService } from '../projects/projects.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { Task, TaskStatus, Priority, Prisma } from '../../../generated/prisma';
+import { StorageService } from '../files/storage.service';
+import { Task, TaskStatus, Priority, Prisma, File } from '../../../generated/prisma';
 
 /**
  * Task role enum for permission checks
@@ -78,7 +79,27 @@ export class TasksService {
     @Inject(forwardRef(() => ProjectsService))
     private readonly projectsService: ProjectsService,
     private readonly notificationsService: NotificationsService,
+    private readonly storageService: StorageService,
   ) {}
+
+  /**
+   * Transform file URLs to use current API_BASE_URL
+   * This ensures URLs work correctly in both development and production
+   */
+  private async transformFileUrls<T extends { files?: File[] }>(task: T): Promise<T> {
+    if (!task.files || task.files.length === 0) {
+      return task;
+    }
+
+    const filesWithUrls = await Promise.all(
+      task.files.map(async (file) => ({
+        ...file,
+        url: await this.storageService.getUrl(file.name),
+      })),
+    );
+
+    return { ...task, files: filesWithUrls };
+  }
 
   /**
    * Get user role for a task
@@ -320,10 +341,12 @@ export class TasksService {
       throw new NotFoundException(`Task with ID "${id}" not found`);
     }
 
-    return task;
+    // Transform file URLs to use current API_BASE_URL
+    return this.transformFileUrls(task);
   }
 
   async update(id: string, dto: UpdateTaskDto, userId: string): Promise<Task> {
+    // Use findOne which transforms file URLs - we need the task data for validation
     const existing = await this.findOne(id);
 
     // Check user permissions

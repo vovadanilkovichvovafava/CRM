@@ -4,9 +4,10 @@ import { TasksController } from './tasks.controller';
 import { AuthModule } from '../auth/auth.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
-  imports: [AuthModule, forwardRef(() => ProjectsModule), NotificationsModule],
+  imports: [AuthModule, forwardRef(() => ProjectsModule), NotificationsModule, FilesModule],
   controllers: [TasksController],
   providers: [TasksService],
   exports: [TasksService],

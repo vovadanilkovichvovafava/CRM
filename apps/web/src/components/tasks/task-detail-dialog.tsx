@@ -24,6 +24,7 @@ import {
   Trash2,
   Pencil,
   Check,
+  Folder,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +66,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useTaskComments, useCreateComment } from '@/hooks/use-comments';
 import { useUpdateTask, useCreateTask, useTask, useDeleteTask } from '@/hooks/use-tasks';
+import { useProjects } from '@/hooks/use-projects';
 import { toast } from 'sonner';
 import type { Task as TaskType } from '@/types';
 import { api } from '@/lib/api';
@@ -249,7 +251,11 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   // Navigation state for viewing subtasks
   const [taskHistory, setTaskHistory] = useState<string[]>([]);
   const [viewingTaskId, setViewingTaskId] = useState<string | null>(null);
+  // File upload states
+  const [isUploadingTaskFile, setIsUploadingTaskFile] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const taskFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch full task data to get subtasks
@@ -257,6 +263,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   // Fetch the subtask data when viewing a subtask
   const { data: viewingSubtaskData, refetch: refetchViewingTask } = useTask(viewingTaskId || '');
   const deleteTaskMutation = useDeleteTask();
+  // Fetch projects for project selector
+  const { data: projectsData } = useProjects({ limit: 100 });
+  const projects = projectsData?.data || [];
 
   // Reset navigation and editing state when dialog closes or task changes
   useEffect(() => {
@@ -301,7 +310,8 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   const userRole = displayTask ? getUserRole(displayTask as Task, currentUser?.id) : 'viewer';
   const isCreator = userRole === 'creator';
   const isAssignee = userRole === 'assignee';
-  const canEditStatus = isCreator || isAssignee;
+  // Only creator can change status - assignee has view-only access to status
+  const canEditStatus = isCreator;
   const canEditAllFields = isCreator;
   const canAddAttachments = isCreator || isAssignee;
   // Use fullTaskData subtasks if available for accurate status check
@@ -509,6 +519,56 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
   const removeAttachedFile = (index: number) => {
     setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle task file upload (direct upload to task, not via comment)
+  const handleTaskFileUpload = async (files: FileList | File[]) => {
+    if (!displayTask || files.length === 0) return;
+
+    setIsUploadingTaskFile(true);
+    try {
+      for (const file of Array.from(files)) {
+        await api.files.upload(file, { taskId: displayTask.id });
+      }
+      toast.success(`${files.length} file(s) uploaded`);
+      // Refresh task data to show new files
+      if (viewingTaskId) {
+        refetchViewingTask();
+      } else {
+        refetchTask();
+      }
+    } catch (error) {
+      toast.error('Failed to upload file');
+    } finally {
+      setIsUploadingTaskFile(false);
+    }
+  };
+
+  const handleTaskFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleTaskFileUpload(e.target.files);
+    }
+    if (taskFileInputRef.current) {
+      taskFileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && canAddAttachments) {
+      handleTaskFileUpload(e.dataTransfer.files);
+    }
   };
 
   const insertMention = (user: User) => {
@@ -832,8 +892,66 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     </div>
                   </div>
 
-                  {/* Dates & Priority Row */}
+                  {/* Project & Dates Row */}
                   <div className="grid grid-cols-2 gap-6">
+                    {/* Project */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-white/50 text-xs">
+                        <Folder className="h-3 w-3" />
+                        <span>Project</span>
+                        {!canEditAllFields && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                        )}
+                      </div>
+                      <Select
+                        value={displayTask.project?.id || '__none__'}
+                        disabled={!canEditAllFields}
+                        onValueChange={(value) => {
+                          const actualValue = value === '__none__' ? null : value;
+                          handleUpdateTask({ projectId: actualValue } as Partial<TaskType>);
+                          const project = actualValue ? projects.find(p => p.id === actualValue) : undefined;
+                          if (!isViewingSubtask) {
+                            onUpdate({
+                              ...task,
+                              project: project ? { id: project.id, name: project.name, color: project.color } : undefined,
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className={cn('h-9 w-full', !canEditAllFields && 'opacity-60')}>
+                          <SelectValue placeholder="No project">
+                            {displayTask.project ? (
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: displayTask.project.color || '#6366f1' }}
+                                />
+                                {displayTask.project.name}
+                              </span>
+                            ) : (
+                              <span className="text-white/50">No project</span>
+                            )}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">
+                            <span className="text-white/50">No project</span>
+                          </SelectItem>
+                          {projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: project.color || '#6366f1' }}
+                                />
+                                {project.name}
+                              </span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     {/* Dates */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-white/50 text-xs">
@@ -848,7 +966,10 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         )}
                       </div>
                     </div>
+                  </div>
 
+                  {/* Priority Row */}
+                  <div className="grid grid-cols-2 gap-6">
                     {/* Priority */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-white/50 text-xs">
@@ -883,6 +1004,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         </SelectContent>
                       </Select>
                     </div>
+                    <div /> {/* Empty cell for grid alignment */}
                   </div>
 
                   {/* Description */}
@@ -961,13 +1083,19 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   {/* Attachments */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Label className="text-white/50 text-xs">Attachments</Label>
+                      <Label className="text-white/50 text-xs">
+                        Attachments
+                        {displayTask.files && displayTask.files.length > 0 && (
+                          <span className="ml-1 text-white/30">({displayTask.files.length})</span>
+                        )}
+                      </Label>
                       {canAddAttachments && (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={() => taskFileInputRef.current?.click()}
                           className="text-white/50 hover:text-white text-xs"
+                          disabled={isUploadingTaskFile}
                         >
                           <Plus className="h-3 w-3 mr-1" />
                           Add
@@ -975,22 +1103,29 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                       )}
                     </div>
 
-                    {canAddAttachments ? (
-                      <div
-                        className="border-2 border-dashed border-white/10 rounded-lg p-6 text-center hover:border-white/20 transition-colors cursor-pointer"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Upload className="h-8 w-8 mx-auto mb-2 text-white/30" />
-                        <p className="text-sm text-white/50">Drop your files here to <span className="text-blue-400">upload</span></p>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-white/10 rounded-lg p-4 text-center opacity-50">
-                        <p className="text-sm text-white/40">Only the creator or assignee can upload files</p>
-                      </div>
-                    )}
+                    {/* Hidden file input for task files */}
+                    <input
+                      type="file"
+                      ref={taskFileInputRef}
+                      onChange={handleTaskFileSelect}
+                      className="hidden"
+                      multiple
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    />
 
-                    {displayTask.files && displayTask.files.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2">
+                    {/* Show files if available, otherwise show drop zone */}
+                    {displayTask.files && displayTask.files.length > 0 ? (
+                      <div
+                        className={cn(
+                          'grid grid-cols-2 gap-2 p-3 rounded-lg border-2 border-dashed transition-colors',
+                          isDragging && canAddAttachments
+                            ? 'border-indigo-500 bg-indigo-500/10'
+                            : 'border-transparent'
+                        )}
+                        onDragOver={canAddAttachments ? handleDragOver : undefined}
+                        onDragLeave={canAddAttachments ? handleDragLeave : undefined}
+                        onDrop={canAddAttachments ? handleDrop : undefined}
+                      >
                         {displayTask.files.map((file) => (
                           <a
                             key={file.id}
@@ -1008,6 +1143,43 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                             <span className="text-xs text-white/40">{formatFileSize(file.size)}</span>
                           </a>
                         ))}
+                        {isUploadingTaskFile && (
+                          <div className="flex items-center gap-2 p-2 rounded bg-white/5">
+                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-500" />
+                            <span className="text-sm text-white/50">Uploading...</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : canAddAttachments ? (
+                      <div
+                        className={cn(
+                          'border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer',
+                          isDragging
+                            ? 'border-indigo-500 bg-indigo-500/10'
+                            : 'border-white/10 hover:border-white/20'
+                        )}
+                        onClick={() => taskFileInputRef.current?.click()}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        {isUploadingTaskFile ? (
+                          <>
+                            <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-2 border-t-2 border-b-2 border-indigo-500" />
+                            <p className="text-sm text-white/50">Uploading...</p>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-8 w-8 mx-auto mb-2 text-white/30" />
+                            <p className="text-sm text-white/50">
+                              Drop your files here to <span className="text-blue-400">upload</span>
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-white/10 rounded-lg p-4 text-center opacity-50">
+                        <p className="text-sm text-white/40">Only the creator or assignee can upload files</p>
                       </div>
                     )}
                   </div>

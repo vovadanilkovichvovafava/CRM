@@ -13,6 +13,10 @@ export interface CreateFileDto {
   projectId?: string;
 }
 
+export interface FileWithUrl extends File {
+  url: string;
+}
+
 @Injectable()
 export class FilesService {
   private readonly logger = new Logger(FilesService.name);
@@ -22,7 +26,30 @@ export class FilesService {
     private readonly storage: StorageService,
   ) {}
 
-  async upload(dto: CreateFileDto, userId: string): Promise<File> {
+  /**
+   * Generate current URL for a file (handles both stored URLs and dynamic generation)
+   */
+  private async getFileUrl(file: File): Promise<string> {
+    // Always generate fresh URL to handle environment changes (localhost vs production)
+    return this.storage.getUrl(file.name);
+  }
+
+  /**
+   * Add dynamic URL to file object
+   */
+  private async addUrlToFile(file: File): Promise<FileWithUrl> {
+    const url = await this.getFileUrl(file);
+    return { ...file, url };
+  }
+
+  /**
+   * Add dynamic URLs to array of files
+   */
+  private async addUrlsToFiles(files: File[]): Promise<FileWithUrl[]> {
+    return Promise.all(files.map((file) => this.addUrlToFile(file)));
+  }
+
+  async upload(dto: CreateFileDto, userId: string): Promise<FileWithUrl> {
     const { name, url } = await this.storage.upload(dto.buffer, dto.originalName, dto.mimeType);
 
     const file = await this.prisma.file.create({
@@ -31,7 +58,7 @@ export class FilesService {
         originalName: dto.originalName,
         mimeType: dto.mimeType,
         size: dto.size,
-        url,
+        url, // Store URL for backwards compatibility
         recordId: dto.recordId,
         taskId: dto.taskId,
         projectId: dto.projectId,
@@ -41,31 +68,34 @@ export class FilesService {
 
     this.logger.log('File uploaded', { fileId: file.id, userId });
 
-    return file;
+    // Return with dynamically generated URL
+    return this.addUrlToFile(file);
   }
 
-  async findByRecord(recordId: string): Promise<File[]> {
-    return this.prisma.file.findMany({
+  async findByRecord(recordId: string): Promise<FileWithUrl[]> {
+    const files = await this.prisma.file.findMany({
       where: { recordId },
       orderBy: { createdAt: 'desc' },
     });
+    return this.addUrlsToFiles(files);
   }
 
-  async findByTask(taskId: string): Promise<File[]> {
-    return this.prisma.file.findMany({
+  async findByTask(taskId: string): Promise<FileWithUrl[]> {
+    const files = await this.prisma.file.findMany({
       where: { taskId },
       orderBy: { createdAt: 'desc' },
     });
+    return this.addUrlsToFiles(files);
   }
 
-  async findOne(id: string): Promise<File> {
+  async findOne(id: string): Promise<FileWithUrl> {
     const file = await this.prisma.file.findUnique({ where: { id } });
 
     if (!file) {
       throw new NotFoundException(`File with ID "${id}" not found`);
     }
 
-    return file;
+    return this.addUrlToFile(file);
   }
 
   async getDownloadUrl(id: string): Promise<string> {
