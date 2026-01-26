@@ -500,7 +500,7 @@ export default function TasksPage() {
   const usersList = (users as Array<{ id: string; name?: string; email: string; avatar?: string }>) || [];
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] -m-6 bg-[#f4f6f9]">
+    <div className="flex h-[calc(100vh-4rem)] -m-6 bg-[#f4f6f9] overflow-hidden">
       {/* Project Sidebar */}
       <ProjectSidebar selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} />
 
@@ -592,7 +592,7 @@ export default function TasksPage() {
           {/* Board View */}
           {!isLoading && viewMode === 'board' && (
             <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-              <div className="flex gap-5 overflow-x-auto pb-4">
+              <div className="flex gap-5 overflow-x-auto pb-4 min-w-0">
                 {columns.map((column) => (
                   <DroppableColumn key={column.id} column={column} tasks={tasksByStatus[column.id] || []} onAddTask={openCreateDialog} onTaskClick={handleTaskClick} addTaskLabel={t('tasks.addTask')} />
                 ))}
