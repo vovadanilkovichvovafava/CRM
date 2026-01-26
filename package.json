@@ -11,7 +11,7 @@
     "start": "pnpm --filter api start",
     "start:api": "pnpm --filter api start",
     "start:web": "pnpm --filter web start",
-    "start:prod": "node apps/web/.next/standalone/apps/web/server.js & pnpm --filter api start:prod",
+    "start:prod": "API_PORT=3001 pnpm --filter api start:prod & INTERNAL_API_URL=http://localhost:3001 node apps/web/.next/standalone/apps/web/server.js",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
