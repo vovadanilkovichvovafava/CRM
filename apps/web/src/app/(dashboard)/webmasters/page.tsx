@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -22,7 +23,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
-import { WebmasterDetailPanel } from '@/components/records/webmaster-detail-panel';
 import { api, ApiError } from '@/lib/api';
 import { getInitials, formatRelativeTime } from '@/lib/utils';
 
@@ -78,9 +78,9 @@ const statusColors: Record<string, string> = {
 export default function WebmastersPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedWebmasterId, setSelectedWebmasterId] = useState<string | null>(null);
   const [webmastersObjectId, setWebmastersObjectId] = useState<string | null>(null);
 
   // Get webmasters object
@@ -239,7 +239,7 @@ export default function WebmastersPage() {
                     <tr
                       key={webmaster.id}
                       className="cursor-pointer"
-                      onClick={() => setSelectedWebmasterId(webmaster.id)}
+                      onClick={() => router.push(`/webmasters/${webmaster.id}`)}
                     >
                       <td>
                         <div className="flex items-center gap-3">
@@ -301,7 +301,7 @@ export default function WebmastersPage() {
                             className="h-8 w-8 text-gray-400 hover:text-violet-600 hover:bg-violet-50"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSelectedWebmasterId(webmaster.id);
+                              router.push(`/webmasters/${webmaster.id}`);
                             }}
                           >
                             <Eye className="h-4 w-4" />
@@ -340,12 +340,6 @@ export default function WebmastersPage() {
           fields={webmasterFields}
         />
       )}
-
-      {/* Webmaster Detail Panel */}
-      <WebmasterDetailPanel
-        webmasterId={selectedWebmasterId}
-        onClose={() => setSelectedWebmasterId(null)}
-      />
     </div>
   );
 }

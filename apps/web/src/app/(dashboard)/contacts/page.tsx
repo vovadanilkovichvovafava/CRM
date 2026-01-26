@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Search,
   Filter,
@@ -26,7 +27,6 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
-import { ContactDetailPanel } from '@/components/records/contact-detail-panel';
 import { api, ApiError } from '@/lib/api';
 import { cn, getInitials } from '@/lib/utils';
 
@@ -147,9 +147,9 @@ function EmptyStateIllustration() {
 export default function ContactsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [contactsObjectId, setContactsObjectId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('total');
   const [createdFilter, setCreatedFilter] = useState<string>('This Quarter');
@@ -427,11 +427,11 @@ export default function ContactsPage() {
                 </tr>
               </thead>
               <tbody className="stagger-children">
-                {contacts.map((contact, index) => (
+                {contacts.map((contact) => (
                   <tr
                     key={contact.id}
                     className="cursor-pointer"
-                    onClick={() => setSelectedContactId(contact.id)}
+                    onClick={() => router.push(`/contacts/${contact.id}`)}
                   >
                     <td onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" className="rounded border-gray-300" />
@@ -490,7 +490,7 @@ export default function ContactsPage() {
                       <div className="flex items-center gap-1">
                         <button
                           className="p-1.5 rounded-md text-gray-400 hover:text-[#0070d2] hover:bg-blue-50 transition-all"
-                          onClick={() => setSelectedContactId(contact.id)}
+                          onClick={() => router.push(`/contacts/${contact.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -527,12 +527,6 @@ export default function ContactsPage() {
           fields={contactFields}
         />
       )}
-
-      {/* Contact Detail Panel */}
-      <ContactDetailPanel
-        contactId={selectedContactId}
-        onClose={() => setSelectedContactId(null)}
-      />
     </div>
   );
 }

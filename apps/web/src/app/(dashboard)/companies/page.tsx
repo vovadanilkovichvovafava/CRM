@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -27,10 +28,8 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
-import { SlideOver } from '@/components/ui/slide-over';
-import { RelationsSection } from '@/components/records/relations-section';
 import { api, ApiError } from '@/lib/api';
-import { cn, getInitials, formatRelativeTime } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 
 const companyFields = [
   { name: 'name', displayName: 'Company Name', type: 'TEXT', isRequired: true },
@@ -118,8 +117,8 @@ function EmptyStateIllustration() {
 export default function CompaniesPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [companiesObjectId, setCompaniesObjectId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string>('total');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -178,7 +177,6 @@ export default function CompaniesPage() {
 
   const companies = (recordsData?.data as CompanyRecord[]) || [];
   const isLoading = objectLoading || (recordsLoading && !!companiesObjectId);
-  const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
 
   const metrics = useMemo(() => ({
     total: companies.length,
@@ -330,7 +328,7 @@ export default function CompaniesPage() {
                   <tr
                     key={company.id}
                     className="cursor-pointer"
-                    onClick={() => setSelectedCompanyId(company.id)}
+                    onClick={() => router.push(`/companies/${company.id}`)}
                   >
                     <td onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" className="rounded border-gray-300" />
@@ -393,7 +391,7 @@ export default function CompaniesPage() {
                       <div className="flex items-center gap-1">
                         <button
                           className="p-1.5 rounded-md text-gray-400 hover:text-[#0070d2] hover:bg-blue-50 transition-all"
-                          onClick={() => setSelectedCompanyId(company.id)}
+                          onClick={() => router.push(`/companies/${company.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -430,79 +428,6 @@ export default function CompaniesPage() {
           fields={companyFields}
         />
       )}
-
-      {/* Company Detail Panel */}
-      <SlideOver
-        isOpen={!!selectedCompanyId}
-        onClose={() => setSelectedCompanyId(null)}
-        title={t('common.details')}
-      >
-        {selectedCompany && (
-          <div className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-gradient-to-br from-[#2e844a] to-[#4bca81]">
-                <Building2 className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  {selectedCompany.data?.name || 'Unnamed'}
-                </h2>
-                {selectedCompany.data?.industry && (
-                  <p className="text-gray-500">{selectedCompany.data.industry}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="grid gap-4">
-              {selectedCompany.data?.website && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                  <Globe className="h-5 w-5 text-[#2e844a]" />
-                  <a
-                    href={selectedCompany.data.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#0070d2] hover:underline"
-                  >
-                    {selectedCompany.data.website}
-                  </a>
-                </div>
-              )}
-              {(selectedCompany.data?.city || selectedCompany.data?.country) && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                  <MapPin className="h-5 w-5 text-gray-400" />
-                  <span className="text-gray-700">
-                    {[selectedCompany.data?.city, selectedCompany.data?.country].filter(Boolean).join(', ')}
-                  </span>
-                </div>
-              )}
-              {selectedCompany.data?.employees && (
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                  <Users className="h-5 w-5 text-gray-400" />
-                  <span className="text-gray-700">
-                    {selectedCompany.data.employees.toLocaleString()} employees
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {selectedCompany.data?.description && (
-              <div className="p-4 rounded-lg bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-500 mb-2">{t('common.description')}</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {selectedCompany.data.description}
-                </p>
-              </div>
-            )}
-
-            <RelationsSection recordId={selectedCompany.id} currentObjectName="companies" />
-
-            <div className="text-xs text-gray-400 pt-4 border-t border-gray-200">
-              <p>Created {formatRelativeTime(selectedCompany.createdAt)}</p>
-              <p>Updated {formatRelativeTime(selectedCompany.updatedAt)}</p>
-            </div>
-          </div>
-        )}
-      </SlideOver>
     </div>
   );
 }

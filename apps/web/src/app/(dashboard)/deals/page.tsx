@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, DollarSign, Loader2, TrendingUp, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,12 +9,8 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { KanbanBoard, KanbanStage, KanbanItem } from '@/components/kanban';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
-import { SlideOver } from '@/components/ui/slide-over';
-import { EditRecordModal } from '@/components/records/edit-record-modal';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
 import { api, ApiError } from '@/lib/api';
-import { getInitials, formatRelativeTime } from '@/lib/utils';
 
 // Deal fields configuration
 const dealFields = [
@@ -59,9 +56,8 @@ const defaultStages: KanbanStage[] = [
 export default function DealsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedDeal, setSelectedDeal] = useState<DealRecord | null>(null);
-  const [isEditOpen, setIsEditOpen] = useState(false);
   const [dealsObjectId, setDealsObjectId] = useState<string | null>(null);
   const [stages, setStages] = useState<KanbanStage[]>(defaultStages);
 
@@ -152,7 +148,6 @@ export default function DealsPage() {
     onSuccess: () => {
       toast.success('Deal deleted');
       queryClient.invalidateQueries({ queryKey: ['records', 'deals'] });
-      setSelectedDeal(null);
     },
     onError: () => {
       toast.error('Failed to delete deal');
@@ -174,10 +169,7 @@ export default function DealsPage() {
   };
 
   const handleDealClick = (item: KanbanItem) => {
-    const deal = deals.find((d) => d.id === item.id);
-    if (deal) {
-      setSelectedDeal(deal);
-    }
+    router.push(`/deals/${item.id}`);
   };
 
   const formatCurrency = (value: number) => {
@@ -298,128 +290,6 @@ export default function DealsPage() {
           objectName="Deal"
           fields={dealFields}
           defaultStage="lead"
-        />
-      )}
-
-      {/* Deal Detail Panel */}
-      <SlideOver
-        isOpen={!!selectedDeal}
-        onClose={() => setSelectedDeal(null)}
-        width="lg"
-      >
-        {selectedDeal && (
-          <div className="p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16 bg-gradient-to-br from-green-500 to-emerald-500">
-                  <AvatarFallback className="text-xl text-white bg-transparent">
-                    {getInitials(selectedDeal.data.name || 'D')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {selectedDeal.data.name || 'Unnamed Deal'}
-                  </h1>
-                  {selectedDeal.data.company && (
-                    <p className="text-gray-600">{selectedDeal.data.company}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Value */}
-            <div className="p-5 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
-              <p className="text-sm font-medium text-green-700">Deal Value</p>
-              <p className="text-3xl font-bold text-green-700">
-                {formatCurrency(selectedDeal.data.value || 0)}
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditOpen(true)}
-              >
-                {t('common.edit')}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  if (confirm('Delete this deal?')) {
-                    deleteMutation.mutate(selectedDeal.id);
-                  }
-                }}
-                className="border-red-200 text-red-700 hover:bg-red-50"
-              >
-                {t('common.delete')}
-              </Button>
-            </div>
-
-            {/* Details */}
-            <Card className="sf-card">
-              <CardHeader className="border-b border-gray-100">
-                <CardTitle className="text-lg text-gray-900">{t('common.details')}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-4">
-                {selectedDeal.data.contact && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('deals.fields.contact')}</p>
-                    <p className="text-gray-900 mt-1">{selectedDeal.data.contact}</p>
-                  </div>
-                )}
-                {selectedDeal.data.expectedCloseDate && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('deals.fields.closeDate')}</p>
-                    <p className="text-gray-900 mt-1">{selectedDeal.data.expectedCloseDate}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('deals.fields.stage')}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div
-                      className="h-3 w-3 rounded-full"
-                      style={{
-                        backgroundColor:
-                          stages.find((s) => s.id === selectedDeal.stage)?.color || '#6B7280',
-                      }}
-                    />
-                    <p className="text-gray-900 font-medium">
-                      {stages.find((s) => s.id === selectedDeal.stage)?.name || 'Unknown'}
-                    </p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Created</p>
-                  <p className="text-gray-900 mt-1">{formatRelativeTime(selectedDeal.createdAt)}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Notes */}
-            {selectedDeal.data.notes && (
-              <Card className="sf-card">
-                <CardHeader className="border-b border-gray-100">
-                  <CardTitle className="text-lg text-gray-900">{t('contacts.fields.notes')}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <p className="text-gray-700 whitespace-pre-wrap">{selectedDeal.data.notes}</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </SlideOver>
-
-      {/* Edit Modal */}
-      {selectedDeal && (
-        <EditRecordModal
-          isOpen={isEditOpen}
-          onClose={() => setIsEditOpen(false)}
-          record={selectedDeal}
-          objectName="Deal"
-          fields={dealFields}
         />
       )}
     </div>
