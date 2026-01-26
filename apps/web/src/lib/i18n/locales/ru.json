@@ -76,6 +76,7 @@
     }
   },
   "nav": {
+    "home": "Главная",
     "dashboard": "Главная",
     "contacts": "Контакты",
     "companies": "Компании",
@@ -91,7 +92,12 @@
     "analytics": "Аналитика",
     "importData": "Импорт данных",
     "settings": "Настройки",
-    "search": "Поиск...",
+    "search": "Поиск",
+    "searchPlaceholder": "Поиск в Janus...",
+    "searchHint": "Введите для поиска контактов, компаний, сделок...",
+    "appLauncher": "Приложения",
+    "profile": "Мой профиль",
+    "more": "Ещё",
     "crm": "CRM",
     "marketing": "Маркетинг",
     "seeEverything": "Видим всё"

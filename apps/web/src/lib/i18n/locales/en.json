@@ -76,6 +76,7 @@
     }
   },
   "nav": {
+    "home": "Home",
     "dashboard": "Dashboard",
     "contacts": "Contacts",
     "companies": "Companies",
@@ -91,7 +92,12 @@
     "analytics": "Analytics",
     "importData": "Import Data",
     "settings": "Settings",
-    "search": "Search...",
+    "search": "Search",
+    "searchPlaceholder": "Search Janus...",
+    "searchHint": "Type to search contacts, companies, deals...",
+    "appLauncher": "App Launcher",
+    "profile": "My Profile",
+    "more": "More",
     "crm": "CRM",
     "marketing": "Marketing",
     "seeEverything": "See everything"
