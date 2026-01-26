@@ -427,7 +427,14 @@
     "addEntry": "Add Entry",
     "totalTime": "Total Time",
     "thisWeek": "This Week",
-    "thisMonth": "This Month"
+    "thisMonth": "This Month",
+    "entries": "entries",
+    "billable": "Billable",
+    "billableTime": "Billable Time",
+    "noDescription": "No description",
+    "whatAreYouWorkingOn": "What are you working on?",
+    "timerStarted": "Timer started",
+    "timerStopped": "Timer stopped"
   },
   "emailTemplates": {
     "title": "Email Templates",

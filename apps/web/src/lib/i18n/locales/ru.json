@@ -427,7 +427,14 @@
     "addEntry": "Добавить запись",
     "totalTime": "Общее время",
     "thisWeek": "На этой неделе",
-    "thisMonth": "В этом месяце"
+    "thisMonth": "В этом месяце",
+    "entries": "записей",
+    "billable": "Оплачиваемое",
+    "billableTime": "Оплач. время",
+    "noDescription": "Без описания",
+    "whatAreYouWorkingOn": "Над чем работаете?",
+    "timerStarted": "Таймер запущен",
+    "timerStopped": "Таймер остановлен"
   },
   "emailTemplates": {
     "title": "Email шаблоны",

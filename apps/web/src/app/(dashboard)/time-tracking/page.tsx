@@ -1,25 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Clock,
-  Plus,
   Loader2,
   Trash2,
-  Edit,
   Calendar,
   DollarSign,
   Timer,
   TrendingUp,
+  RefreshCw,
+  Settings,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { api, ApiError } from '@/lib/api';
-import { formatRelativeTime, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { TimerWidget } from '@/components/time/timer-widget';
 
 interface TimeEntry {
@@ -60,10 +60,37 @@ function formatDate(dateString: string): string {
   });
 }
 
+interface MetricProps {
+  label: string;
+  value: number;
+  isActive?: boolean;
+  onClick?: () => void;
+}
+
+function Metric({ label, value, isActive, onClick }: MetricProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex flex-col items-center px-4 py-2 rounded-md transition-all duration-200',
+        isActive
+          ? 'bg-[#0070d2] text-white'
+          : 'text-white hover:bg-white/10'
+      )}
+    >
+      <span className="font-semibold text-lg">{value}</span>
+      <span className={cn('text-xs whitespace-nowrap', isActive ? 'text-white/80' : 'text-white/60')}>
+        {label}
+      </span>
+    </button>
+  );
+}
+
 export default function TimeTrackingPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('week');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Calculate date range
   const getDateRange = () => {
@@ -96,7 +123,7 @@ export default function TimeTrackingPage() {
   };
 
   // Get time entries
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['time-entries', dateFilter],
     queryFn: () => api.timeEntries.list(getDateRange()),
   });
@@ -112,186 +139,228 @@ export default function TimeTrackingPage() {
     mutationFn: (id: string) => api.timeEntries.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['time-entries'] });
-      toast.success('Time entry deleted');
+      toast.success(t('common.success'));
     },
     onError: (err) => {
       if (err instanceof ApiError) {
-        toast.error('Failed to delete time entry');
+        toast.error(t('errors.general'));
       }
     },
   });
 
   const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this time entry?')) {
+    if (confirm(t('common.confirm'))) {
       deleteMutation.mutate(id);
     }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 500);
   };
 
   const entries = data?.data || [];
 
   // Group entries by date
-  const groupedEntries = entries.reduce((acc, entry) => {
-    const date = formatDate(entry.startTime);
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(entry);
-    return acc;
-  }, {} as Record<string, TimeEntry[]>);
+  const groupedEntries = useMemo(() => {
+    return entries.reduce((acc, entry) => {
+      const date = formatDate(entry.startTime);
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(entry);
+      return acc;
+    }, {} as Record<string, TimeEntry[]>);
+  }, [entries]);
+
+  const filterLabels: Record<string, string> = {
+    today: t('common.today'),
+    week: t('calendar.week'),
+    month: t('calendar.month'),
+    all: t('common.all'),
+  };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/5 bg-[#0a0a0f] px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500">
-            <Clock className="h-5 w-5 text-white" />
+    <div className="h-full flex flex-col bg-[#f4f6f9]">
+      {/* Page Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-500">
+              <Clock className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{t('timeTracking.title')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {t('timeTracking.title')}
+                </h1>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-white">{t('timeTracking.title')}</h1>
-            <p className="text-sm text-white/40">
-              {stats?.entriesCount || 0} entries • {stats?.totalHours || 0} hours tracked
-            </p>
+
+          <div className="flex items-center gap-2">
+            <button className="p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors">
+              <Settings className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleRefresh}
+              className={cn(
+                'p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors',
+                isRefreshing && 'animate-spin'
+              )}
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Timer Widget */}
-      <div className="border-b border-white/5 bg-[#0a0a0f]/50 px-6 py-4">
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
         <TimerWidget />
       </div>
 
-      {/* Stats */}
-      <div className="border-b border-white/5 bg-[#0a0a0f]/30 px-6 py-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card className="bg-white/[0.02] border-white/[0.05]">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                  <Timer className="h-5 w-5 text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{stats?.totalHours || 0}h</p>
-                  <p className="text-xs text-white/40">{t('timeTracking.totalTime')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Filters Bar */}
+      <div className="bg-[#16325c] px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 rounded-lg">
+            {(['today', 'week', 'month', 'all'] as const).map((filter) => (
+              <Metric
+                key={filter}
+                label={filterLabels[filter]}
+                value={filter === dateFilter ? entries.length : 0}
+                isActive={dateFilter === filter}
+                onClick={() => setDateFilter(filter)}
+              />
+            ))}
+          </div>
 
-          <Card className="bg-white/[0.02] border-white/[0.05]">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                  <DollarSign className="h-5 w-5 text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">
-                    ${stats?.billableAmount?.toFixed(0) || 0}
-                  </p>
-                  <p className="text-xs text-white/40">Billable</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/[0.02] border-white/[0.05]">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10">
-                  <TrendingUp className="h-5 w-5 text-violet-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">{stats?.entriesCount || 0}</p>
-                  <p className="text-xs text-white/40">Entries</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-white/[0.02] border-white/[0.05]">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                  <Calendar className="h-5 w-5 text-amber-400" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-white">
-                    {formatMinutes(stats?.billableMinutes || 0)}
-                  </p>
-                  <p className="text-xs text-white/40">Billable Time</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center gap-4 text-white">
+            <div className="flex items-center gap-2">
+              <Timer className="h-4 w-4 text-white/60" />
+              <span className="text-sm">{stats?.totalHours || 0}h {t('timeTracking.totalTime')}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-white/60" />
+              <span className="text-sm">${stats?.billableAmount?.toFixed(0) || 0} {t('timeTracking.billable')}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="border-b border-white/5 bg-[#0a0a0f]/50 px-6 py-3">
-        <div className="flex items-center gap-2">
-          {(['today', 'week', 'month', 'all'] as const).map((filter) => {
-            const filterLabels: Record<typeof filter, string> = {
-              today: t('common.today'),
-              week: t('calendar.week'),
-              month: t('calendar.month'),
-              all: t('common.all'),
-            };
-            return (
-              <Button
-                key={filter}
-                variant={dateFilter === filter ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setDateFilter(filter)}
-                className={cn(
-                  dateFilter === filter
-                    ? 'bg-amber-600 hover:bg-amber-700'
-                    : 'border-white/10 text-white/60 hover:text-white'
-                )}
-              >
-                {filterLabels[filter]}
-              </Button>
-            );
-          })}
+      {/* Stats Cards */}
+      <div className="px-6 py-4 border-b border-gray-200 bg-white">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                  <Timer className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.totalHours || 0}h</p>
+                  <p className="text-xs text-gray-500">{t('timeTracking.totalTime')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100">
+                  <DollarSign className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    ${stats?.billableAmount?.toFixed(0) || 0}
+                  </p>
+                  <p className="text-xs text-gray-500">{t('timeTracking.billable')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-100">
+                  <TrendingUp className="h-5 w-5 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.entriesCount || 0}</p>
+                  <p className="text-xs text-gray-500">{t('timeTracking.entries')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                  <Calendar className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {formatMinutes(stats?.billableMinutes || 0)}
+                  </p>
+                  <p className="text-xs text-gray-500">{t('timeTracking.billableTime')}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-600">
+            {entries.length} {t('timeTracking.entries')}
+          </p>
+        </div>
+
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#0070d2]" />
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64">
-            <Clock className="h-12 w-12 text-white/20 mb-4" />
-            <p className="text-white/40 mb-2">{t('common.noData')}</p>
-            <p className="text-sm text-white/30">{t('timeTracking.startTimer')}</p>
+          <div className="sf-card flex flex-col items-center justify-center py-16 bg-white rounded-lg border border-gray-200">
+            <Clock className="h-12 w-12 text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.noData')}</h3>
+            <p className="text-gray-500">{t('timeTracking.startTimer')}</p>
           </div>
         ) : (
           <div className="space-y-6">
             {Object.entries(groupedEntries).map(([date, dayEntries]) => (
-              <div key={date}>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-white/60">{date}</h3>
-                  <span className="text-xs text-white/40">
+              <div key={date} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                  <h3 className="text-sm font-medium text-gray-700">{date}</h3>
+                  <span className="text-xs text-gray-500 font-medium">
                     {formatMinutes(dayEntries.reduce((sum, e) => sum + e.duration, 0))}
                   </span>
                 </div>
-                <div className="space-y-2">
+                <div className="divide-y divide-gray-100">
                   {dayEntries.map((entry) => (
                     <div
                       key={entry.id}
-                      className="flex items-center gap-4 p-3 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors group"
+                      className="flex items-center gap-4 p-4 hover:bg-gray-50 transition-colors group"
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                        <Clock className="h-5 w-5 text-amber-400" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                        <Clock className="h-5 w-5 text-amber-600" />
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white truncate">
-                          {entry.description || entry.task?.title || 'No description'}
+                        <p className="text-sm text-gray-900 truncate">
+                          {entry.description || entry.task?.title || t('timeTracking.noDescription')}
                         </p>
-                        <p className="text-xs text-white/40">
+                        <p className="text-xs text-gray-500">
                           {formatTime(entry.startTime)}
                           {entry.endTime && ` - ${formatTime(entry.endTime)}`}
                         </p>
@@ -299,17 +368,17 @@ export default function TimeTrackingPage() {
 
                       <div className="flex items-center gap-3">
                         {entry.isBillable && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Billable
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                            {t('timeTracking.billable')}
                           </span>
                         )}
-                        <span className="text-sm font-mono font-medium text-white">
+                        <span className="text-sm font-mono font-medium text-gray-900">
                           {formatMinutes(entry.duration)}
                         </span>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-7 w-7 text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleDelete(entry.id)}
                         >
                           <Trash2 className="h-4 w-4" />
