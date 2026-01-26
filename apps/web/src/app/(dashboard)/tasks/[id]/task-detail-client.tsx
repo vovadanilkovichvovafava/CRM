@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -32,12 +32,24 @@ import {
   Upload,
   MoreHorizontal,
   AlertCircle,
+  X,
+  Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -50,6 +62,7 @@ interface Task {
   dueDate?: string;
   startDate?: string;
   estimatedHours?: number;
+  assigneeId?: string;
   createdAt: string;
   updatedAt: string;
   project?: { id: string; name: string; color?: string };
@@ -61,11 +74,11 @@ interface Task {
   _count?: { subtasks: number; comments: number; files: number };
 }
 
-interface Comment {
+interface User {
   id: string;
-  content: string;
-  createdAt: string;
-  user: { id: string; name?: string; email: string; avatar?: string };
+  name?: string;
+  email: string;
+  avatar?: string;
 }
 
 interface Activity {
@@ -110,73 +123,319 @@ const priorityConfig: Record<string, { label: string; color: string; bgColor: st
   LOW: { label: 'Low', color: 'text-gray-700', bgColor: 'bg-gray-100' },
 };
 
-// Field row component for the two-column grid
+// Generic Dropdown Component
+function Dropdown<T extends string>({
+  value,
+  options,
+  onChange,
+  renderOption,
+  renderValue,
+  disabled = false,
+}: {
+  value: T;
+  options: T[];
+  onChange: (value: T) => void;
+  renderOption: (option: T, isSelected: boolean) => React.ReactNode;
+  renderValue: (value: T) => React.ReactNode;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={cn(
+          "inline-flex items-center gap-1 transition-all cursor-pointer",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+        disabled={disabled}
+      >
+        {renderValue(value)}
+        <ChevronDown className="h-3 w-3 text-gray-400" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[180px]">
+          {options.map((option) => (
+            <button
+              key={option}
+              onClick={() => {
+                onChange(option);
+                setIsOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors"
+            >
+              {renderOption(option, value === option)}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// User Selector Dropdown
+function UserSelector({
+  value,
+  users,
+  onChange,
+  disabled = false,
+}: {
+  value?: string;
+  users: User[];
+  onChange: (userId: string | undefined) => void;
+  disabled?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selectedUser = users.find(u => u.id === value);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (ref.current && !ref.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={cn(
+          "inline-flex items-center gap-2 hover:bg-gray-100 px-2 py-1 rounded transition-colors cursor-pointer",
+          disabled && "opacity-50 cursor-not-allowed"
+        )}
+        disabled={disabled}
+      >
+        {selectedUser ? (
+          <>
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={selectedUser.avatar} />
+              <AvatarFallback className="text-xs bg-blue-500 text-white">
+                {selectedUser.name?.charAt(0) || selectedUser.email.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm">{selectedUser.name || selectedUser.email}</span>
+          </>
+        ) : (
+          <span className="text-gray-400 text-sm">Empty</span>
+        )}
+        <ChevronDown className="h-3 w-3 text-gray-400" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[220px] max-h-64 overflow-y-auto">
+          <button
+            onClick={() => {
+              onChange(undefined);
+              setIsOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors text-gray-500"
+          >
+            <X className="h-4 w-4" />
+            Unassign
+          </button>
+          {users.map((user) => (
+            <button
+              key={user.id}
+              onClick={() => {
+                onChange(user.id);
+                setIsOpen(false);
+              }}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors",
+                value === user.id && "bg-blue-50"
+              )}
+            >
+              <Avatar className="h-6 w-6">
+                <AvatarImage src={user.avatar} />
+                <AvatarFallback className="text-xs bg-blue-500 text-white">
+                  {user.name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span>{user.name || user.email}</span>
+              {value === user.id && <Check className="h-4 w-4 ml-auto text-blue-500" />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Date Picker Field
+function DateField({
+  value,
+  onChange,
+  label,
+  disabled = false,
+}: {
+  value?: string;
+  onChange: (date: string | undefined) => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="date"
+          defaultValue={value ? value.split('T')[0] : ''}
+          className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onBlur={(e) => {
+            const newValue = e.target.value;
+            onChange(newValue || undefined);
+            setIsEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const newValue = (e.target as HTMLInputElement).value;
+              onChange(newValue || undefined);
+              setIsEditing(false);
+            }
+            if (e.key === 'Escape') {
+              setIsEditing(false);
+            }
+          }}
+          disabled={disabled}
+        />
+        <button
+          onClick={() => {
+            onChange(undefined);
+            setIsEditing(false);
+          }}
+          className="p-1 hover:bg-gray-100 rounded"
+        >
+          <X className="h-4 w-4 text-gray-400" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => !disabled && setIsEditing(true)}
+      className={cn(
+        "text-sm hover:bg-gray-100 px-2 py-1 rounded transition-colors",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}
+      disabled={disabled}
+    >
+      {value ? format(new Date(value), 'MMM d, yyyy') : <span className="text-gray-400">Empty</span>}
+    </button>
+  );
+}
+
+// Editable Number Field
+function NumberField({
+  value,
+  onChange,
+  suffix = '',
+  disabled = false,
+}: {
+  value?: number;
+  onChange: (value: number | undefined) => void;
+  suffix?: string;
+  disabled?: boolean;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          ref={inputRef}
+          type="number"
+          defaultValue={value || ''}
+          min="0"
+          step="0.5"
+          className="text-sm border border-gray-300 rounded px-2 py-1 w-20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onBlur={(e) => {
+            const newValue = parseFloat(e.target.value);
+            onChange(isNaN(newValue) ? undefined : newValue);
+            setIsEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const newValue = parseFloat((e.target as HTMLInputElement).value);
+              onChange(isNaN(newValue) ? undefined : newValue);
+              setIsEditing(false);
+            }
+            if (e.key === 'Escape') {
+              setIsEditing(false);
+            }
+          }}
+          disabled={disabled}
+        />
+        <span className="text-sm text-gray-500">{suffix}</span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => !disabled && setIsEditing(true)}
+      className={cn(
+        "text-sm hover:bg-gray-100 px-2 py-1 rounded transition-colors",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}
+      disabled={disabled}
+    >
+      {value ? `${value}${suffix}` : <span className="text-gray-400">Empty</span>}
+    </button>
+  );
+}
+
+// Field row component
 function FieldRow({
   icon: Icon,
   label,
   children,
-  isEmpty = false
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   children: React.ReactNode;
-  isEmpty?: boolean;
 }) {
   return (
     <div className="flex items-center gap-3 py-2.5 px-3 hover:bg-gray-50 rounded-lg transition-colors">
       <Icon className="h-4 w-4 text-gray-400 flex-shrink-0" />
       <span className="text-sm text-gray-500 w-24 flex-shrink-0">{label}</span>
-      <div className={cn("flex-1", isEmpty && "text-gray-400 text-sm")}>
+      <div className="flex-1">
         {children}
       </div>
-    </div>
-  );
-}
-
-// Status badge with dropdown behavior
-function StatusBadge({ status, onStatusChange }: { status: string; onStatusChange: (status: string) => void }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const config = statusConfig[status] || statusConfig.TODO;
-
-  return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium transition-all",
-          config.bgColor,
-          config.color
-        )}
-      >
-        {config.icon}
-        {config.label}
-        <ChevronDown className="h-3 w-3 ml-1" />
-      </button>
-
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]">
-            {Object.entries(statusConfig).map(([key, cfg]) => (
-              <button
-                key={key}
-                onClick={() => {
-                  onStatusChange(key);
-                  setIsOpen(false);
-                }}
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 transition-colors",
-                  status === key && "bg-gray-50"
-                )}
-              >
-                <span className={cfg.color}>{cfg.icon}</span>
-                {cfg.label}
-                {status === key && <CheckCircle2 className="h-3 w-3 ml-auto text-blue-500" />}
-              </button>
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
@@ -191,14 +450,24 @@ export function TaskDetailClient() {
   const [activeTab, setActiveTab] = useState<'details' | 'subtasks' | 'actionItems'>('details');
   const [commentText, setCommentText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
+  // Fetch task
   const { data: task, isLoading, error } = useQuery({
     queryKey: ['tasks', taskId],
     queryFn: () => api.tasks.get(taskId) as Promise<Task>,
     enabled: !!taskId && taskId !== '_placeholder',
   });
 
-  // Mock activities for demo
+  // Fetch users for assignee selector
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => api.users.list() as Promise<User[]>,
+  });
+
+  // Activities
   const activities: Activity[] = task ? [
     { id: '1', type: 'created', description: 'created this task', createdAt: task.createdAt, user: task.createdBy },
     ...(task.assignee ? [{
@@ -208,6 +477,19 @@ export function TaskDetailClient() {
       createdAt: task.createdAt
     }] : []),
   ] : [];
+
+  // Mutations
+  const updateTaskMutation = useMutation({
+    mutationFn: (data: Partial<Task>) => api.tasks.update(taskId, data),
+    onSuccess: () => {
+      toast.success(t('tasks.messages.updated'));
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
+    onError: () => {
+      toast.error(t('errors.general'));
+    },
+  });
 
   const deleteMutation = useMutation({
     mutationFn: () => api.tasks.delete(taskId),
@@ -221,16 +503,56 @@ export function TaskDetailClient() {
     },
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: (status: string) => api.tasks.update(taskId, { status }),
-    onSuccess: () => {
-      toast.success(t('tasks.messages.updated'));
-      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
-    },
-    onError: () => {
-      toast.error(t('errors.general'));
-    },
-  });
+  // Update handlers
+  const handleUpdateStatus = (status: string) => {
+    updateTaskMutation.mutate({ status } as Partial<Task>);
+  };
+
+  const handleUpdatePriority = (priority: string) => {
+    updateTaskMutation.mutate({ priority } as Partial<Task>);
+  };
+
+  const handleUpdateAssignee = (assigneeId: string | undefined) => {
+    updateTaskMutation.mutate({ assigneeId } as Partial<Task>);
+  };
+
+  const handleUpdateDueDate = (dueDate: string | undefined) => {
+    updateTaskMutation.mutate({ dueDate } as Partial<Task>);
+  };
+
+  const handleUpdateStartDate = (startDate: string | undefined) => {
+    updateTaskMutation.mutate({ startDate } as Partial<Task>);
+  };
+
+  const handleUpdateEstimatedHours = (estimatedHours: number | undefined) => {
+    updateTaskMutation.mutate({ estimatedHours } as Partial<Task>);
+  };
+
+  const handleSendComment = () => {
+    if (!commentText.trim()) return;
+    // TODO: Implement actual comment API
+    toast.success('Comment sent');
+    setCommentText('');
+  };
+
+  const handleOpenEditDialog = () => {
+    if (task) {
+      setEditTitle(task.title);
+      setEditDescription(task.description || '');
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleSaveEdit = () => {
+    updateTaskMutation.mutate({
+      title: editTitle,
+      description: editDescription || undefined,
+    } as Partial<Task>, {
+      onSuccess: () => {
+        setIsEditDialogOpen(false);
+      }
+    });
+  };
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -244,7 +566,6 @@ export function TaskDetailClient() {
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    // Handle file upload
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       toast.info(`${files.length} file(s) would be uploaded`);
@@ -275,6 +596,7 @@ export function TaskDetailClient() {
   const status = statusConfig[task.status] || statusConfig.TODO;
   const priority = priorityConfig[task.priority] || priorityConfig.MEDIUM;
   const shortId = task.id.slice(0, 8);
+  const isUpdating = updateTaskMutation.isPending;
 
   return (
     <div className="h-full flex flex-col bg-white">
@@ -289,14 +611,12 @@ export function TaskDetailClient() {
             {t('common.back')}
           </Link>
 
-          {/* Task Type Badge */}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-md">
             <CheckCircle2 className="h-4 w-4 text-gray-600" />
             <span className="text-sm font-medium text-gray-700">Task</span>
             <ChevronDown className="h-3 w-3 text-gray-400" />
           </div>
 
-          {/* Task ID */}
           <span className="text-sm text-gray-400 font-mono">{shortId}</span>
         </div>
 
@@ -304,7 +624,7 @@ export function TaskDetailClient() {
           <span className="text-sm text-gray-400">
             Created {format(new Date(task.createdAt), 'MMM d, yyyy')}
           </span>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleOpenEditDialog}>
             <Pencil className="h-4 w-4 mr-1.5" />
             {t('common.edit')}
           </Button>
@@ -334,34 +654,58 @@ export function TaskDetailClient() {
               {/* Left Column */}
               <div className="space-y-1">
                 <FieldRow icon={AlertCircle} label={t('tasks.fields.status')}>
-                  <StatusBadge
-                    status={task.status}
-                    onStatusChange={(s) => updateStatusMutation.mutate(s)}
+                  <Dropdown
+                    value={task.status}
+                    options={['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']}
+                    onChange={handleUpdateStatus}
+                    disabled={isUpdating}
+                    renderValue={(val) => {
+                      const cfg = statusConfig[val] || statusConfig.TODO;
+                      return (
+                        <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm font-medium", cfg.bgColor, cfg.color)}>
+                          {cfg.icon}
+                          {cfg.label}
+                        </span>
+                      );
+                    }}
+                    renderOption={(opt, isSelected) => {
+                      const cfg = statusConfig[opt] || statusConfig.TODO;
+                      return (
+                        <span className="flex items-center gap-2">
+                          <span className={cfg.color}>{cfg.icon}</span>
+                          {cfg.label}
+                          {isSelected && <Check className="h-4 w-4 ml-auto text-blue-500" />}
+                        </span>
+                      );
+                    }}
                   />
                 </FieldRow>
 
                 <FieldRow icon={Calendar} label={t('tasks.fields.dates')}>
-                  {task.startDate || task.dueDate ? (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span>{task.startDate ? format(new Date(task.startDate), 'MMM d') : '—'}</span>
-                      <span className="text-gray-400">→</span>
-                      <span className={cn(
-                        task.dueDate && new Date(task.dueDate) < new Date() && 'text-red-600'
-                      )}>
-                        {task.dueDate ? format(new Date(task.dueDate), 'MMM d') : '—'}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-sm">Empty</span>
-                  )}
+                  <div className="flex items-center gap-2 text-sm">
+                    <DateField
+                      value={task.startDate}
+                      onChange={handleUpdateStartDate}
+                      label="Start"
+                      disabled={isUpdating}
+                    />
+                    <span className="text-gray-400">→</span>
+                    <DateField
+                      value={task.dueDate}
+                      onChange={handleUpdateDueDate}
+                      label="Due"
+                      disabled={isUpdating}
+                    />
+                  </div>
                 </FieldRow>
 
                 <FieldRow icon={Timer} label={t('tasks.fields.timeEstimate')}>
-                  {task.estimatedHours ? (
-                    <span className="text-sm">{task.estimatedHours}h</span>
-                  ) : (
-                    <span className="text-gray-400 text-sm">Empty</span>
-                  )}
+                  <NumberField
+                    value={task.estimatedHours}
+                    onChange={handleUpdateEstimatedHours}
+                    suffix="h"
+                    disabled={isUpdating}
+                  />
                 </FieldRow>
 
                 <FieldRow icon={Tag} label={t('tasks.fields.tags')}>
@@ -378,7 +722,9 @@ export function TaskDetailClient() {
                       ))}
                     </div>
                   ) : (
-                    <span className="text-gray-400 text-sm">Empty</span>
+                    <button className="text-gray-400 text-sm hover:bg-gray-100 px-2 py-1 rounded">
+                      Empty
+                    </button>
                   )}
                 </FieldRow>
               </div>
@@ -386,40 +732,52 @@ export function TaskDetailClient() {
               {/* Right Column */}
               <div className="space-y-1">
                 <FieldRow icon={User} label={t('tasks.fields.assignees')}>
-                  {task.assignee ? (
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={task.assignee.avatar} />
-                        <AvatarFallback className="text-xs bg-blue-500 text-white">
-                          {task.assignee.name?.charAt(0) || task.assignee.email.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm">{task.assignee.name || task.assignee.email}</span>
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-sm">Empty</span>
-                  )}
+                  <UserSelector
+                    value={task.assigneeId}
+                    users={users}
+                    onChange={handleUpdateAssignee}
+                    disabled={isUpdating}
+                  />
                 </FieldRow>
 
                 <FieldRow icon={Flag} label={t('tasks.fields.priority')}>
-                  <span className={cn(
-                    "inline-flex items-center px-2 py-0.5 rounded text-sm font-medium",
-                    priority.bgColor,
-                    priority.color
-                  )}>
-                    {priority.label}
-                  </span>
+                  <Dropdown
+                    value={task.priority}
+                    options={['URGENT', 'HIGH', 'MEDIUM', 'LOW']}
+                    onChange={handleUpdatePriority}
+                    disabled={isUpdating}
+                    renderValue={(val) => {
+                      const cfg = priorityConfig[val] || priorityConfig.MEDIUM;
+                      return (
+                        <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-sm font-medium", cfg.bgColor, cfg.color)}>
+                          {cfg.label}
+                        </span>
+                      );
+                    }}
+                    renderOption={(opt, isSelected) => {
+                      const cfg = priorityConfig[opt] || priorityConfig.MEDIUM;
+                      return (
+                        <span className="flex items-center gap-2">
+                          <span className={cn("w-3 h-3 rounded-full", cfg.bgColor)} />
+                          {cfg.label}
+                          {isSelected && <Check className="h-4 w-4 ml-auto text-blue-500" />}
+                        </span>
+                      );
+                    }}
+                  />
                 </FieldRow>
 
                 <FieldRow icon={Clock} label={t('tasks.fields.trackTime')}>
-                  <button className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700">
+                  <button className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded transition-colors">
                     <PlayCircle className="h-4 w-4" />
                     Add time
                   </button>
                 </FieldRow>
 
                 <FieldRow icon={LinkIcon} label={t('tasks.fields.relationships')}>
-                  <span className="text-gray-400 text-sm">Empty</span>
+                  <button className="text-gray-400 text-sm hover:bg-gray-100 px-2 py-1 rounded">
+                    Empty
+                  </button>
                 </FieldRow>
               </div>
             </div>
@@ -465,7 +823,6 @@ export function TaskDetailClient() {
             {/* Tab Content */}
             {activeTab === 'details' && (
               <div className="space-y-6">
-                {/* Custom Fields Section */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('tasks.customFields')}</h3>
                   <div className="text-sm text-gray-500 py-4 border border-dashed border-gray-200 rounded-lg text-center">
@@ -473,7 +830,6 @@ export function TaskDetailClient() {
                   </div>
                 </div>
 
-                {/* Attachments Section */}
                 <div>
                   <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('tasks.attachments')}</h3>
                   <div
@@ -481,7 +837,7 @@ export function TaskDetailClient() {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={cn(
-                      "border-2 border-dashed rounded-lg py-8 text-center transition-colors",
+                      "border-2 border-dashed rounded-lg py-8 text-center transition-colors cursor-pointer",
                       isDragging
                         ? "border-blue-400 bg-blue-50"
                         : "border-gray-200 hover:border-gray-300"
@@ -489,7 +845,7 @@ export function TaskDetailClient() {
                   >
                     <Upload className="h-8 w-8 text-gray-300 mx-auto mb-2" />
                     <p className="text-sm text-gray-500">
-                      {t('tasks.dropFilesHere')} <button className="text-blue-600 hover:underline">{t('tasks.upload')}</button>
+                      {t('tasks.dropFilesHere')} <span className="text-blue-600 hover:underline">{t('tasks.upload')}</span>
                     </p>
                   </div>
                 </div>
@@ -522,7 +878,6 @@ export function TaskDetailClient() {
 
         {/* Right Panel - Activity */}
         <div className="w-96 border-l border-gray-200 bg-gray-50 flex flex-col">
-          {/* Activity Header */}
           <div className="px-4 py-3 border-b border-gray-200 bg-white flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">{t('tasks.activity')}</h2>
             <div className="flex items-center gap-2">
@@ -535,7 +890,6 @@ export function TaskDetailClient() {
             </div>
           </div>
 
-          {/* Activity Timeline */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="space-y-4">
               {activities.map((activity) => (
@@ -566,7 +920,6 @@ export function TaskDetailClient() {
                 </div>
               ))}
 
-              {/* Comments placeholder */}
               {(task._count?.comments || 0) === 0 && (
                 <div className="text-center py-8">
                   <MessageSquare className="h-8 w-8 text-gray-300 mx-auto mb-2" />
@@ -576,22 +929,19 @@ export function TaskDetailClient() {
             </div>
           </div>
 
-          {/* Comment Input */}
           <div className="p-4 border-t border-gray-200 bg-white">
             <div className="flex items-start gap-3">
               <Avatar className="h-8 w-8">
                 <AvatarFallback className="bg-blue-500 text-white text-sm">U</AvatarFallback>
               </Avatar>
               <div className="flex-1">
-                <div className="relative">
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder={t('tasks.writeComment')}
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder={t('tasks.writeComment')}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-1">
                     <button className="p-1.5 hover:bg-gray-100 rounded transition-colors">
@@ -604,6 +954,7 @@ export function TaskDetailClient() {
                   <Button
                     size="sm"
                     disabled={!commentText.trim()}
+                    onClick={handleSendComment}
                     className="bg-blue-500 hover:bg-blue-600"
                   >
                     <Send className="h-4 w-4 mr-1" />
@@ -615,6 +966,45 @@ export function TaskDetailClient() {
           </div>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{t('tasks.editTask')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">{t('tasks.fields.title')}</Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder={t('tasks.fields.title')}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">{t('tasks.fields.description')}</Label>
+              <Textarea
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder={t('tasks.fields.description')}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={!editTitle.trim() || isUpdating}>
+              {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
