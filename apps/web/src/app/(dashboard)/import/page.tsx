@@ -17,6 +17,7 @@ import {
   Database,
   Columns,
   Eye,
+  FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -204,24 +205,23 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#f4f6f9]">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/5 bg-[#0a0a0f] px-6 py-4">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0070d2]">
             <Upload className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">{t('import.title')}</h1>
-            <p className="text-sm text-white/40">
-              Import contacts, companies, and other records from CSV or Excel
+            <h1 className="text-xl font-bold text-gray-900">{t('import.title')}</h1>
+            <p className="text-sm text-gray-500">
+              {t('import.description')}
             </p>
           </div>
         </div>
 
         <Button
           variant="outline"
-          className="border-white/10"
           onClick={() => router.back()}
         >
           {t('common.cancel')}
@@ -229,7 +229,7 @@ export default function ImportPage() {
       </div>
 
       {/* Progress Steps */}
-      <div className="border-b border-white/5 bg-[#0a0a0f]/50 px-6 py-4">
+      <div className="border-b border-gray-200 bg-white px-6 py-4">
         <div className="flex items-center justify-center gap-2">
           {STEPS.map((s, i) => {
             const Icon = s.icon;
@@ -241,9 +241,9 @@ export default function ImportPage() {
                 <div
                   className={cn(
                     'flex items-center gap-2 px-4 py-2 rounded-lg transition-colors',
-                    isActive && 'bg-blue-500/20 text-blue-400',
-                    isComplete && 'text-green-400',
-                    !isActive && !isComplete && 'text-white/30'
+                    isActive && 'bg-blue-50 text-[#0070d2]',
+                    isComplete && 'text-green-600',
+                    !isActive && !isComplete && 'text-gray-400'
                   )}
                 >
                   {isComplete ? (
@@ -254,7 +254,7 @@ export default function ImportPage() {
                   <span className="text-sm font-medium">{s.title}</span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <ArrowRight className="h-4 w-4 mx-2 text-white/20" />
+                  <ArrowRight className="h-4 w-4 mx-2 text-gray-300" />
                 )}
               </div>
             );
@@ -268,13 +268,13 @@ export default function ImportPage() {
           {/* Step 1: Select Object */}
           {step === 'select' && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-white mb-4">
-                Select an object to import into
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                {t('import.selectObject')}
               </h2>
 
               {isLoadingObjects ? (
                 <div className="flex justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                  <Loader2 className="h-8 w-8 animate-spin text-[#0070d2]" />
                 </div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -284,8 +284,8 @@ export default function ImportPage() {
                       className={cn(
                         'cursor-pointer transition-all',
                         selectedObjectId === obj.id
-                          ? 'bg-blue-500/20 border-blue-500/50 ring-2 ring-blue-500/30'
-                          : 'bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.04]'
+                          ? 'bg-blue-50 border-[#0070d2] ring-2 ring-[#0070d2]/30'
+                          : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-md'
                       )}
                       onClick={() => {
                         setSelectedObjectId(obj.id);
@@ -294,11 +294,13 @@ export default function ImportPage() {
                     >
                       <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="text-2xl">{obj.icon || '📋'}</div>
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-100">
+                            <FileText className="h-5 w-5 text-gray-600" />
+                          </div>
                           <div>
-                            <p className="font-medium text-white">{obj.displayName}</p>
-                            <p className="text-xs text-white/40">
-                              {obj.recordCount} records
+                            <p className="font-medium text-gray-900">{obj.displayName}</p>
+                            <p className="text-xs text-gray-500">
+                              {obj.recordCount} {t('common.records')}
                             </p>
                           </div>
                         </div>
@@ -313,49 +315,48 @@ export default function ImportPage() {
           {/* Step 2: Upload File */}
           {step === 'upload' && (
             <div className="space-y-4">
-              <h2 className="text-lg font-semibold text-white mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 {t('import.uploadFile')}
               </h2>
 
               <div
                 className={cn(
-                  'border-2 border-dashed rounded-xl p-12 text-center transition-colors',
+                  'border-2 border-dashed rounded-xl p-12 text-center transition-colors bg-white',
                   file
-                    ? 'border-green-500/50 bg-green-500/10'
-                    : 'border-white/10 hover:border-white/20'
+                    ? 'border-green-500 bg-green-50'
+                    : 'border-gray-300 hover:border-[#0070d2]'
                 )}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={handleDrop}
               >
                 {file ? (
                   <div className="space-y-4">
-                    <FileSpreadsheet className="h-12 w-12 mx-auto text-green-400" />
+                    <FileSpreadsheet className="h-12 w-12 mx-auto text-green-600" />
                     <div>
-                      <p className="text-white font-medium">{file.name}</p>
-                      <p className="text-sm text-white/40">
+                      <p className="text-gray-900 font-medium">{file.name}</p>
+                      <p className="text-sm text-gray-500">
                         {(file.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="border-white/10"
                       onClick={() => setFile(null)}
                     >
                       <X className="h-4 w-4 mr-1" />
-                      Remove
+                      {t('common.remove')}
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <Upload className="h-12 w-12 mx-auto text-white/30" />
+                    <Upload className="h-12 w-12 mx-auto text-gray-400" />
                     <div>
-                      <p className="text-white/60">
-                        Drag and drop your file here, or
+                      <p className="text-gray-600">
+                        {t('import.dragAndDrop')}
                       </p>
                       <label className="cursor-pointer">
-                        <span className="text-blue-400 hover:underline">
-                          browse to upload
+                        <span className="text-[#0070d2] hover:underline">
+                          {t('import.browseToUpload')}
                         </span>
                         <input
                           type="file"
@@ -365,17 +366,17 @@ export default function ImportPage() {
                         />
                       </label>
                     </div>
-                    <p className="text-xs text-white/30">
-                      Supported formats: CSV, Excel (.xlsx, .xls)
+                    <p className="text-xs text-gray-400">
+                      {t('import.supportedFormats')}
                     </p>
                   </div>
                 )}
               </div>
 
               {uploadMutation.isPending && (
-                <div className="flex items-center justify-center gap-2 text-blue-400">
+                <div className="flex items-center justify-center gap-2 text-[#0070d2]">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Processing file...</span>
+                  <span>{t('import.processing')}</span>
                 </div>
               )}
             </div>
@@ -385,50 +386,49 @@ export default function ImportPage() {
           {step === 'map' && previewData && fields && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold text-gray-900">
                   {t('import.mappingFields')}
                 </h2>
-                <p className="text-sm text-white/40">
-                  {previewData.totalRows} rows found
+                <p className="text-sm text-gray-500">
+                  {previewData.totalRows} {t('import.rowsFound')}
                 </p>
               </div>
 
-              <Card className="bg-white/[0.02] border-white/[0.05]">
+              <Card className="bg-white border-gray-200">
                 <CardContent className="p-0">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-white/5">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-white/50">
-                          File Column
+                      <tr className="border-b border-gray-200 bg-gray-50">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
+                          {t('import.fileColumn')}
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-white/50">
-                          Maps To
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
+                          {t('import.mapsTo')}
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-white/50">
-                          Transform
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
+                          {t('import.transform')}
                         </th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-white/50">
-                          Sample
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">
+                          {t('import.sample')}
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {mappings.map((mapping, idx) => {
-                        const targetField = fields.find((f) => f.name === mapping.targetField);
-                        const sampleValue = previewData.sampleData[0]?.[mapping.sourceColumn] || '';
+                        const sampleValue = previewData.sampleData[0]?.[mapping.sourceColumn] ?? '';
 
                         return (
-                          <tr key={idx} className="border-b border-white/5 last:border-0">
+                          <tr key={idx} className="border-b border-gray-100 last:border-0">
                             <td className="py-3 px-4">
-                              <span className="text-white">{mapping.sourceColumn}</span>
+                              <span className="text-gray-900">{mapping.sourceColumn}</span>
                             </td>
                             <td className="py-3 px-4">
                               <select
                                 value={mapping.targetField}
                                 onChange={(e) => updateMapping(idx, 'targetField', e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-md px-3 py-1.5 text-white text-sm"
+                                className="w-full bg-white border border-gray-300 rounded-md px-3 py-1.5 text-gray-900 text-sm focus:border-[#0070d2] focus:ring-1 focus:ring-[#0070d2]"
                               >
-                                <option value="">Skip this column</option>
+                                <option value="">{t('import.skipColumn')}</option>
                                 {fields.map((field) => (
                                   <option key={field.name} value={field.name}>
                                     {field.displayName}
@@ -441,16 +441,16 @@ export default function ImportPage() {
                               <select
                                 value={mapping.transform}
                                 onChange={(e) => updateMapping(idx, 'transform', e.target.value)}
-                                className="bg-white/5 border border-white/10 rounded-md px-3 py-1.5 text-white text-sm"
+                                className="bg-white border border-gray-300 rounded-md px-3 py-1.5 text-gray-900 text-sm focus:border-[#0070d2] focus:ring-1 focus:ring-[#0070d2]"
                               >
                                 <option value="none">{t('common.none')}</option>
-                                <option value="trim">Trim</option>
-                                <option value="lowercase">Lowercase</option>
-                                <option value="uppercase">Uppercase</option>
+                                <option value="trim">{t('import.transforms.trim')}</option>
+                                <option value="lowercase">{t('import.transforms.lowercase')}</option>
+                                <option value="uppercase">{t('import.transforms.uppercase')}</option>
                               </select>
                             </td>
                             <td className="py-3 px-4">
-                              <span className="text-white/50 text-sm truncate block max-w-[200px]">
+                              <span className="text-gray-500 text-sm truncate block max-w-[200px]">
                                 {sampleValue || '—'}
                               </span>
                             </td>
@@ -464,11 +464,11 @@ export default function ImportPage() {
 
               {/* Required fields warning */}
               {fields.some((f) => f.isRequired) && (
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5" />
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
                   <div>
-                    <p className="text-sm text-amber-200">{t('common.required')}:</p>
-                    <p className="text-xs text-amber-200/70">
+                    <p className="text-sm text-amber-800 font-medium">{t('common.required')}:</p>
+                    <p className="text-xs text-amber-700">
                       {fields.filter((f) => f.isRequired).map((f) => f.displayName).join(', ')}
                     </p>
                   </div>
@@ -480,40 +480,40 @@ export default function ImportPage() {
           {/* Step 4: Preview & Import */}
           {step === 'preview' && previewData && (
             <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-white">
-                Review and Import
+              <h2 className="text-lg font-semibold text-gray-900">
+                {t('import.reviewAndImport')}
               </h2>
 
               {/* Summary */}
               <div className="grid grid-cols-3 gap-4">
-                <Card className="bg-white/[0.02] border-white/[0.05]">
+                <Card className="bg-white border-gray-200">
                   <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold text-white">{previewData.totalRows}</p>
-                    <p className="text-sm text-white/40">Total rows</p>
+                    <p className="text-3xl font-bold text-gray-900">{previewData.totalRows}</p>
+                    <p className="text-sm text-gray-500">{t('import.totalRows')}</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/[0.02] border-white/[0.05]">
+                <Card className="bg-white border-gray-200">
                   <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold text-white">
+                    <p className="text-3xl font-bold text-[#0070d2]">
                       {mappings.filter((m) => m.targetField).length}
                     </p>
-                    <p className="text-sm text-white/40">Mapped fields</p>
+                    <p className="text-sm text-gray-500">{t('import.mappedFields')}</p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/[0.02] border-white/[0.05]">
+                <Card className="bg-white border-gray-200">
                   <CardContent className="p-4 text-center">
-                    <p className="text-3xl font-bold text-white">
+                    <p className="text-3xl font-bold text-gray-400">
                       {mappings.filter((m) => !m.targetField).length}
                     </p>
-                    <p className="text-sm text-white/40">Skipped columns</p>
+                    <p className="text-sm text-gray-500">{t('import.skippedColumns')}</p>
                   </CardContent>
                 </Card>
               </div>
 
               {/* Options */}
-              <Card className="bg-white/[0.02] border-white/[0.05]">
+              <Card className="bg-white border-gray-200">
                 <CardHeader>
-                  <CardTitle className="text-white text-base">Import Options</CardTitle>
+                  <CardTitle className="text-gray-900 text-base">{t('import.options')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -525,11 +525,11 @@ export default function ImportPage() {
                         skipDuplicates: e.target.checked,
                         updateExisting: e.target.checked ? false : prev.updateExisting,
                       }))}
-                      className="rounded border-white/20 bg-white/5"
+                      className="rounded border-gray-300 text-[#0070d2] focus:ring-[#0070d2]"
                     />
                     <div>
-                      <p className="text-white text-sm">Skip duplicates</p>
-                      <p className="text-xs text-white/40">Skip records that already exist based on unique fields</p>
+                      <p className="text-gray-900 text-sm">{t('import.skipDuplicates')}</p>
+                      <p className="text-xs text-gray-500">{t('import.skipDuplicatesDesc')}</p>
                     </div>
                   </label>
                   <label className="flex items-center gap-3 cursor-pointer">
@@ -541,30 +541,30 @@ export default function ImportPage() {
                         updateExisting: e.target.checked,
                         skipDuplicates: e.target.checked ? false : prev.skipDuplicates,
                       }))}
-                      className="rounded border-white/20 bg-white/5"
+                      className="rounded border-gray-300 text-[#0070d2] focus:ring-[#0070d2]"
                     />
                     <div>
-                      <p className="text-white text-sm">Update existing records</p>
-                      <p className="text-xs text-white/40">Update records that already exist with new data</p>
+                      <p className="text-gray-900 text-sm">{t('import.updateExisting')}</p>
+                      <p className="text-xs text-gray-500">{t('import.updateExistingDesc')}</p>
                     </div>
                   </label>
                 </CardContent>
               </Card>
 
               {/* Sample Preview */}
-              <Card className="bg-white/[0.02] border-white/[0.05]">
+              <Card className="bg-white border-gray-200">
                 <CardHeader>
-                  <CardTitle className="text-white text-base">Data Preview</CardTitle>
-                  <CardDescription className="text-white/50">
-                    Showing first {Math.min(5, previewData.sampleData.length)} rows
+                  <CardTitle className="text-gray-900 text-base">{t('import.dataPreview')}</CardTitle>
+                  <CardDescription>
+                    {t('import.showingRows', { count: Math.min(5, previewData.sampleData.length) })}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-white/5">
+                      <tr className="border-b border-gray-200 bg-gray-50">
                         {mappings.filter((m) => m.targetField).map((m) => (
-                          <th key={m.sourceColumn} className="text-left py-2 px-3 text-white/50 font-medium">
+                          <th key={m.sourceColumn} className="text-left py-2 px-3 text-gray-600 font-medium">
                             {fields?.find((f) => f.name === m.targetField)?.displayName || m.targetField}
                           </th>
                         ))}
@@ -572,9 +572,9 @@ export default function ImportPage() {
                     </thead>
                     <tbody>
                       {previewData.sampleData.slice(0, 5).map((row, idx) => (
-                        <tr key={idx} className="border-b border-white/5 last:border-0">
+                        <tr key={idx} className="border-b border-gray-100 last:border-0">
                           {mappings.filter((m) => m.targetField).map((m) => (
-                            <td key={m.sourceColumn} className="py-2 px-3 text-white/70">
+                            <td key={m.sourceColumn} className="py-2 px-3 text-gray-700">
                               {row[m.sourceColumn] || '—'}
                             </td>
                           ))}
@@ -590,11 +590,10 @@ export default function ImportPage() {
       </div>
 
       {/* Footer */}
-      <div className="border-t border-white/5 bg-[#0a0a0f] px-6 py-4">
+      <div className="border-t border-gray-200 bg-white px-6 py-4">
         <div className="flex justify-between max-w-4xl mx-auto">
           <Button
             variant="outline"
-            className="border-white/10"
             onClick={goBack}
             disabled={step === 'select'}
           >
@@ -605,7 +604,6 @@ export default function ImportPage() {
           <Button
             onClick={goNext}
             disabled={!canProceed() || uploadMutation.isPending || importMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700"
           >
             {(uploadMutation.isPending || importMutation.isPending) && (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -613,7 +611,7 @@ export default function ImportPage() {
             {step === 'preview' ? (
               <>
                 <Check className="h-4 w-4 mr-2" />
-                Import {previewData?.totalRows} Records
+                {t('import.importRecords', { count: previewData?.totalRows || 0 })}
               </>
             ) : (
               <>
