@@ -331,20 +331,49 @@
   },
   "deals": {
     "title": "Deals",
-    "addDeal": "Add Deal",
+    "myDeals": "My Deals",
+    "allDeals": "All Deals",
+    "addDeal": "New Deal",
     "createDeal": "Create Deal",
     "editDeal": "Edit Deal",
     "deleteDeal": "Delete Deal",
     "searchDeals": "Search deals...",
     "noDeals": "No deals yet",
+    "noDealsYet": "Start tracking your deals",
+    "noDealsHint": "When there are deals that match your filters, you'll see them here.",
     "createFirstDeal": "Create your first deal",
+    "pipelineValue": "Pipeline Value",
+    "wonValue": "Won Value",
+    "activeDeals": "Active Deals",
+    "lostValue": "Lost Value",
+    "winRate": "Win Rate",
+    "avgDealSize": "Avg. Deal Size",
+    "items": "deals",
+    "filteredBy": "Filtered by Stage, Owner",
+    "stages": {
+      "lead": "Lead",
+      "qualified": "Qualified",
+      "proposal": "Proposal",
+      "negotiation": "Negotiation",
+      "closed_won": "Closed Won",
+      "closed_lost": "Closed Lost"
+    },
     "fields": {
-      "name": "Name",
+      "name": "Deal Name",
       "value": "Value",
       "stage": "Stage",
       "contact": "Contact",
       "company": "Company",
-      "closeDate": "Close Date"
+      "closeDate": "Close Date",
+      "expectedCloseDate": "Expected Close",
+      "probability": "Probability",
+      "notes": "Notes"
+    },
+    "metrics": {
+      "total": "Total",
+      "thisMonth": "This Month",
+      "thisQuarter": "This Quarter",
+      "closing": "Closing Soon"
     }
   },
   "webmasters": {

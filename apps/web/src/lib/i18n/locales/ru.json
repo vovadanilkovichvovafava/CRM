@@ -331,20 +331,49 @@
   },
   "deals": {
     "title": "Сделки",
-    "addDeal": "Добавить сделку",
+    "myDeals": "Мои сделки",
+    "allDeals": "Все сделки",
+    "addDeal": "Новая сделка",
     "createDeal": "Создать сделку",
     "editDeal": "Редактировать сделку",
     "deleteDeal": "Удалить сделку",
     "searchDeals": "Поиск сделок...",
     "noDeals": "Пока нет сделок",
+    "noDealsYet": "Начните отслеживать сделки",
+    "noDealsHint": "Когда появятся сделки, соответствующие фильтрам, они отобразятся здесь.",
     "createFirstDeal": "Создайте первую сделку",
+    "pipelineValue": "Сумма в работе",
+    "wonValue": "Закрыто успешно",
+    "activeDeals": "Активные сделки",
+    "lostValue": "Закрыто неуспешно",
+    "winRate": "Конверсия",
+    "avgDealSize": "Средний чек",
+    "items": "сделок",
+    "filteredBy": "Фильтр по этапу, владельцу",
+    "stages": {
+      "lead": "Лид",
+      "qualified": "Квалифицирован",
+      "proposal": "Предложение",
+      "negotiation": "Переговоры",
+      "closed_won": "Закрыто (успех)",
+      "closed_lost": "Закрыто (неуспех)"
+    },
     "fields": {
-      "name": "Название",
+      "name": "Название сделки",
       "value": "Сумма",
       "stage": "Этап",
       "contact": "Контакт",
       "company": "Компания",
-      "closeDate": "Дата закрытия"
+      "closeDate": "Дата закрытия",
+      "expectedCloseDate": "Ожидаемая дата закрытия",
+      "probability": "Вероятность",
+      "notes": "Заметки"
+    },
+    "metrics": {
+      "total": "Всего",
+      "thisMonth": "В этом месяце",
+      "thisQuarter": "В этом квартале",
+      "closing": "Закрывается"
     }
   },
   "webmasters": {
