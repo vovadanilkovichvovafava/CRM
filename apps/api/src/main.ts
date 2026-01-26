@@ -63,12 +63,13 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = process.env.PORT || process.env.API_PORT || 3001;
+  // API_PORT takes priority when running alongside Next.js in the same container
+  // This allows Next.js to use PORT (Railway's default) while API uses API_PORT
+  const port = process.env.API_PORT || process.env.PORT || 3001;
   await app.listen(port, '0.0.0.0');
 
-  logger.log(`Application running on: http://localhost:${port}`);
+  logger.log(`Application running on port: ${port}`);
   logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
-  logger.log(`Frontend: http://localhost:${port}/`);
 }
 
 bootstrap().catch((error) => {
