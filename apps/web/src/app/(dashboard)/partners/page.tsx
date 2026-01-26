@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -12,22 +14,23 @@ import {
   Eye,
   AlertCircle,
   Link as LinkIcon,
-  MapPin,
   Layers,
   User,
+  Settings,
+  RefreshCw,
+  MoreHorizontal,
+  ChevronDown,
+  Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
 import { PartnerDetailPanel } from '@/components/records/partner-detail-panel';
 import { api, ApiError } from '@/lib/api';
-import { getInitials, formatRelativeTime } from '@/lib/utils';
+import { getInitials, formatRelativeTime, cn } from '@/lib/utils';
 
-// Partner fields for affiliate CRM
 const partnerFields = [
   { name: 'name', displayName: 'Partner Name', type: 'TEXT', isRequired: true },
   {
@@ -87,28 +90,56 @@ interface PartnerRecord {
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-  paused: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  inactive: 'bg-slate-500/10 text-slate-400 border-slate-500/30',
+  active: 'bg-green-100 text-green-700',
+  paused: 'bg-yellow-100 text-yellow-700',
+  inactive: 'bg-gray-100 text-gray-600',
 };
 
 const typeColors: Record<string, string> = {
-  'CPA Network': 'text-pink-400',
-  'Direct Advertiser': 'text-blue-400',
-  'Media Buyer': 'text-violet-400',
-  'Agency': 'text-emerald-400',
-  'Other': 'text-white/60',
+  'CPA Network': 'text-pink-600',
+  'Direct Advertiser': 'text-blue-600',
+  'Media Buyer': 'text-violet-600',
+  'Agency': 'text-green-600',
+  'Other': 'text-gray-600',
 };
+
+interface MetricProps {
+  label: string;
+  value: number;
+  isActive?: boolean;
+  onClick?: () => void;
+}
+
+function Metric({ label, value, isActive, onClick }: MetricProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex flex-col items-center px-4 py-2 rounded-md transition-all duration-200',
+        isActive
+          ? 'bg-[#0070d2] text-white'
+          : 'text-gray-700 hover:bg-gray-100'
+      )}
+    >
+      <span className="font-semibold text-lg">{value}</span>
+      <span className={cn('text-xs whitespace-nowrap', isActive ? 'text-white/80' : 'text-gray-500')}>
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export default function PartnersPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedPartnerId, setSelectedPartnerId] = useState<string | null>(null);
   const [partnersObjectId, setPartnersObjectId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string>('total');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Get partners object
   const { data: objectData, isLoading: objectLoading, error: objectError, refetch: refetchObject } = useQuery({
     queryKey: ['objects', 'partners'],
     queryFn: async () => {
@@ -136,9 +167,9 @@ export default function PartnersPage() {
   const handleAddPartner = () => {
     if (!partnersObjectId) {
       if (objectError) {
-        toast.error('Failed to load partners configuration. Please refresh the page.');
+        toast.error(t('errors.general'));
       } else {
-        toast.error('Loading partners configuration...');
+        toast.error(t('common.loading'));
         refetchObject();
       }
       return;
@@ -146,8 +177,7 @@ export default function PartnersPage() {
     setIsCreateOpen(true);
   };
 
-  // Get partners records
-  const { data: recordsData, isLoading: recordsLoading } = useQuery({
+  const { data: recordsData, isLoading: recordsLoading, refetch: refetchRecords } = useQuery({
     queryKey: ['records', 'partners', partnersObjectId, search],
     queryFn: () =>
       api.records.list({
@@ -157,221 +187,303 @@ export default function PartnersPage() {
     enabled: !!partnersObjectId,
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.records.delete(id),
     onSuccess: () => {
-      toast.success('Partner deleted');
+      toast.success(t('common.success'));
       queryClient.invalidateQueries({ queryKey: ['records', 'partners'] });
     },
     onError: () => {
-      toast.error('Failed to delete partner');
+      toast.error(t('errors.general'));
     },
   });
 
   const partners = (recordsData?.data as PartnerRecord[]) || [];
   const isLoading = objectLoading || (recordsLoading && !!partnersObjectId);
 
+  const metrics = useMemo(() => {
+    const total = partners.length;
+    const active = partners.filter(p => p.data?.status === 'active').length;
+    const paused = partners.filter(p => p.data?.status === 'paused').length;
+    const inactive = partners.filter(p => p.data?.status === 'inactive').length;
+    const noStatus = partners.filter(p => !p.data?.status).length;
+    return { total, active, paused, inactive, noStatus };
+  }, [partners]);
+
+  const filteredPartners = useMemo(() => {
+    if (activeFilter === 'total') return partners;
+    if (activeFilter === 'active') return partners.filter(p => p.data?.status === 'active');
+    if (activeFilter === 'paused') return partners.filter(p => p.data?.status === 'paused');
+    if (activeFilter === 'inactive') return partners.filter(p => p.data?.status === 'inactive');
+    if (activeFilter === 'noStatus') return partners.filter(p => !p.data?.status);
+    return partners;
+  }, [partners, activeFilter]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetchRecords();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="h-full flex flex-col bg-[#f4f6f9]">
+      {/* Page Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-500">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-rose-600">
               <Handshake className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">{t('partners.title')}</h1>
-              <p className="text-sm text-white/50">
-                {partners.length} partner{partners.length !== 1 ? 's' : ''}
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{t('partners.title')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {t('partners.title')}
+                </h1>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </div>
             </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button className="p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors">
+              <Settings className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleRefresh}
+              className={cn(
+                'p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors',
+                isRefreshing && 'animate-spin'
+              )}
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+            <button className="p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors">
+              <Filter className="h-5 w-5" />
+            </button>
+
+            <Button
+              onClick={handleAddPartner}
+              variant="outline"
+              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50"
+            >
+              {objectLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : objectError ? (
+                <AlertCircle className="mr-2 h-4 w-4" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
+              {t('common.new')}
+            </Button>
+          </div>
         </div>
-        <Button
-          onClick={handleAddPartner}
-          className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
-        >
-          {objectLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : objectError ? (
-            <AlertCircle className="mr-2 h-4 w-4" />
-          ) : (
-            <Plus className="mr-2 h-4 w-4" />
-          )}
-          {t('partners.addPartner')}
-        </Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
-          <Input
-            placeholder={t('partners.searchPartners')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-white/5 border-white/10"
-          />
+      {/* Filters Bar */}
+      <div className="bg-[#16325c] px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 rounded-lg">
+            <Metric
+              label={t('common.all')}
+              value={metrics.total}
+              isActive={activeFilter === 'total'}
+              onClick={() => setActiveFilter('total')}
+            />
+            <Metric
+              label={t('partners.status.active', 'Active')}
+              value={metrics.active}
+              isActive={activeFilter === 'active'}
+              onClick={() => setActiveFilter('active')}
+            />
+            <Metric
+              label={t('partners.status.paused', 'Paused')}
+              value={metrics.paused}
+              isActive={activeFilter === 'paused'}
+              onClick={() => setActiveFilter('paused')}
+            />
+            <Metric
+              label={t('partners.status.inactive', 'Inactive')}
+              value={metrics.inactive}
+              isActive={activeFilter === 'inactive'}
+              onClick={() => setActiveFilter('inactive')}
+            />
+            <Metric
+              label={t('partners.noStatus', 'No Status')}
+              value={metrics.noStatus}
+              isActive={activeFilter === 'noStatus'}
+              onClick={() => setActiveFilter('noStatus')}
+            />
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+            <Input
+              placeholder={t('partners.searchPartners')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:bg-white/20"
+            />
+          </div>
         </div>
-        <Button variant="outline" size="icon" className="border-white/10">
-          <Filter className="h-4 w-4" />
-        </Button>
       </div>
 
-      {/* Partners Table */}
-      <Card className="bg-white/[0.02] border-white/[0.05]">
-        <CardContent className="p-0">
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-600">
+            {filteredPartners.length} {t('partners.title').toLowerCase()}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              {t('contacts.sendEmail', 'Send Email')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="sf-card animate-fade-in">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-pink-500" />
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-[#0070d2]" />
             </div>
-          ) : partners.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Handshake className="h-12 w-12 text-white/20 mb-4" />
-              <h3 className="text-lg font-medium text-white mb-1">{t('common.noData')}</h3>
-              <p className="text-sm text-white/50 mb-4">
-                Add your first partner network or advertiser
+          ) : filteredPartners.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Handshake className="h-12 w-12 text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.noData')}</h3>
+              <p className="text-gray-500 mb-4">
+                {t('partners.noPartners', 'Add your first partner network or advertiser')}
               </p>
               <Button
                 onClick={handleAddPartner}
-                className="bg-gradient-to-r from-pink-500 to-rose-500"
+                className="bg-[#0070d2] hover:bg-[#005fb2]"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 {t('partners.addPartner')}
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      {t('partners.title')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Manager
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Verticals
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      {t('common.status')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Added
-                    </th>
-                    <th className="w-24"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                  {partners.map((partner) => (
-                    <tr
-                      key={partner.id}
-                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
-                      onClick={() => setSelectedPartnerId(partner.id)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8 bg-gradient-to-br from-pink-500 to-rose-500">
-                            <AvatarFallback className="text-xs text-white bg-transparent">
-                              {getInitials(partner.data?.name || 'P')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <span className="font-medium text-white block">
-                              {partner.data?.name || 'Unnamed'}
-                            </span>
-                            {partner.data?.website && (
-                              <span className="text-xs text-white/40 flex items-center gap-1">
-                                <LinkIcon className="h-3 w-3" />
-                                {partner.data.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                              </span>
-                            )}
-                          </div>
+            <table className="sf-table">
+              <thead>
+                <tr>
+                  <th>{t('common.name')}</th>
+                  <th>{t('partners.type', 'Type')}</th>
+                  <th>{t('partners.manager', 'Manager')}</th>
+                  <th>{t('partners.verticals', 'Verticals')}</th>
+                  <th>{t('common.status')}</th>
+                  <th>{t('common.created', 'Added')}</th>
+                  <th className="w-24"></th>
+                </tr>
+              </thead>
+              <tbody className="stagger-children">
+                {filteredPartners.map((partner) => (
+                  <tr
+                    key={partner.id}
+                    className="cursor-pointer"
+                    onClick={() => setSelectedPartnerId(partner.id)}
+                  >
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-pink-500 to-rose-600 text-white text-sm font-medium">
+                          {getInitials(partner.data?.name || 'P')}
                         </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        {partner.data?.type ? (
-                          <span className={`text-sm ${typeColors[partner.data.type] || 'text-white/60'}`}>
-                            {partner.data.type}
-                          </span>
-                        ) : (
-                          <span className="text-white/30 text-sm">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {partner.data?.manager_name ? (
-                          <div className="flex items-center gap-1 text-sm text-white/60">
-                            <User className="h-3 w-3" />
-                            {partner.data.manager_name}
-                          </div>
-                        ) : (
-                          <span className="text-white/30 text-sm">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {partner.data?.verticals ? (
-                          <div className="flex items-center gap-1 text-sm text-white/60">
-                            <Layers className="h-3 w-3 text-pink-400" />
-                            {partner.data.verticals}
-                          </div>
-                        ) : (
-                          <span className="text-white/30 text-sm">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {partner.data?.status ? (
-                          <span className={`text-xs px-2 py-1 rounded-full border ${statusColors[partner.data.status] || 'bg-white/10 text-white/60'}`}>
-                            {partner.data.status}
-                          </span>
-                        ) : (
-                          <span className="text-white/30 text-sm">-</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-white/40">
-                        {formatRelativeTime(partner.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-white/40 hover:text-white"
+                        <div>
+                          <Link
+                            href="#"
+                            className="font-medium text-[#0070d2] hover:underline"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedPartnerId(partner.id);
                             }}
                           >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-white/40 hover:text-red-400"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Delete this partner?')) {
-                                deleteMutation.mutate(partner.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                            {partner.data?.name || 'Unnamed'}
+                          </Link>
+                          {partner.data?.website && (
+                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                              <LinkIcon className="h-3 w-3" />
+                              {partner.data.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                            </span>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </td>
+                    <td>
+                      {partner.data?.type ? (
+                        <span className={`text-sm font-medium ${typeColors[partner.data.type] || 'text-gray-600'}`}>
+                          {partner.data.type}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {partner.data?.manager_name ? (
+                        <div className="flex items-center gap-1.5 text-gray-700">
+                          <User className="h-3.5 w-3.5 text-gray-400" />
+                          {partner.data.manager_name}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {partner.data?.verticals ? (
+                        <div className="flex items-center gap-1.5 text-gray-700">
+                          <Layers className="h-3.5 w-3.5 text-pink-500" />
+                          {partner.data.verticals}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {partner.data?.status ? (
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[partner.data.status] || 'bg-gray-100 text-gray-600'}`}>
+                          {partner.data.status.charAt(0).toUpperCase() + partner.data.status.slice(1)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="text-gray-500">
+                      {formatRelativeTime(partner.createdAt)}
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="p-1.5 rounded-md text-gray-400 hover:text-[#0070d2] hover:bg-blue-50 transition-all"
+                          onClick={() => setSelectedPartnerId(partner.id)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                          onClick={() => {
+                            if (confirm(t('common.confirm'))) {
+                              deleteMutation.mutate(partner.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <button className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Create Modal */}
       {partnersObjectId && (

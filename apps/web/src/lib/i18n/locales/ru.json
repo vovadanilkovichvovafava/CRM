@@ -398,7 +398,17 @@
   "partners": {
     "title": "Партнёры",
     "addPartner": "Добавить партнёра",
-    "searchPartners": "Поиск партнёров..."
+    "searchPartners": "Поиск партнёров...",
+    "noPartners": "Добавьте первую партнёрскую сеть или рекламодателя",
+    "type": "Тип",
+    "manager": "Менеджер",
+    "verticals": "Вертикали",
+    "noStatus": "Без статуса",
+    "status": {
+      "active": "Активный",
+      "paused": "Приостановлен",
+      "inactive": "Неактивный"
+    }
   },
   "calendar": {
     "title": "Календарь",

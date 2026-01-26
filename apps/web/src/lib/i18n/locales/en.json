@@ -398,7 +398,17 @@
   "partners": {
     "title": "Partners",
     "addPartner": "Add Partner",
-    "searchPartners": "Search partners..."
+    "searchPartners": "Search partners...",
+    "noPartners": "Add your first partner network or advertiser",
+    "type": "Type",
+    "manager": "Manager",
+    "verticals": "Verticals",
+    "noStatus": "No Status",
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "inactive": "Inactive"
+    }
   },
   "calendar": {
     "title": "Calendar",
