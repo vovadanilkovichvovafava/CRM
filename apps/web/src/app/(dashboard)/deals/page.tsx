@@ -194,12 +194,12 @@ export default function DealsPage() {
   }, [deals, activeStageFilter]);
 
   const metrics = useMemo(() => {
-    const totalValue = deals.reduce((sum, d) => sum + (d.data?.value || 0), 0);
+    const totalValue = deals.reduce((sum, d) => sum + Number(d.data?.value || 0), 0);
     const wonDeals = deals.filter(d => d.stage === 'closed_won');
     const lostDeals = deals.filter(d => d.stage === 'closed_lost');
     const activeDeals = deals.filter(d => d.stage !== 'closed_won' && d.stage !== 'closed_lost');
-    const wonValue = wonDeals.reduce((sum, d) => sum + (d.data?.value || 0), 0);
-    const lostValue = lostDeals.reduce((sum, d) => sum + (d.data?.value || 0), 0);
+    const wonValue = wonDeals.reduce((sum, d) => sum + Number(d.data?.value || 0), 0);
+    const lostValue = lostDeals.reduce((sum, d) => sum + Number(d.data?.value || 0), 0);
     const closedDeals = wonDeals.length + lostDeals.length;
     const winRate = closedDeals > 0 ? Math.round((wonDeals.length / closedDeals) * 100) : 0;
     const avgDealSize = activeDeals.length > 0 ? Math.round(totalValue / activeDeals.length) : 0;
@@ -348,7 +348,7 @@ export default function DealsPage() {
           </button>
           {stageConfigs.map(stage => {
             const count = dealsByStage[stage.id]?.length || 0;
-            const stageValue = dealsByStage[stage.id]?.reduce((sum, d) => sum + (d.data?.value || 0), 0) || 0;
+            const stageValue = dealsByStage[stage.id]?.reduce((sum, d) => sum + Number(d.data?.value || 0), 0) || 0;
             return (
               <button
                 key={stage.id}
