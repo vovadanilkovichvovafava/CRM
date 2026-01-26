@@ -8,13 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useTasks, useCreateTask, useMoveTask, useUpdateTask, useTask } from '@/hooks/use-tasks';
+import { useTasks, useCreateTask, useMoveTask, useUpdateTask } from '@/hooks/use-tasks';
 import { useUsers, useCurrentUser } from '@/hooks/use-users';
 import { cn } from '@/lib/utils';
 import type { Task as TaskType } from '@/types';
 import { CalendarView, type CalendarEvent } from '@/components/calendar/calendar-view';
 import { ProjectSidebar } from '@/components/tasks/project-sidebar';
-import { TaskDetailDialog } from '@/components/tasks/task-detail-dialog';
 import {
   Dialog,
   DialogContent,
@@ -308,12 +307,13 @@ export default function TasksPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [createForStatus, setCreateForStatus] = useState('TODO');
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [showMyTasks, setShowMyTasks] = useState(false);
 
-  // Fetch task from URL parameter or pending navigation
-  const { data: taskFromUrl } = useTask(targetTaskId || '');
+  // Navigate to task detail page
+  const handleTaskClick = (task: Task) => {
+    router.push(`/tasks/${task.id}`);
+  };
 
   // Form state
   const [newTitle, setNewTitle] = useState('');
@@ -339,21 +339,15 @@ export default function TasksPage() {
     }
   }, [tasksError, t]);
 
-  // Open task from URL parameter or pending navigation
+  // Handle task navigation from URL or pending
   useEffect(() => {
-    console.log('[TasksPage] useEffect - taskFromUrl:', taskFromUrl, 'targetTaskId:', targetTaskId);
-    if (taskFromUrl && targetTaskId) {
-      console.log('[TasksPage] Opening task:', targetTaskId);
-      setSelectedTask(taskFromUrl as Task);
-      // Clear the pending task and URL parameter
+    if (targetTaskId && targetTaskId !== '_placeholder') {
+      router.push(`/tasks/${targetTaskId}`);
       if (pendingTaskId) {
         clearPendingTaskId();
       }
-      if (taskIdFromUrl) {
-        router.replace('/tasks', { scroll: false });
-      }
     }
-  }, [taskFromUrl, targetTaskId, pendingTaskId, taskIdFromUrl, router, clearPendingTaskId]);
+  }, [targetTaskId, pendingTaskId, router, clearPendingTaskId]);
 
   const createTaskMutation = useCreateTask();
   const moveTaskMutation = useMoveTask();
@@ -600,7 +594,7 @@ export default function TasksPage() {
             <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className="flex gap-5 overflow-x-auto pb-4">
                 {columns.map((column) => (
-                  <DroppableColumn key={column.id} column={column} tasks={tasksByStatus[column.id] || []} onAddTask={openCreateDialog} onTaskClick={setSelectedTask} addTaskLabel={t('tasks.addTask')} />
+                  <DroppableColumn key={column.id} column={column} tasks={tasksByStatus[column.id] || []} onAddTask={openCreateDialog} onTaskClick={handleTaskClick} addTaskLabel={t('tasks.addTask')} />
                 ))}
               </div>
               <DragOverlay>{activeTask ? <TaskCardOverlay task={activeTask} /> : null}</DragOverlay>
@@ -631,7 +625,7 @@ export default function TasksPage() {
                       </tr>
                     ) : (
                       [...tasks].sort((a, b) => (priorityWeights[b.priority] || 0) - (priorityWeights[a.priority] || 0)).map((task) => (
-                        <tr key={task.id} className="border-b border-gray-100 hover:bg-blue-50/50 cursor-pointer transition-colors" onClick={() => setSelectedTask(task)}>
+                        <tr key={task.id} className="border-b border-gray-100 hover:bg-blue-50/50 cursor-pointer transition-colors" onClick={() => handleTaskClick(task)}>
                           <td className="px-4 py-3.5">
                             <span className="font-medium text-gray-900">{task.title}</span>
                           </td>
@@ -676,7 +670,7 @@ export default function TasksPage() {
                   events={calendarEvents}
                   onEventClick={(event) => {
                     const task = tasks.find((t) => t.id === event.id);
-                    if (task) setSelectedTask(task);
+                    if (task) handleTaskClick(task);
                   }}
                   onDateSelect={(start) => {
                     setNewDueDate(start.toISOString().split('T')[0]);
@@ -798,14 +792,6 @@ export default function TasksPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Task Detail Dialog */}
-      <TaskDetailDialog
-        task={selectedTask}
-        users={usersList}
-        onClose={() => setSelectedTask(null)}
-        onUpdate={(task) => setSelectedTask(task)}
-      />
     </div>
   );
 }

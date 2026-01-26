@@ -75,7 +75,7 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
   ];
 
   return (
-    <div className="w-64 border-r border-gray-200 flex flex-col h-full bg-white">
+    <div className="w-64 shrink-0 border-r border-gray-200 flex flex-col h-full bg-white overflow-hidden">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center justify-between mb-3">
