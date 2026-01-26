@@ -1,5 +1,9 @@
 import { DealDetailClient } from './deal-detail-client';
 
+export function generateStaticParams() {
+  return [{ id: '_placeholder' }];
+}
+
 export default function DealDetailPage() {
   return <DealDetailClient />;
 }

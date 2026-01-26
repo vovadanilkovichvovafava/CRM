@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Remove 'output: export' - dynamic routes require server-side rendering or API routes
-  // For static hosting, you need to handle client-side routing properly
+  output: 'export',
   trailingSlash: true,
   reactStrictMode: true,
   images: {
