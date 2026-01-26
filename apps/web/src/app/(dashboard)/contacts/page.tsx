@@ -147,7 +147,6 @@ function EmptyStateIllustration() {
 export default function ContactsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
