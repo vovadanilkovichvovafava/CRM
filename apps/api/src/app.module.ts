@@ -1,9 +1,6 @@
-import { Module, Logger, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ServeStaticModule } from '@nestjs/serve-static';
 import { BullModule } from '@nestjs/bullmq';
-import { join } from 'path';
-import { SpaFallbackMiddleware } from './middleware/spa-fallback.middleware';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ObjectsModule } from './modules/objects/objects.module';
@@ -57,12 +54,6 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
-    }),
-
-    // Serve static frontend files
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', 'web-static'),
-      exclude: ['/api/{*path}', '/socket.io/{*path}'],
     }),
 
     // Optional modules (like BullMQ)
@@ -121,9 +112,4 @@ if (process.env.REDIS_HOST || process.env.REDIS_URL) {
     WebmasterScoringModule,
   ],
 })
-export class AppModule implements NestModule {
-  configure(consumer: MiddlewareConsumer): void {
-    // Apply SPA fallback middleware for client-side routing support
-    consumer.apply(SpaFallbackMiddleware).forRoutes('*');
-  }
-}
+export class AppModule {}
