@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -15,18 +16,20 @@ import {
   Send,
   MapPin,
   TrendingUp,
+  Settings,
+  RefreshCw,
+  MoreHorizontal,
+  ChevronDown,
+  Mail,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
 import { api, ApiError } from '@/lib/api';
-import { getInitials, formatRelativeTime } from '@/lib/utils';
+import { getInitials, formatRelativeTime, cn } from '@/lib/utils';
 
-// Webmaster fields for affiliate CRM
 const webmasterFields = [
   { name: 'name', displayName: 'Name', type: 'TEXT', isRequired: true },
   { name: 'email', displayName: 'Email', type: 'EMAIL', isRequired: false },
@@ -70,10 +73,36 @@ interface WebmasterRecord {
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-100 text-emerald-700 border-emerald-300',
-  paused: 'bg-amber-100 text-amber-700 border-amber-300',
-  blocked: 'bg-red-100 text-red-700 border-red-300',
+  active: 'bg-green-100 text-green-700',
+  paused: 'bg-yellow-100 text-yellow-700',
+  blocked: 'bg-red-100 text-red-700',
 };
+
+interface MetricProps {
+  label: string;
+  value: number;
+  isActive?: boolean;
+  onClick?: () => void;
+}
+
+function Metric({ label, value, isActive, onClick }: MetricProps) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex flex-col items-center px-4 py-2 rounded-md transition-all duration-200',
+        isActive
+          ? 'bg-[#0070d2] text-white'
+          : 'text-gray-700 hover:bg-gray-100'
+      )}
+    >
+      <span className="font-semibold text-lg">{value}</span>
+      <span className={cn('text-xs whitespace-nowrap', isActive ? 'text-white/80' : 'text-gray-500')}>
+        {label}
+      </span>
+    </button>
+  );
+}
 
 export default function WebmastersPage() {
   const { t } = useTranslation();
@@ -82,8 +111,9 @@ export default function WebmastersPage() {
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [webmastersObjectId, setWebmastersObjectId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string>('total');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Get webmasters object
   const { data: objectData, isLoading: objectLoading, error: objectError, refetch: refetchObject } = useQuery({
     queryKey: ['objects', 'webmasters'],
     queryFn: async () => {
@@ -111,9 +141,9 @@ export default function WebmastersPage() {
   const handleAddWebmaster = () => {
     if (!webmastersObjectId) {
       if (objectError) {
-        toast.error('Failed to load webmasters configuration. Please refresh the page.');
+        toast.error(t('errors.general'));
       } else {
-        toast.error('Loading webmasters configuration...');
+        toast.error(t('common.loading'));
         refetchObject();
       }
       return;
@@ -121,8 +151,7 @@ export default function WebmastersPage() {
     setIsCreateOpen(true);
   };
 
-  // Get webmasters records
-  const { data: recordsData, isLoading: recordsLoading } = useQuery({
+  const { data: recordsData, isLoading: recordsLoading, refetch: refetchRecords } = useQuery({
     queryKey: ['records', 'webmasters', webmastersObjectId, search],
     queryFn: () =>
       api.records.list({
@@ -132,203 +161,289 @@ export default function WebmastersPage() {
     enabled: !!webmastersObjectId,
   });
 
-  // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.records.delete(id),
     onSuccess: () => {
-      toast.success('Webmaster deleted');
+      toast.success(t('common.success'));
       queryClient.invalidateQueries({ queryKey: ['records', 'webmasters'] });
     },
     onError: () => {
-      toast.error('Failed to delete webmaster');
+      toast.error(t('errors.general'));
     },
   });
 
   const webmasters = (recordsData?.data as WebmasterRecord[]) || [];
   const isLoading = objectLoading || (recordsLoading && !!webmastersObjectId);
 
+  const metrics = useMemo(() => {
+    const total = webmasters.length;
+    const active = webmasters.filter(w => w.data?.status === 'active').length;
+    const paused = webmasters.filter(w => w.data?.status === 'paused').length;
+    const blocked = webmasters.filter(w => w.data?.status === 'blocked').length;
+    const noStatus = webmasters.filter(w => !w.data?.status).length;
+    return { total, active, paused, blocked, noStatus };
+  }, [webmasters]);
+
+  const filteredWebmasters = useMemo(() => {
+    if (activeFilter === 'total') return webmasters;
+    if (activeFilter === 'active') return webmasters.filter(w => w.data?.status === 'active');
+    if (activeFilter === 'paused') return webmasters.filter(w => w.data?.status === 'paused');
+    if (activeFilter === 'blocked') return webmasters.filter(w => w.data?.status === 'blocked');
+    if (activeFilter === 'noStatus') return webmasters.filter(w => !w.data?.status);
+    return webmasters;
+  }, [webmasters, activeFilter]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetchRecords();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
-            <Globe className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('webmasters.title')}</h1>
-            <p className="text-gray-600">
-              {webmasters.length} webmaster{webmasters.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={handleAddWebmaster}
-          className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-sm"
-        >
-          {objectLoading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : objectError ? (
-            <AlertCircle className="mr-2 h-4 w-4" />
-          ) : (
-            <Plus className="mr-2 h-4 w-4" />
-          )}
-          {t('webmasters.addWebmaster')}
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder={t('webmasters.searchWebmasters')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Button variant="outline" size="icon">
-          <Filter className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Webmasters Table */}
-      <Card className="sf-card overflow-hidden">
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
-                <p className="text-sm text-gray-500">Loading webmasters...</p>
+    <div className="h-full flex flex-col bg-[#f4f6f9]">
+      {/* Page Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+              <Globe className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{t('webmasters.title')}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {t('webmasters.title')}
+                </h1>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
               </div>
             </div>
-          ) : webmasters.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="w-16 h-16 mb-6 rounded-full bg-violet-50 flex items-center justify-center">
-                <Globe className="h-8 w-8 text-violet-500/60" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('common.noData')}</h3>
-              <p className="text-gray-600 mb-6 max-w-sm">
-                Start by adding your first webmaster partner
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors">
+              <Settings className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleRefresh}
+              className={cn(
+                'p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors',
+                isRefreshing && 'animate-spin'
+              )}
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+            <button className="p-2 rounded-md text-gray-500 hover:bg-gray-100 transition-colors">
+              <Filter className="h-5 w-5" />
+            </button>
+
+            <Button
+              onClick={handleAddWebmaster}
+              variant="outline"
+              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50"
+            >
+              {objectLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : objectError ? (
+                <AlertCircle className="mr-2 h-4 w-4" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
+              {t('common.new')}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="bg-[#16325c] px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 rounded-lg">
+            <Metric
+              label={t('common.all')}
+              value={metrics.total}
+              isActive={activeFilter === 'total'}
+              onClick={() => setActiveFilter('total')}
+            />
+            <Metric
+              label={t('webmasters.status.active', 'Active')}
+              value={metrics.active}
+              isActive={activeFilter === 'active'}
+              onClick={() => setActiveFilter('active')}
+            />
+            <Metric
+              label={t('webmasters.status.paused', 'Paused')}
+              value={metrics.paused}
+              isActive={activeFilter === 'paused'}
+              onClick={() => setActiveFilter('paused')}
+            />
+            <Metric
+              label={t('webmasters.status.blocked', 'Blocked')}
+              value={metrics.blocked}
+              isActive={activeFilter === 'blocked'}
+              onClick={() => setActiveFilter('blocked')}
+            />
+            <Metric
+              label={t('webmasters.noStatus', 'No Status')}
+              value={metrics.noStatus}
+              isActive={activeFilter === 'noStatus'}
+              onClick={() => setActiveFilter('noStatus')}
+            />
+          </div>
+
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+            <Input
+              placeholder={t('webmasters.searchWebmasters')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:bg-white/20"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-auto p-6">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-600">
+            {filteredWebmasters.length} {t('webmasters.title').toLowerCase()}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50"
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              {t('contacts.sendEmail', 'Send Email')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="sf-card animate-fade-in">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-[#0070d2]" />
+            </div>
+          ) : filteredWebmasters.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Globe className="h-12 w-12 text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('common.noData')}</h3>
+              <p className="text-gray-500 mb-4">
+                {t('webmasters.noWebmasters', 'Start by adding your first webmaster partner')}
               </p>
               <Button
                 onClick={handleAddWebmaster}
-                className="bg-gradient-to-r from-violet-500 to-purple-500"
+                className="bg-[#0070d2] hover:bg-[#005fb2]"
               >
                 <Plus className="mr-2 h-4 w-4" />
                 {t('webmasters.addWebmaster')}
               </Button>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="sf-table">
-                <thead>
-                  <tr>
-                    <th>{t('common.name')}</th>
-                    <th>Contact</th>
-                    <th>Traffic</th>
-                    <th>GEOs</th>
-                    <th>{t('common.status')}</th>
-                    <th>Added</th>
-                    <th className="w-24"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {webmasters.map((webmaster) => (
-                    <tr
-                      key={webmaster.id}
-                      className="cursor-pointer"
-                      onClick={() => router.push(`/webmasters/${webmaster.id}`)}
-                    >
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 bg-gradient-to-br from-violet-500 to-purple-500">
-                            <AvatarFallback className="text-xs text-white bg-transparent">
-                              {getInitials(webmaster.data?.name || 'W')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="font-medium text-gray-900">
-                            {webmaster.data?.name || 'Unnamed'}
+            <table className="sf-table">
+              <thead>
+                <tr>
+                  <th>{t('common.name')}</th>
+                  <th>{t('webmasters.contact', 'Contact')}</th>
+                  <th>{t('webmasters.traffic', 'Traffic')}</th>
+                  <th>{t('webmasters.geos', 'GEOs')}</th>
+                  <th>{t('common.status')}</th>
+                  <th>{t('common.created', 'Added')}</th>
+                  <th className="w-24"></th>
+                </tr>
+              </thead>
+              <tbody className="stagger-children">
+                {filteredWebmasters.map((webmaster) => (
+                  <tr
+                    key={webmaster.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/webmasters/${webmaster.id}`)}
+                  >
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600 text-white text-sm font-medium">
+                          {getInitials(webmaster.data?.name || 'W')}
+                        </div>
+                        <Link
+                          href={`/webmasters/${webmaster.id}`}
+                          className="font-medium text-[#0070d2] hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {webmaster.data?.name || 'Unnamed'}
+                        </Link>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        {webmaster.data?.telegram ? (
+                          <span className="flex items-center gap-1">
+                            <Send className="h-3 w-3 text-gray-400" />
+                            {webmaster.data.telegram}
                           </span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          {webmaster.data?.telegram && (
-                            <span className="flex items-center gap-1">
-                              <Send className="h-3 w-3 text-gray-400" />
-                              {webmaster.data.telegram}
-                            </span>
-                          )}
-                          {!webmaster.data?.telegram && webmaster.data?.email && (
-                            <span>{webmaster.data.email}</span>
-                          )}
-                          {!webmaster.data?.telegram && !webmaster.data?.email && (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1.5 text-gray-700">
-                          <TrendingUp className="h-3.5 w-3.5 text-violet-500" />
-                          {webmaster.data?.traffic_sources || <span className="text-gray-400">-</span>}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1.5 text-gray-700">
-                          <MapPin className="h-3.5 w-3.5 text-emerald-500" />
-                          {webmaster.data?.geos || <span className="text-gray-400">-</span>}
-                        </div>
-                      </td>
-                      <td>
-                        {webmaster.data?.status ? (
-                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${statusColors[webmaster.data.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                            {webmaster.data.status}
-                          </span>
+                        ) : webmaster.data?.email ? (
+                          <span>{webmaster.data.email}</span>
                         ) : (
-                          <span className="text-gray-400">-</span>
+                          <span className="text-gray-400">—</span>
                         )}
-                      </td>
-                      <td className="text-gray-500">
-                        {formatRelativeTime(webmaster.createdAt)}
-                      </td>
-                      <td>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-400 hover:text-violet-600 hover:bg-violet-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              router.push(`/webmasters/${webmaster.id}`);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Delete this webmaster?')) {
-                                deleteMutation.mutate(webmaster.id);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <TrendingUp className="h-3.5 w-3.5 text-violet-500" />
+                        {webmaster.data?.traffic_sources || <span className="text-gray-400">—</span>}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <MapPin className="h-3.5 w-3.5 text-green-500" />
+                        {webmaster.data?.geos || <span className="text-gray-400">—</span>}
+                      </div>
+                    </td>
+                    <td>
+                      {webmaster.data?.status ? (
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColors[webmaster.data.status] || 'bg-gray-100 text-gray-600'}`}>
+                          {webmaster.data.status.charAt(0).toUpperCase() + webmaster.data.status.slice(1)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="text-gray-500">
+                      {formatRelativeTime(webmaster.createdAt)}
+                    </td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="p-1.5 rounded-md text-gray-400 hover:text-[#0070d2] hover:bg-blue-50 transition-all"
+                          onClick={() => router.push(`/webmasters/${webmaster.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="p-1.5 rounded-md text-gray-400 hover:text-red-500 hover:bg-red-50 transition-all"
+                          onClick={() => {
+                            if (confirm(t('common.confirm'))) {
+                              deleteMutation.mutate(webmaster.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <button className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Create Modal */}
       {webmastersObjectId && (

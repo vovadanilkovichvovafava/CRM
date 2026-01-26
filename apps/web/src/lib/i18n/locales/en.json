@@ -70,6 +70,8 @@
     "daysAgo": "{{count}} d. ago",
     "unknown": "Unknown",
     "due": "Due",
+    "new": "New",
+    "created": "Created",
     "priorities": {
       "urgent": "Urgent",
       "high": "High",
@@ -381,7 +383,17 @@
   "webmasters": {
     "title": "Webmasters",
     "addWebmaster": "Add Webmaster",
-    "searchWebmasters": "Search webmasters..."
+    "searchWebmasters": "Search webmasters...",
+    "noWebmasters": "Start by adding your first webmaster partner",
+    "contact": "Contact",
+    "traffic": "Traffic",
+    "geos": "GEOs",
+    "noStatus": "No Status",
+    "status": {
+      "active": "Active",
+      "paused": "Paused",
+      "blocked": "Blocked"
+    }
   },
   "partners": {
     "title": "Partners",

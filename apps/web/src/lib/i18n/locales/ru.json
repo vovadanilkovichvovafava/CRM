@@ -70,6 +70,8 @@
     "unassigned": "Не назначен",
     "unknown": "Неизвестно",
     "due": "Срок",
+    "new": "Новый",
+    "created": "Создано",
     "priorities": {
       "urgent": "Срочно",
       "high": "Высокий",
@@ -381,7 +383,17 @@
   "webmasters": {
     "title": "Вебмастера",
     "addWebmaster": "Добавить вебмастера",
-    "searchWebmasters": "Поиск вебмастеров..."
+    "searchWebmasters": "Поиск вебмастеров...",
+    "noWebmasters": "Добавьте первого вебмастера-партнёра",
+    "contact": "Контакт",
+    "traffic": "Трафик",
+    "geos": "ГЕО",
+    "noStatus": "Без статуса",
+    "status": {
+      "active": "Активный",
+      "paused": "Приостановлен",
+      "blocked": "Заблокирован"
+    }
   },
   "partners": {
     "title": "Партнёры",
