@@ -15,9 +15,8 @@ import { Button } from '@/components/ui/button';
 import {
   DashboardProvider,
   useDashboard,
-  WidgetWrapper,
-  WidgetRenderer,
   WidgetPickerModal,
+  SortableWidgetGrid,
 } from '@/components/dashboard';
 
 function DashboardContent() {
@@ -26,8 +25,6 @@ function DashboardContent() {
   const [showWidgetPicker, setShowWidgetPicker] = useState(false);
 
   const isRussian = i18n.language === 'ru';
-
-  const sortedWidgets = [...config.widgets].sort((a, b) => a.position - b.position);
 
   return (
     <div className="h-full flex flex-col bg-[#f4f6f9]">
@@ -110,15 +107,15 @@ function DashboardContent() {
         <div className="bg-blue-50 border-b border-blue-100 px-6 py-2">
           <p className="text-sm text-blue-700">
             {isRussian
-              ? 'Режим редактирования. Изменяйте размер виджетов или удаляйте их. Нажмите "Сохранить" для применения.'
-              : 'Edit mode active. Resize or remove widgets. Click "Save" to apply changes.'}
+              ? 'Режим редактирования. Перетаскивайте виджеты для изменения порядка, изменяйте размер или удаляйте их. Нажмите "Сохранить" для применения.'
+              : 'Edit mode active. Drag widgets to reorder, resize, or remove them. Click "Save" to apply changes.'}
           </p>
         </div>
       )}
 
       {/* Dashboard Grid */}
       <div className="flex-1 overflow-auto p-6">
-        {sortedWidgets.length === 0 ? (
+        {config.widgets.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full">
             <LayoutGrid className="h-16 w-16 text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
@@ -141,16 +138,10 @@ function DashboardContent() {
             </Button>
           </div>
         ) : (
-          <div
-            className="grid gap-4 auto-rows-[minmax(160px,auto)]"
-            style={{ gridTemplateColumns: `repeat(${config.columns}, minmax(0, 1fr))` }}
-          >
-            {sortedWidgets.map((widget) => (
-              <WidgetWrapper key={widget.instanceId} widget={widget}>
-                <WidgetRenderer widget={widget} />
-              </WidgetWrapper>
-            ))}
-          </div>
+          <SortableWidgetGrid
+            widgets={config.widgets}
+            columns={config.columns}
+          />
         )}
       </div>
 

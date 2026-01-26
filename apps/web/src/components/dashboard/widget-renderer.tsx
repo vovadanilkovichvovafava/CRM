@@ -8,6 +8,9 @@ import { TodaysEventsWidget } from './widgets/todays-events-widget';
 import { AssistantWidget } from './widgets/assistant-widget';
 import { QuickActionsWidget } from './widgets/quick-actions-widget';
 import { SingleMetricWidget } from './widgets/single-metric-widget';
+import { PipelineChartWidget } from './widgets/pipeline-chart-widget';
+import { RevenueTrendWidget } from './widgets/revenue-trend-widget';
+import { GoalsProgressWidget } from './widgets/goals-progress-widget';
 
 interface WidgetRendererProps {
   widget: DashboardWidget;
@@ -46,25 +49,13 @@ export function WidgetRenderer({ widget }: WidgetRendererProps) {
       return <SingleMetricWidget metricType="tasks-due" />;
 
     case 'pipeline-chart':
-      return (
-        <div className="sf-card h-full p-4 flex items-center justify-center">
-          <p className="text-gray-500 text-sm">Pipeline Chart (Coming Soon)</p>
-        </div>
-      );
+      return <PipelineChartWidget />;
 
     case 'revenue-trend':
-      return (
-        <div className="sf-card h-full p-4 flex items-center justify-center">
-          <p className="text-gray-500 text-sm">Revenue Trend (Coming Soon)</p>
-        </div>
-      );
+      return <RevenueTrendWidget />;
 
     case 'goals-progress':
-      return (
-        <div className="sf-card h-full p-4 flex items-center justify-center">
-          <p className="text-gray-500 text-sm">Goals Progress (Coming Soon)</p>
-        </div>
-      );
+      return <GoalsProgressWidget />;
 
     default:
       return (
