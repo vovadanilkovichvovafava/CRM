@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
@@ -47,6 +48,7 @@ interface EmailTemplate {
 }
 
 export default function EmailTemplatesPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -130,7 +132,7 @@ export default function EmailTemplatesPage() {
             <Mail className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Email Templates</h1>
+            <h1 className="text-xl font-bold text-white">{t('emailTemplates.title')}</h1>
             <p className="text-sm text-white/40">
               {templates.length} template{templates.length !== 1 ? 's' : ''}
             </p>
@@ -139,7 +141,7 @@ export default function EmailTemplatesPage() {
 
         <Button onClick={handleCreate} className="bg-rose-600 hover:bg-rose-700">
           <Plus className="mr-2 h-4 w-4" />
-          New Template
+          {t('emailTemplates.addTemplate')}
         </Button>
       </div>
 
@@ -151,7 +153,7 @@ export default function EmailTemplatesPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search templates..."
+              placeholder={t('emailTemplates.searchTemplates')}
               className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
             />
           </div>
@@ -167,7 +169,7 @@ export default function EmailTemplatesPage() {
                   : 'border-white/10 text-white/60 hover:text-white'
               )}
             >
-              All
+              {t('common.all')}
             </Button>
             {categories.map((cat) => (
               <Button
@@ -198,11 +200,11 @@ export default function EmailTemplatesPage() {
           <div className="flex flex-col items-center justify-center h-64">
             <Mail className="h-12 w-12 text-white/20 mb-4" />
             <p className="text-white/40 mb-4">
-              {search ? 'No templates found' : 'No email templates yet'}
+              {search ? t('common.notFound') : t('emailTemplates.noTemplates')}
             </p>
             <Button onClick={handleCreate} className="bg-rose-600 hover:bg-rose-700">
               <Plus className="mr-2 h-4 w-4" />
-              Create your first template
+              {t('emailTemplates.createTemplate')}
             </Button>
           </div>
         ) : (
@@ -382,7 +384,7 @@ export default function EmailTemplatesPage() {
                 variant="outline"
                 onClick={() => setPreviewTemplate(null)}
               >
-                Close
+                {t('common.close')}
               </Button>
             </div>
           </div>

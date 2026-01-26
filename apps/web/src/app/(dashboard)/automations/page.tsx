@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import {
@@ -58,6 +59,7 @@ const TRIGGER_LABELS: Record<string, string> = {
 };
 
 export default function AutomationsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState<boolean | null>(null);
@@ -130,7 +132,7 @@ export default function AutomationsPage() {
             <Workflow className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Automations</h1>
+            <h1 className="text-xl font-bold text-white">{t('automations.title')}</h1>
             <p className="text-sm text-white/40">
               {workflows.length} workflow{workflows.length !== 1 ? 's' : ''} ({activeCount} active)
             </p>
@@ -140,7 +142,7 @@ export default function AutomationsPage() {
         <Link href="/automations/editor?id=new">
           <Button className="bg-orange-600 hover:bg-orange-700">
             <Plus className="mr-2 h-4 w-4" />
-            New Workflow
+            {t('automations.addAutomation')}
           </Button>
         </Link>
       </div>
@@ -153,7 +155,7 @@ export default function AutomationsPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search workflows..."
+              placeholder={t('automations.searchAutomations')}
               className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30"
             />
           </div>
@@ -169,7 +171,7 @@ export default function AutomationsPage() {
                   : 'border-white/10 text-white/60 hover:text-white'
               )}
             >
-              All
+              {t('common.all')}
             </Button>
             <Button
               variant={filterActive === true ? 'default' : 'outline'}
@@ -211,12 +213,12 @@ export default function AutomationsPage() {
           <div className="flex flex-col items-center justify-center h-64">
             <Workflow className="h-12 w-12 text-white/20 mb-4" />
             <p className="text-white/40 mb-4">
-              {search ? 'No workflows found' : 'No automations yet'}
+              {search ? t('common.notFound') : t('automations.noAutomations')}
             </p>
             <Link href="/automations/editor?id=new">
               <Button className="bg-orange-600 hover:bg-orange-700">
                 <Plus className="mr-2 h-4 w-4" />
-                Create your first workflow
+                {t('automations.createAutomation')}
               </Button>
             </Link>
           </div>

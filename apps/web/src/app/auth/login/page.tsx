@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'sonner';
@@ -58,6 +59,7 @@ function JanusLogo({ className = 'w-10 h-10' }: { className?: string }) {
 }
 
 export default function LoginPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -70,7 +72,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!email || !password) {
-      toast.error('Please fill in all fields');
+      toast.error(t('settings.messages.fillAllFields'));
       return;
     }
 
@@ -92,7 +94,7 @@ export default function LoginPage() {
       } else if (error instanceof Error) {
         toast.error(`Error: ${error.message}`);
       } else {
-        toast.error('Network error. Check if API is running.');
+        toast.error(t('errors.networkError'));
       }
     } finally {
       setIsLoading(false);
@@ -114,7 +116,7 @@ export default function LoginPage() {
       } else if (error instanceof Error) {
         toast.error(`Error: ${error.message}`);
       } else {
-        toast.error('Network error');
+        toast.error(t('errors.networkError'));
       }
     } finally {
       setIsLoading(false);
@@ -140,14 +142,14 @@ export default function LoginPage() {
 
         {/* Form card */}
         <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-8 backdrop-blur-sm">
-          <h1 className="text-2xl font-bold text-white mb-2">Welcome back</h1>
-          <p className="text-white/50 mb-6">Sign in to your account to continue</p>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('auth.login.title')}</h1>
+          <p className="text-white/50 mb-6">{t('auth.login.subtitle')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Email
+                {t('auth.login.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
@@ -164,7 +166,7 @@ export default function LoginPage() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Password
+                {t('auth.login.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
@@ -198,10 +200,10 @@ export default function LoginPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Signing in...
+                  {t('auth.login.signingIn')}
                 </>
               ) : (
-                'Sign in'
+                t('auth.login.signIn')
               )}
             </button>
           </form>
@@ -212,7 +214,7 @@ export default function LoginPage() {
               <div className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#0a0a0f] text-white/40">or</span>
+              <span className="px-2 bg-[#0a0a0f] text-white/40">{t('common.or')}</span>
             </div>
           </div>
 
@@ -227,12 +229,12 @@ export default function LoginPage() {
 
           {/* Register link */}
           <p className="mt-6 text-center text-white/50">
-            Don&apos;t have an account?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link
               href="/auth/register"
               className="text-indigo-400 hover:text-indigo-300 transition-colors"
             >
-              Sign up
+              {t('auth.login.createAccount')}
             </Link>
           </p>
         </div>

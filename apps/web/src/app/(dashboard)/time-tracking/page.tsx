@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Clock,
@@ -60,6 +61,7 @@ function formatDate(dateString: string): string {
 }
 
 export default function TimeTrackingPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [dateFilter, setDateFilter] = useState<'today' | 'week' | 'month' | 'all'>('week');
 
@@ -146,7 +148,7 @@ export default function TimeTrackingPage() {
             <Clock className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Time Tracking</h1>
+            <h1 className="text-xl font-bold text-white">{t('timeTracking.title')}</h1>
             <p className="text-sm text-white/40">
               {stats?.entriesCount || 0} entries • {stats?.totalHours || 0} hours tracked
             </p>
@@ -170,7 +172,7 @@ export default function TimeTrackingPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-white">{stats?.totalHours || 0}h</p>
-                  <p className="text-xs text-white/40">Total Time</p>
+                  <p className="text-xs text-white/40">{t('timeTracking.totalTime')}</p>
                 </div>
               </div>
             </CardContent>
@@ -227,21 +229,29 @@ export default function TimeTrackingPage() {
       {/* Filters */}
       <div className="border-b border-white/5 bg-[#0a0a0f]/50 px-6 py-3">
         <div className="flex items-center gap-2">
-          {(['today', 'week', 'month', 'all'] as const).map((filter) => (
-            <Button
-              key={filter}
-              variant={dateFilter === filter ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setDateFilter(filter)}
-              className={cn(
-                dateFilter === filter
-                  ? 'bg-amber-600 hover:bg-amber-700'
-                  : 'border-white/10 text-white/60 hover:text-white'
-              )}
-            >
-              {filter.charAt(0).toUpperCase() + filter.slice(1)}
-            </Button>
-          ))}
+          {(['today', 'week', 'month', 'all'] as const).map((filter) => {
+            const filterLabels: Record<typeof filter, string> = {
+              today: t('common.today'),
+              week: t('calendar.week'),
+              month: t('calendar.month'),
+              all: t('common.all'),
+            };
+            return (
+              <Button
+                key={filter}
+                variant={dateFilter === filter ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDateFilter(filter)}
+                className={cn(
+                  dateFilter === filter
+                    ? 'bg-amber-600 hover:bg-amber-700'
+                    : 'border-white/10 text-white/60 hover:text-white'
+                )}
+              >
+                {filterLabels[filter]}
+              </Button>
+            );
+          })}
         </div>
       </div>
 
@@ -254,8 +264,8 @@ export default function TimeTrackingPage() {
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64">
             <Clock className="h-12 w-12 text-white/20 mb-4" />
-            <p className="text-white/40 mb-2">No time entries yet</p>
-            <p className="text-sm text-white/30">Start the timer to track your time</p>
+            <p className="text-white/40 mb-2">{t('common.noData')}</p>
+            <p className="text-sm text-white/30">{t('timeTracking.startTimer')}</p>
           </div>
         ) : (
           <div className="space-y-6">

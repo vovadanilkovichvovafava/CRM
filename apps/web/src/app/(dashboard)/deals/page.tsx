@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, DollarSign, Loader2, TrendingUp, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { KanbanBoard, KanbanStage, KanbanItem } from '@/components/kanban';
 import { CreateRecordModal } from '@/components/records/create-record-modal';
@@ -56,6 +57,7 @@ const defaultStages: KanbanStage[] = [
 ];
 
 export default function DealsPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<DealRecord | null>(null);
@@ -205,7 +207,7 @@ export default function DealsPage() {
               <DollarSign className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Deals</h1>
+              <h1 className="text-2xl font-bold text-white">{t('deals.title')}</h1>
               <p className="text-sm text-white/50">
                 {deals.length} deal{deals.length !== 1 ? 's' : ''} · {formatCurrency(totalValue)} total
               </p>
@@ -223,7 +225,7 @@ export default function DealsPage() {
           ) : (
             <Plus className="mr-2 h-4 w-4" />
           )}
-          Add Deal
+          {t('deals.addDeal')}
         </Button>
       </div>
 
@@ -343,7 +345,7 @@ export default function DealsPage() {
                 onClick={() => setIsEditOpen(true)}
                 className="border-white/10"
               >
-                Edit
+                {t('common.edit')}
               </Button>
               <Button
                 variant="outline"
@@ -354,30 +356,30 @@ export default function DealsPage() {
                 }}
                 className="border-red-500/20 text-red-400 hover:bg-red-500/10"
               >
-                Delete
+                {t('common.delete')}
               </Button>
             </div>
 
             {/* Details */}
             <Card className="bg-white/[0.02] border-white/[0.05]">
               <CardHeader>
-                <CardTitle className="text-lg text-white">Details</CardTitle>
+                <CardTitle className="text-lg text-white">{t('common.details')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {selectedDeal.data.contact && (
                   <div>
-                    <p className="text-xs text-white/40 uppercase tracking-wider">Contact</p>
+                    <p className="text-xs text-white/40 uppercase tracking-wider">{t('deals.fields.contact')}</p>
                     <p className="text-white">{selectedDeal.data.contact}</p>
                   </div>
                 )}
                 {selectedDeal.data.expectedCloseDate && (
                   <div>
-                    <p className="text-xs text-white/40 uppercase tracking-wider">Expected Close</p>
+                    <p className="text-xs text-white/40 uppercase tracking-wider">{t('deals.fields.closeDate')}</p>
                     <p className="text-white">{selectedDeal.data.expectedCloseDate}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-xs text-white/40 uppercase tracking-wider">Stage</p>
+                  <p className="text-xs text-white/40 uppercase tracking-wider">{t('deals.fields.stage')}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <div
                       className="h-3 w-3 rounded-full"
@@ -402,7 +404,7 @@ export default function DealsPage() {
             {selectedDeal.data.notes && (
               <Card className="bg-white/[0.02] border-white/[0.05]">
                 <CardHeader>
-                  <CardTitle className="text-lg text-white">Notes</CardTitle>
+                  <CardTitle className="text-lg text-white">{t('contacts.fields.notes')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-white/70 whitespace-pre-wrap">{selectedDeal.data.notes}</p>

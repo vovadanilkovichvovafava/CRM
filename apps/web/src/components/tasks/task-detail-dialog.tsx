@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   CalendarDays,
   Send,
@@ -235,6 +236,7 @@ function parseLinks(content: string): React.ReactNode {
 }
 
 export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailDialogProps) {
+  const { t } = useTranslation();
   const [newComment, setNewComment] = useState('');
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
@@ -349,7 +351,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
     // Check if trying to set status to DONE with incomplete subtasks
     if (updates.status === 'DONE' && hasIncompleteSubtasks) {
-      toast.error('Cannot mark task as DONE. Complete all subtasks first.');
+      toast.error(t('tasks.messages.completeSubtasksFirst') || 'Cannot mark task as DONE. Complete all subtasks first.');
       return;
     }
 
@@ -357,7 +359,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
       { id: displayTask.id, data: updates },
       {
         onSuccess: () => {
-          toast.success('Task updated');
+          toast.success(t('tasks.messages.updated'));
           // Refresh the current task data
           if (viewingTaskId) {
             refetchViewingTask();
@@ -366,7 +368,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
           }
         },
         onError: (error: Error) => {
-          toast.error(error.message || 'Failed to update task');
+          toast.error(error.message || t('errors.general'));
         },
       }
     );
@@ -387,7 +389,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
     deleteTaskMutation.mutate(displayTask.id, {
       onSuccess: () => {
-        toast.success(isViewingSubtask ? 'Subtask deleted' : 'Task deleted');
+        toast.success(t('tasks.messages.deleted'));
         setShowDeleteConfirm(false);
         if (isViewingSubtask) {
           // Navigate back to parent task
@@ -399,7 +401,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         }
       },
       onError: () => {
-        toast.error('Failed to delete task');
+        toast.error(t('errors.general'));
       },
     });
   };
@@ -426,14 +428,14 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         },
         {
           onSuccess: () => {
-            toast.success(replyingTo ? 'Reply added' : 'Comment added');
+            toast.success(t('comments.addComment'));
             setNewComment('');
             setAttachedFiles([]);
             setReplyingTo(null);
             refetchComments();
           },
           onError: () => {
-            toast.error('Failed to add comment');
+            toast.error(t('errors.general'));
           },
         }
       );
@@ -465,7 +467,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
       } as Partial<TaskType>,
       {
         onSuccess: () => {
-          toast.success('Subtask added');
+          toast.success(t('tasks.messages.created'));
           setNewSubtaskTitle('');
           // Refresh the current task data
           if (viewingTaskId) {
@@ -475,7 +477,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
           }
         },
         onError: () => {
-          toast.error('Failed to add subtask');
+          toast.error(t('errors.general'));
         },
       }
     );
@@ -485,7 +487,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   const handleDeleteSubtask = (subtaskId: string) => {
     deleteTaskMutation.mutate(subtaskId, {
       onSuccess: () => {
-        toast.success('Subtask deleted');
+        toast.success(t('tasks.messages.deleted'));
         if (viewingTaskId) {
           refetchViewingTask();
         } else {
@@ -493,7 +495,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         }
       },
       onError: () => {
-        toast.error('Failed to delete subtask');
+        toast.error(t('errors.general'));
       },
     });
   };
@@ -538,7 +540,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
       for (const file of Array.from(files)) {
         await api.files.upload(file, { taskId: displayTask.id });
       }
-      toast.success(`${files.length} file(s) uploaded`);
+      toast.success(t('files.uploadFile'));
       // Refresh task data to show new files
       if (viewingTaskId) {
         refetchViewingTask();
@@ -546,7 +548,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         refetchTask();
       }
     } catch (error) {
-      toast.error('Failed to upload file');
+      toast.error(t('errors.general'));
     } finally {
       setIsUploadingTaskFile(false);
     }
@@ -587,7 +589,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
     setDeletingFileId(fileId);
     try {
       await api.files.delete(fileId);
-      toast.success('File deleted');
+      toast.success(t('files.delete'));
       // Refresh task data
       if (viewingTaskId) {
         refetchViewingTask();
@@ -595,7 +597,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         refetchTask();
       }
     } catch (error) {
-      toast.error('Failed to delete file');
+      toast.error(t('errors.general'));
     } finally {
       setDeletingFileId(null);
     }
@@ -736,7 +738,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     }}
                   >
                     <Pencil className="h-4 w-4 mr-2" />
-                    Edit title
+                    {t('common.edit')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -744,7 +746,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     onClick={() => setShowDeleteConfirm(true)}
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Delete {isViewingSubtask ? 'subtask' : 'task'}
+                    {t('common.delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -762,18 +764,18 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
         <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete {isViewingSubtask ? 'subtask' : 'task'}?</AlertDialogTitle>
+              <AlertDialogTitle>{t('tasks.deleteTask')}?</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete &ldquo;{displayTask.title}&rdquo;? This action cannot be undone.
+                {displayTask.title}
                 {!isViewingSubtask && taskWithSubtasks.subtasks && taskWithSubtasks.subtasks.length > 0 && (
                   <span className="block mt-2 text-yellow-400">
-                    Warning: This task has {taskWithSubtasks.subtasks.length} subtask(s) that will also be deleted.
+                    {t('tasks.fields.subtasks')}: {taskWithSubtasks.subtasks.length}
                   </span>
                 )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteTask}
                 className="bg-red-600 hover:bg-red-700"
@@ -781,7 +783,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 {deleteTaskMutation.isPending ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white" />
                 ) : (
-                  'Delete'
+                  t('common.delete')
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -803,7 +805,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                       : 'border-transparent text-white/50 hover:text-white'
                   )}
                 >
-                  Details
+                  {t('common.details')}
                 </button>
                 {/* Hide subtasks tab for subtasks - subtasks cannot have nested subtasks */}
                 {!isViewingSubtask && (
@@ -816,7 +818,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         : 'border-transparent text-white/50 hover:text-white'
                     )}
                   >
-                    Subtasks
+                    {t('tasks.fields.subtasks')}
                     {((displayTask._count?.subtasks || 0) > 0 || (taskWithSubtasks.subtasks?.length || 0) > 0) && (
                       <Badge variant="secondary" className="ml-2 bg-white/10 text-xs">
                         {displayTask._count?.subtasks || taskWithSubtasks.subtasks?.length || 0}
@@ -834,9 +836,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <Clock className="h-3 w-3" />
-                        <span>Status</span>
+                        <span>{t('tasks.fields.status')}</span>
                         {!canEditStatus && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">{t('common.view')}</Badge>
                         )}
                       </div>
                       <Select
@@ -876,9 +878,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <User className="h-3 w-3" />
-                        <span>Assignees</span>
+                        <span>{t('tasks.fields.assignee')}</span>
                         {!canEditAllFields && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">{t('common.view')}</Badge>
                         )}
                       </div>
                       <Select
@@ -898,11 +900,11 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         }}
                       >
                         <SelectTrigger className={cn('h-9 w-full', !canEditAllFields && 'opacity-60')}>
-                          <SelectValue placeholder="Unassigned" />
+                          <SelectValue placeholder={t('common.unassigned')} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">
-                            <span className="text-white/50">Unassigned</span>
+                            <span className="text-white/50">{t('common.unassigned')}</span>
                           </SelectItem>
                           {users.map((user) => (
                             <SelectItem key={user.id} value={user.id}>
@@ -928,9 +930,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <Folder className="h-3 w-3" />
-                        <span>Project</span>
+                        <span>{t('tasks.fields.project')}</span>
                         {!canEditAllFields && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">{t('common.view')}</Badge>
                         )}
                       </div>
                       <Select
@@ -949,7 +951,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         }}
                       >
                         <SelectTrigger className={cn('h-9 w-full', !canEditAllFields && 'opacity-60')}>
-                          <SelectValue placeholder="No project">
+                          <SelectValue placeholder={t('common.none')}>
                             {displayTask.project ? (
                               <span className="flex items-center gap-2">
                                 <span
@@ -959,13 +961,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                                 {displayTask.project.name}
                               </span>
                             ) : (
-                              <span className="text-white/50">No project</span>
+                              <span className="text-white/50">{t('common.none')}</span>
                             )}
                           </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">
-                            <span className="text-white/50">No project</span>
+                            <span className="text-white/50">{t('common.none')}</span>
                           </SelectItem>
                           {projects.map((project) => (
                             <SelectItem key={project.id} value={project.id}>
@@ -986,13 +988,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <CalendarDays className="h-3 w-3" />
-                        <span>Dates</span>
+                        <span>{t('tasks.fields.dueDate')}</span>
                       </div>
                       <div className="text-sm">
                         {displayTask.dueDate ? (
-                          <span>Due {format(new Date(displayTask.dueDate), 'MMM d, yyyy')}</span>
+                          <span>{t('common.due')} {format(new Date(displayTask.dueDate), 'MMM d, yyyy')}</span>
                         ) : (
-                          <span className="text-white/40">No due date</span>
+                          <span className="text-white/40">{t('common.none')}</span>
                         )}
                       </div>
                     </div>
@@ -1004,9 +1006,9 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-white/50 text-xs">
                         <Flag className="h-3 w-3" />
-                        <span>Priority</span>
+                        <span>{t('tasks.fields.priority')}</span>
                         {!canEditAllFields && (
-                          <Badge variant="outline" className="text-[10px] px-1 py-0">View only</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1 py-0">{t('common.view')}</Badge>
                         )}
                       </div>
                       <Select
@@ -1040,7 +1042,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   {/* Description */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-white/50 text-xs">Description</Label>
+                      <Label className="text-white/50 text-xs">{t('tasks.fields.description')}</Label>
                       {canEditAllFields && !isEditingDescription && (
                         <Button
                           variant="ghost"
@@ -1051,7 +1053,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                           }}
                           className="text-white/50 hover:text-white text-xs h-6"
                         >
-                          Edit
+                          {t('common.edit')}
                         </Button>
                       )}
                     </div>
@@ -1060,7 +1062,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         <Textarea
                           value={descriptionDraft}
                           onChange={(e) => setDescriptionDraft(e.target.value)}
-                          placeholder="Add a description..."
+                          placeholder={t('tasks.fields.description') + '...'}
                           rows={4}
                           className="bg-white/5 border-white/10 text-sm resize-none"
                           autoFocus
@@ -1071,7 +1073,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                             size="sm"
                             onClick={() => setIsEditingDescription(false)}
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </Button>
                           <Button
                             size="sm"
@@ -1080,7 +1082,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                               setIsEditingDescription(false);
                             }}
                           >
-                            Save
+                            {t('common.save')}
                           </Button>
                         </div>
                       </div>
@@ -1103,7 +1105,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                           </p>
                         ) : (
                           <p className="text-sm text-white/30 italic">
-                            {canEditAllFields ? 'Click to add description...' : 'No description'}
+                            {canEditAllFields ? t('common.add') + '...' : t('projects.noDescription')}
                           </p>
                         )}
                       </div>
@@ -1114,7 +1116,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-white/50 text-xs">
-                        Attachments
+                        {t('tasks.fields.files')}
                         {displayTask.files && displayTask.files.length > 0 && (
                           <span className="ml-1 text-white/30">({displayTask.files.length})</span>
                         )}
@@ -1128,7 +1130,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                           disabled={isUploadingTaskFile}
                         >
                           <Plus className="h-3 w-3 mr-1" />
-                          Add
+                          {t('common.add')}
                         </Button>
                       )}
                     </div>
@@ -1194,7 +1196,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         {isUploadingTaskFile && (
                           <div className="flex items-center gap-2 p-2 rounded bg-white/5">
                             <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-indigo-500" />
-                            <span className="text-sm text-white/50">Uploading...</span>
+                            <span className="text-sm text-white/50">{t('common.loading')}</span>
                           </div>
                         )}
                       </div>
@@ -1214,20 +1216,20 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         {isUploadingTaskFile ? (
                           <>
                             <div className="animate-spin rounded-full h-8 w-8 mx-auto mb-2 border-t-2 border-b-2 border-indigo-500" />
-                            <p className="text-sm text-white/50">Uploading...</p>
+                            <p className="text-sm text-white/50">{t('common.loading')}</p>
                           </>
                         ) : (
                           <>
                             <Upload className="h-8 w-8 mx-auto mb-2 text-white/30" />
                             <p className="text-sm text-white/50">
-                              Drop your files here to <span className="text-blue-400">upload</span>
+                              {t('files.dropHere')} <span className="text-blue-400">{t('common.upload')}</span>
                             </p>
                           </>
                         )}
                       </div>
                     ) : (
                       <div className="border-2 border-dashed border-white/10 rounded-lg p-4 text-center opacity-50">
-                        <p className="text-sm text-white/40">Only the creator or assignee can upload files</p>
+                        <p className="text-sm text-white/40">{t('files.noFiles')}</p>
                       </div>
                     )}
                   </div>
@@ -1240,8 +1242,8 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   {(!taskWithSubtasks.subtasks || taskWithSubtasks.subtasks.length === 0) && (
                     <div className="text-center py-8 text-white/40">
                       <ListTodo className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No subtasks yet</p>
-                      <p className="text-xs mt-1">Add subtasks to break down this task</p>
+                      <p className="text-sm">{t('tasks.noTasksYet')}</p>
+                      <p className="text-xs mt-1">{t('tasks.actions.addSubtask')}</p>
                     </div>
                   )}
 
@@ -1259,7 +1261,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   {/* Add subtask input */}
                   <div className="flex gap-2 mt-4 pt-4 border-t border-white/10">
                     <Input
-                      placeholder="Add subtask..."
+                      placeholder={t('tasks.actions.addSubtask') + '...'}
                       value={newSubtaskTitle}
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       onKeyDown={(e) => {
@@ -1282,7 +1284,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-white/60" />
-                <span className="font-medium text-sm">Activity</span>
+                <span className="font-medium text-sm">{t('tasks.fields.activity')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="bg-white/10 text-xs">
@@ -1290,13 +1292,13 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 </Badge>
                 {/* Show user role */}
                 {userRole === 'creator' && (
-                  <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 text-[10px]">Creator</Badge>
+                  <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 text-[10px]">{t('team.roles.owner')}</Badge>
                 )}
                 {userRole === 'project_owner' && (
-                  <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 text-[10px]">Project Owner</Badge>
+                  <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 text-[10px]">{t('team.roles.owner')}</Badge>
                 )}
                 {isAssignee && !isCreator && (
-                  <Badge variant="secondary" className="bg-green-500/20 text-green-400 text-[10px]">Assignee</Badge>
+                  <Badge variant="secondary" className="bg-green-500/20 text-green-400 text-[10px]">{t('tasks.fields.assignee')}</Badge>
                 )}
               </div>
             </div>
@@ -1309,7 +1311,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <div className="w-1 h-1 rounded-full bg-white/30 mt-1.5" />
                   <div>
                     <span>
-                      {getUserById(displayTask.createdBy)?.name || getUserById(displayTask.createdBy)?.email || 'Someone'} created this {isViewingSubtask ? 'subtask' : 'task'}
+                      {getUserById(displayTask.createdBy)?.name || getUserById(displayTask.createdBy)?.email || t('common.unknown')} - {t('activity.types.taskCreated')}
                     </span>
                     {displayTask.createdAt && (
                       <span className="ml-2">{format(new Date(displayTask.createdAt), 'MMM d, yyyy')}</span>
@@ -1321,7 +1323,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   <div className="flex items-start gap-3 text-xs text-white/50">
                     <div className="w-1 h-1 rounded-full bg-white/30 mt-1.5" />
                     <div>
-                      <span>Assigned to: {getUserById(displayTask.assigneeId)?.name || 'User'}</span>
+                      <span>{t('tasks.fields.assignee')}: {getUserById(displayTask.assigneeId)?.name || t('common.unknown')}</span>
                     </div>
                   </div>
                 )}
@@ -1361,8 +1363,8 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Edit</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-400">Delete</DropdownMenuItem>
+                                <DropdownMenuItem>{t('comments.edit')}</DropdownMenuItem>
+                                <DropdownMenuItem className="text-red-400">{t('comments.delete')}</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -1403,7 +1405,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                               onClick={() => handleReply(comment)}
                             >
                               <Reply className="h-3 w-3" />
-                              <span>Reply</span>
+                              <span>{t('comments.reply')}</span>
                             </button>
                           </div>
                         </div>
@@ -1448,7 +1450,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                                       onClick={() => handleReply(comment)}
                                     >
                                       <Reply className="h-2.5 w-2.5" />
-                                      <span>Reply</span>
+                                      <span>{t('comments.reply')}</span>
                                     </button>
                                   </div>
                                 </div>
@@ -1470,7 +1472,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                 <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
                   <div className="flex items-center gap-2 text-xs">
                     <Reply className="h-3 w-3 text-indigo-400" />
-                    <span className="text-white/60">Replying to</span>
+                    <span className="text-white/60">{t('comments.reply')}</span>
                     <span className="font-medium text-indigo-400">{replyingTo.authorName}</span>
                   </div>
                   <button
@@ -1530,7 +1532,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
 
               <Textarea
                 ref={commentInputRef}
-                placeholder="Mention @Brain to create, find, ask anything"
+                placeholder={t('comments.writeComment')}
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 onKeyDown={handleCommentKeyDown}

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import {
   Users,
@@ -63,59 +64,61 @@ function JanusLogo({ className = "w-8 h-8" }: { className?: string }) {
 }
 
 interface NavItem {
-  name: string;
+  nameKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   colorClass?: string;
 }
 
 const mainItems: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { nameKey: 'nav.dashboard', href: '/dashboard', icon: Home },
 ];
 
 const systemObjects: NavItem[] = [
-  { name: 'Contacts', href: '/contacts', icon: Users, colorClass: 'text-blue-400' },
-  { name: 'Companies', href: '/companies', icon: Building2, colorClass: 'text-emerald-400' },
-  { name: 'Deals', href: '/deals', icon: DollarSign, colorClass: 'text-amber-400' },
-  { name: 'Webmasters', href: '/webmasters', icon: Globe, colorClass: 'text-violet-400' },
-  { name: 'Partners', href: '/partners', icon: Handshake, colorClass: 'text-pink-400' },
+  { nameKey: 'nav.contacts', href: '/contacts', icon: Users, colorClass: 'text-blue-400' },
+  { nameKey: 'nav.companies', href: '/companies', icon: Building2, colorClass: 'text-emerald-400' },
+  { nameKey: 'nav.deals', href: '/deals', icon: DollarSign, colorClass: 'text-amber-400' },
+  { nameKey: 'nav.webmasters', href: '/webmasters', icon: Globe, colorClass: 'text-violet-400' },
+  { nameKey: 'nav.partners', href: '/partners', icon: Handshake, colorClass: 'text-pink-400' },
 ];
 
 const pmItems: NavItem[] = [
-  { name: 'Projects', href: '/projects', icon: FolderKanban, colorClass: 'text-cyan-400' },
-  { name: 'Tasks', href: '/tasks', icon: CheckSquare, colorClass: 'text-lime-400' },
-  { name: 'Calendar', href: '/calendar', icon: CalendarDays, colorClass: 'text-indigo-400' },
-  { name: 'Time Tracking', href: '/time-tracking', icon: Clock, colorClass: 'text-amber-400' },
+  { nameKey: 'nav.projects', href: '/projects', icon: FolderKanban, colorClass: 'text-cyan-400' },
+  { nameKey: 'nav.tasks', href: '/tasks', icon: CheckSquare, colorClass: 'text-lime-400' },
+  { nameKey: 'nav.calendar', href: '/calendar', icon: CalendarDays, colorClass: 'text-indigo-400' },
+  { nameKey: 'nav.timeTracking', href: '/time-tracking', icon: Clock, colorClass: 'text-amber-400' },
 ];
 
 const marketingItems: NavItem[] = [
-  { name: 'Email Templates', href: '/email-templates', icon: Mail, colorClass: 'text-rose-400' },
-  { name: 'Automations', href: '/automations', icon: Workflow, colorClass: 'text-orange-400' },
+  { nameKey: 'nav.emailTemplates', href: '/email-templates', icon: Mail, colorClass: 'text-rose-400' },
+  { nameKey: 'nav.automations', href: '/automations', icon: Workflow, colorClass: 'text-orange-400' },
 ];
 
 const otherItems: NavItem[] = [
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Import Data', href: '/import', icon: Upload, colorClass: 'text-cyan-400' },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { nameKey: 'nav.analytics', href: '/analytics', icon: BarChart3 },
+  { nameKey: 'nav.importData', href: '/import', icon: Upload, colorClass: 'text-cyan-400' },
+  { nameKey: 'nav.settings', href: '/settings', icon: Settings },
 ];
 
 function NavSection({
-  title,
+  titleKey,
   items,
   showAddButton,
   pathname,
+  t,
 }: {
-  title?: string;
+  titleKey?: string;
   items: NavItem[];
   showAddButton?: boolean;
   pathname: string;
+  t: (key: string) => string;
 }) {
   return (
     <div className="mb-6">
-      {title && (
+      {titleKey && (
         <div className="mb-2 flex items-center justify-between px-3">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
-            {title}
+            {t(titleKey)}
           </span>
           {showAddButton && (
             <button className="rounded p-0.5 text-white/40 hover:bg-white/5 hover:text-white/60 transition-colors">
@@ -144,7 +147,7 @@ function NavSection({
                     isActive ? 'text-white' : item.colorClass
                   )}
                 />
-                <span>{item.name}</span>
+                <span>{t(item.nameKey)}</span>
                 {isActive && (
                   <div className="ml-auto h-1.5 w-1.5 rounded-full bg-white" />
                 )}
@@ -158,6 +161,7 @@ function NavSection({
 }
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
@@ -177,7 +181,7 @@ export function Sidebar() {
           <JanusLogo className="h-9 w-9" />
           <div className="flex flex-col">
             <span className="text-lg font-bold text-white">Janus</span>
-            <span className="text-[10px] text-white/40 -mt-1">See everything</span>
+            <span className="text-[10px] text-white/40 -mt-1">{t('nav.seeEverything')}</span>
           </div>
         </Link>
       </div>
@@ -186,7 +190,7 @@ export function Sidebar() {
       <div className="px-3 py-4">
         <button className="flex w-full items-center gap-3 rounded-lg bg-white/5 px-3 py-2.5 text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white/60">
           <Search className="h-4 w-4" />
-          <span>Search...</span>
+          <span>{t('nav.search')}</span>
           <kbd className="ml-auto rounded bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-white/30">
             ⌘K
           </kbd>
@@ -195,11 +199,11 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-2">
-        <NavSection items={mainItems} pathname={pathname} />
-        <NavSection title="CRM" items={systemObjects} showAddButton pathname={pathname} />
-        <NavSection title="Projects" items={pmItems} pathname={pathname} />
-        <NavSection title="Marketing" items={marketingItems} pathname={pathname} />
-        <NavSection items={otherItems} pathname={pathname} />
+        <NavSection items={mainItems} pathname={pathname} t={t} />
+        <NavSection titleKey="nav.crm" items={systemObjects} showAddButton pathname={pathname} t={t} />
+        <NavSection titleKey="nav.projects" items={pmItems} pathname={pathname} t={t} />
+        <NavSection titleKey="nav.marketing" items={marketingItems} pathname={pathname} t={t} />
+        <NavSection items={otherItems} pathname={pathname} t={t} />
       </nav>
 
       {/* Bottom section - User info */}
@@ -218,7 +222,7 @@ export function Sidebar() {
           )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-white truncate">
-              {user?.name || 'User'}
+              {user?.name || t('common.user')}
             </p>
             <p className="text-xs text-white/40 truncate">
               {user?.email || 'user@example.com'}
@@ -227,7 +231,7 @@ export function Sidebar() {
           <button
             onClick={handleLogout}
             className="rounded-lg p-2 text-white/40 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-            title="Logout"
+            title={t('common.logout')}
           >
             <LogOut className="h-4 w-4" />
           </button>

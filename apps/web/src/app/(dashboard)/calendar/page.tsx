@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CalendarView, type CalendarEvent } from '@/components/calendar/calendar-view';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,20 +42,21 @@ interface Task {
 }
 
 const PRIORITY_OPTIONS = [
-  { value: 'URGENT', label: 'Urgent', color: 'bg-red-500' },
-  { value: 'HIGH', label: 'High', color: 'bg-orange-500' },
-  { value: 'MEDIUM', label: 'Medium', color: 'bg-yellow-500' },
-  { value: 'LOW', label: 'Low', color: 'bg-gray-500' },
+  { value: 'URGENT', labelKey: 'common.priorities.urgent', color: 'bg-red-500' },
+  { value: 'HIGH', labelKey: 'common.priorities.high', color: 'bg-orange-500' },
+  { value: 'MEDIUM', labelKey: 'common.priorities.medium', color: 'bg-yellow-500' },
+  { value: 'LOW', labelKey: 'common.priorities.low', color: 'bg-gray-500' },
 ];
 
 const STATUS_OPTIONS = [
-  { value: 'TODO', label: 'To Do' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'IN_REVIEW', label: 'In Review' },
-  { value: 'DONE', label: 'Done' },
+  { value: 'TODO', labelKey: 'tasks.status.todo' },
+  { value: 'IN_PROGRESS', labelKey: 'tasks.status.inProgress' },
+  { value: 'IN_REVIEW', labelKey: 'tasks.status.inReview' },
+  { value: 'DONE', labelKey: 'tasks.status.done' },
 ];
 
 export default function CalendarPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -74,10 +76,10 @@ export default function CalendarPage() {
       api.tasks.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      toast.success('Task rescheduled');
+      toast.success(t('tasks.messages.updated'));
     },
     onError: () => {
-      toast.error('Failed to reschedule task');
+      toast.error(t('errors.general'));
     },
   });
 
@@ -89,10 +91,10 @@ export default function CalendarPage() {
       setIsCreateDialogOpen(false);
       setNewTaskTitle('');
       setSelectedDateRange(null);
-      toast.success('Task created');
+      toast.success(t('tasks.messages.created'));
     },
     onError: () => {
-      toast.error('Failed to create task');
+      toast.error(t('errors.general'));
     },
   });
 
@@ -191,12 +193,12 @@ export default function CalendarPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Calendar</h1>
+          <h1 className="text-3xl font-bold">{t('calendar.title')}</h1>
           <p className="text-muted-foreground">View and manage tasks by date</p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Task
+          {t('tasks.addTask')}
         </Button>
       </div>
 
@@ -208,7 +210,7 @@ export default function CalendarPage() {
               <AlertCircle className="h-5 w-5 text-red-400" />
             </div>
             <div>
-              <p className="text-sm text-red-400">Overdue</p>
+              <p className="text-sm text-red-400">{t('common.overdue')}</p>
               <p className="text-2xl font-bold text-red-300">{stats.overdue}</p>
             </div>
           </CardContent>
@@ -220,7 +222,7 @@ export default function CalendarPage() {
               <Clock className="h-5 w-5 text-yellow-400" />
             </div>
             <div>
-              <p className="text-sm text-yellow-400">Due Today</p>
+              <p className="text-sm text-yellow-400">{t('common.today')}</p>
               <p className="text-2xl font-bold text-yellow-300">{stats.dueToday}</p>
             </div>
           </CardContent>
@@ -232,7 +234,7 @@ export default function CalendarPage() {
               <Calendar className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <p className="text-sm text-blue-400">This Week</p>
+              <p className="text-sm text-blue-400">{t('timeTracking.thisWeek')}</p>
               <p className="text-2xl font-bold text-blue-300">{stats.thisWeek}</p>
             </div>
           </CardContent>
@@ -295,13 +297,13 @@ export default function CalendarPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 {selectedTask.startDate && (
                   <div>
-                    <span className="text-muted-foreground">Start:</span>{' '}
+                    <span className="text-muted-foreground">{t('tasks.fields.startDate')}:</span>{' '}
                     {format(new Date(selectedTask.startDate), 'PP')}
                   </div>
                 )}
                 {selectedTask.dueDate && (
                   <div>
-                    <span className="text-muted-foreground">Due:</span>{' '}
+                    <span className="text-muted-foreground">{t('common.due')}:</span>{' '}
                     {format(new Date(selectedTask.dueDate), 'PP')}
                   </div>
                 )}
@@ -311,10 +313,10 @@ export default function CalendarPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedEvent(null)}>
-              Close
+              {t('common.close')}
             </Button>
             <Button onClick={() => window.location.href = `/tasks/${selectedTask?.id}`}>
-              View Details
+              {t('common.details')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -324,22 +326,22 @@ export default function CalendarPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Task</DialogTitle>
+            <DialogTitle>{t('tasks.createNewTask')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
+              <Label htmlFor="title">{t('common.title')}</Label>
               <Input
                 id="title"
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
-                placeholder="Task title..."
+                placeholder={t('tasks.taskTitle')}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="priority">Priority</Label>
+              <Label htmlFor="priority">{t('common.priority')}</Label>
               <Select value={newTaskPriority} onValueChange={setNewTaskPriority}>
                 <SelectTrigger>
                   <SelectValue />
@@ -349,7 +351,7 @@ export default function CalendarPage() {
                     <SelectItem key={opt.value} value={opt.value}>
                       <span className="flex items-center gap-2">
                         <span className={cn('w-2 h-2 rounded-full', opt.color)} />
-                        {opt.label}
+                        {t(opt.labelKey)}
                       </span>
                     </SelectItem>
                   ))}
@@ -360,7 +362,7 @@ export default function CalendarPage() {
             {selectedDateRange && (
               <div className="p-3 rounded-lg bg-muted">
                 <p className="text-sm">
-                  <span className="text-muted-foreground">Date:</span>{' '}
+                  <span className="text-muted-foreground">{t('common.date')}:</span>{' '}
                   {format(selectedDateRange.start, 'PPP')}
                   {selectedDateRange.end.getTime() !== selectedDateRange.start.getTime() && (
                     <> - {format(selectedDateRange.end, 'PPP')}</>
@@ -372,13 +374,13 @@ export default function CalendarPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleCreateTask}
               disabled={!newTaskTitle.trim() || createTaskMutation.isPending}
             >
-              {createTaskMutation.isPending ? 'Creating...' : 'Create Task'}
+              {createTaskMutation.isPending ? t('tasks.creating') : t('tasks.createTask')}
             </Button>
           </DialogFooter>
         </DialogContent>

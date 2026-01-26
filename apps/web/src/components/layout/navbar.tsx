@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import {
   Bell,
   HelpCircle,
@@ -17,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { ru, enUS } from 'date-fns/locale';
 import {
   Popover,
   PopoverContent,
@@ -33,24 +35,6 @@ import {
   useDeleteNotification,
   Notification,
 } from '@/hooks/use-notifications';
-
-const pathNames: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/contacts': 'Contacts',
-  '/companies': 'Companies',
-  '/deals': 'Deals',
-  '/webmasters': 'Webmasters',
-  '/partners': 'Partners',
-  '/projects': 'Projects',
-  '/tasks': 'Tasks',
-  '/analytics': 'Analytics',
-  '/settings': 'Settings',
-  '/calendar': 'Calendar',
-  '/time-tracking': 'Time Tracking',
-  '/email-templates': 'Email Templates',
-  '/automations': 'Automations',
-  '/import': 'Import Data',
-};
 
 function getNotificationIcon(type: string) {
   switch (type) {
@@ -76,11 +60,15 @@ function NotificationItem({
   onMarkAsRead,
   onDelete,
   onClick,
+  t,
+  locale,
 }: {
   notification: Notification;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
   onClick: (notification: Notification) => void;
+  t: (key: string) => string;
+  locale: string;
 }) {
   return (
     <div
@@ -99,7 +87,10 @@ function NotificationItem({
         </p>
         <p className="text-xs text-white/50 mt-0.5 line-clamp-2">{notification.message}</p>
         <p className="text-[10px] text-white/30 mt-1">
-          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+          {formatDistanceToNow(new Date(notification.createdAt), {
+            addSuffix: true,
+            locale: locale === 'ru' ? ru : enUS
+          })}
         </p>
       </div>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -110,7 +101,7 @@ function NotificationItem({
               onMarkAsRead(notification.id);
             }}
             className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-white/80"
-            title="Mark as read"
+            title={t('notifications.markAllRead')}
           >
             <Check className="h-3 w-3" />
           </button>
@@ -121,7 +112,7 @@ function NotificationItem({
             onDelete(notification.id);
           }}
           className="p-1 rounded hover:bg-white/10 text-white/40 hover:text-red-400"
-          title="Delete"
+          title={t('common.delete')}
         >
           <X className="h-3 w-3" />
         </button>
@@ -131,10 +122,30 @@ function NotificationItem({
 }
 
 export function Navbar() {
+  const { t, i18n } = useTranslation();
   const pathname = usePathname();
   const router = useRouter();
-  const currentPage = pathNames[pathname] || 'Dashboard';
   const [isOpen, setIsOpen] = useState(false);
+
+  const pathNames: Record<string, string> = {
+    '/dashboard': t('nav.dashboard'),
+    '/contacts': t('nav.contacts'),
+    '/companies': t('nav.companies'),
+    '/deals': t('nav.deals'),
+    '/webmasters': t('nav.webmasters'),
+    '/partners': t('nav.partners'),
+    '/projects': t('nav.projects'),
+    '/tasks': t('nav.tasks'),
+    '/analytics': t('nav.analytics'),
+    '/settings': t('nav.settings'),
+    '/calendar': t('nav.calendar'),
+    '/time-tracking': t('nav.timeTracking'),
+    '/email-templates': t('nav.emailTemplates'),
+    '/automations': t('nav.automations'),
+    '/import': t('nav.importData'),
+  };
+
+  const currentPage = pathNames[pathname] || t('nav.dashboard');
 
   const { data: notifications = [] } = useNotifications({ limit: 20 });
   const { data: unreadCount } = useUnreadNotificationsCount();
@@ -174,7 +185,7 @@ export function Navbar() {
     <header className="flex h-14 items-center justify-between border-b border-white/5 bg-[#0a0a0f] px-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
-        <span className="text-white/40">Nexus</span>
+        <span className="text-white/40">Janus</span>
         <ChevronRight className="h-4 w-4 text-white/20" />
         <span className="font-medium text-white">{currentPage}</span>
       </div>
@@ -203,10 +214,10 @@ export function Navbar() {
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-sm">Notifications</span>
+                <span className="font-medium text-sm">{t('notifications.title')}</span>
                 {(unreadCount?.count ?? 0) > 0 && (
                   <span className="px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-[10px] font-medium text-indigo-400">
-                    {unreadCount?.count} new
+                    {unreadCount?.count} {t('notifications.new')}
                   </span>
                 )}
               </div>
@@ -218,7 +229,7 @@ export function Navbar() {
                   onClick={handleMarkAllAsRead}
                 >
                   <CheckCheck className="h-3 w-3 mr-1" />
-                  Mark all read
+                  {t('notifications.markAllRead')}
                 </Button>
               )}
             </div>
@@ -228,7 +239,7 @@ export function Navbar() {
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-white/30">
                   <Bell className="h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">No notifications yet</p>
+                  <p className="text-sm">{t('notifications.noNotifications')}</p>
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
@@ -239,6 +250,8 @@ export function Navbar() {
                       onMarkAsRead={handleMarkAsRead}
                       onDelete={handleDelete}
                       onClick={handleNotificationClick}
+                      t={t}
+                      locale={i18n.language}
                     />
                   ))}
                 </div>

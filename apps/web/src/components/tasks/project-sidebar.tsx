@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Plus, FolderKanban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,7 @@ interface ProjectSidebarProps {
 }
 
 export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSidebarProps) {
+  const { t } = useTranslation();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectColor, setNewProjectColor] = useState('#6366f1');
@@ -54,13 +56,13 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
       { name: newProjectName, color: newProjectColor },
       {
         onSuccess: () => {
-          toast.success('Project created');
+          toast.success(t('common.success'));
           setIsCreateDialogOpen(false);
           setNewProjectName('');
         },
         onError: (error) => {
           console.error('Project creation error:', error);
-          const message = error instanceof Error ? error.message : 'Failed to create project';
+          const message = error instanceof Error ? error.message : t('errors.general');
           toast.error(message);
         },
       }
@@ -77,7 +79,7 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
       {/* Header */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm text-white/70">Projects</h2>
+          <h2 className="font-semibold text-sm text-white/70">{t('projects.title')}</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -103,7 +105,7 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
             )}
           >
             <FolderKanban className="h-4 w-4 text-white/50" />
-            <span className="flex-1 text-sm font-medium">All Tasks</span>
+            <span className="flex-1 text-sm font-medium">{t('tasks.allTasks')}</span>
           </button>
 
           {/* Divider */}
@@ -115,22 +117,22 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
             </div>
           ) : error ? (
             <div className="text-center py-8 text-red-400 text-sm">
-              <p>Error loading projects</p>
+              <p>{t('errors.general')}</p>
               <p className="text-xs mt-1 text-red-400/70">
-                {error instanceof Error ? error.message : 'Unknown error'}
+                {error instanceof Error ? error.message : t('common.unknown')}
               </p>
             </div>
           ) : projects.length === 0 ? (
             <div className="text-center py-8 text-white/40 text-sm">
               <FolderKanban className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No projects yet</p>
+              <p>{t('projects.noProjects')}</p>
               <Button
                 variant="link"
                 size="sm"
                 className="text-indigo-400"
                 onClick={() => setIsCreateDialogOpen(true)}
               >
-                Create first project
+                {t('projects.createFirstProject')}
               </Button>
             </div>
           ) : (
@@ -168,22 +170,21 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
+            <DialogTitle>{t('projects.createNewProject')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="projectName">Project Name</Label>
+              <Label htmlFor="projectName">{t('projects.projectName')}</Label>
               <Input
                 id="projectName"
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="My Project"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Color</Label>
+              <Label>{t('projects.fields.color')}</Label>
               <div className="flex gap-2">
                 {colors.map((color) => (
                   <button
@@ -202,13 +203,13 @@ export function ProjectSidebar({ selectedProjectId, onSelectProject }: ProjectSi
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleCreateProject}
               disabled={!newProjectName.trim() || createProjectMutation.isPending}
             >
-              {createProjectMutation.isPending ? 'Creating...' : 'Create Project'}
+              {createProjectMutation.isPending ? t('projects.creating') : t('projects.createProject')}
             </Button>
           </DialogFooter>
         </DialogContent>

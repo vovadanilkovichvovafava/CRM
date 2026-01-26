@@ -17,6 +17,7 @@ import {
   User,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -100,6 +101,7 @@ const typeColors: Record<string, string> = {
 };
 
 export default function PartnersPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -180,7 +182,7 @@ export default function PartnersPage() {
               <Handshake className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Partners</h1>
+              <h1 className="text-2xl font-bold text-white">{t('partners.title')}</h1>
               <p className="text-sm text-white/50">
                 {partners.length} partner{partners.length !== 1 ? 's' : ''}
               </p>
@@ -198,7 +200,7 @@ export default function PartnersPage() {
           ) : (
             <Plus className="mr-2 h-4 w-4" />
           )}
-          Add Partner
+          {t('partners.addPartner')}
         </Button>
       </div>
 
@@ -207,7 +209,7 @@ export default function PartnersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <Input
-            placeholder="Search partners..."
+            placeholder={t('partners.searchPartners')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-white/5 border-white/10"
@@ -228,7 +230,7 @@ export default function PartnersPage() {
           ) : partners.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Handshake className="h-12 w-12 text-white/20 mb-4" />
-              <h3 className="text-lg font-medium text-white mb-1">No partners yet</h3>
+              <h3 className="text-lg font-medium text-white mb-1">{t('common.noData')}</h3>
               <p className="text-sm text-white/50 mb-4">
                 Add your first partner network or advertiser
               </p>
@@ -237,7 +239,7 @@ export default function PartnersPage() {
                 className="bg-gradient-to-r from-pink-500 to-rose-500"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Partner
+                {t('partners.addPartner')}
               </Button>
             </div>
           ) : (
@@ -246,7 +248,7 @@ export default function PartnersPage() {
                 <thead>
                   <tr className="border-b border-white/5">
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Partner
+                      {t('partners.title')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
                       Type
@@ -258,7 +260,7 @@ export default function PartnersPage() {
                       Verticals
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Status
+                      {t('common.status')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
                       Added

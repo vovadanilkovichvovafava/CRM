@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 import {
   Plus,
   Search,
@@ -123,6 +124,7 @@ function sortByPriority(tasks: Task[]): Task[] {
 }
 
 export default function ProjectsPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const selectedProjectId = searchParams.get('id');
@@ -161,6 +163,35 @@ export default function ProjectsPage() {
     return allUsers.find(u => u.id === userId);
   };
 
+  const getStatusLabel = (status: string): string => {
+    const statusKey = status.toLowerCase().replace('_', '');
+    return t(`projects.status.${statusKey}`, status);
+  };
+
+  const getTaskStatusLabel = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'TODO': t('tasks.status.todo'),
+      'IN_PROGRESS': t('tasks.status.inProgress'),
+      'IN_REVIEW': t('tasks.status.inReview'),
+      'DONE': t('tasks.status.done'),
+    };
+    return statusMap[status] || status.replace('_', ' ');
+  };
+
+  const getPriorityLabel = (priority: string): string => {
+    return t(`common.priorities.${priority.toLowerCase()}`, priority);
+  };
+
+  const getRoleLabel = (role: string): string => {
+    const roleMap: Record<string, string> = {
+      'OWNER': t('team.roles.owner'),
+      'ADMIN': t('team.roles.admin'),
+      'MEMBER': t('team.roles.member'),
+      'VIEWER': t('team.roles.viewer'),
+    };
+    return roleMap[role] || role;
+  };
+
   const tasksByStatus = {
     TODO: sortByPriority(tasks.filter(t => t.status === 'TODO')),
     IN_PROGRESS: sortByPriority(tasks.filter(t => t.status === 'IN_PROGRESS')),
@@ -175,7 +206,7 @@ export default function ProjectsPage() {
       { name: newName, description: newDescription },
       {
         onSuccess: (result) => {
-          toast.success('Project created');
+          toast.success(t('common.success'));
           setIsCreateDialogOpen(false);
           setNewName('');
           setNewDescription('');
@@ -184,7 +215,7 @@ export default function ProjectsPage() {
           }
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Failed to create project');
+          toast.error(error instanceof Error ? error.message : t('errors.general'));
         },
       }
     );
@@ -197,12 +228,12 @@ export default function ProjectsPage() {
       { projectId: selectedProjectId, userId: selectedUserId, role: selectedRole },
       {
         onSuccess: () => {
-          toast.success('Member added');
+          toast.success(t('team.messages.memberAdded'));
           setSelectedUserId('');
           setIsInviteDialogOpen(false);
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Failed to add member');
+          toast.error(error instanceof Error ? error.message : t('errors.general'));
         },
       }
     );
@@ -218,17 +249,17 @@ export default function ProjectsPage() {
         { projectId: selectedProjectId, userId: existingUser.id, role: selectedRole },
         {
           onSuccess: () => {
-            toast.success('Member added');
+            toast.success(t('team.messages.memberAdded'));
             setInviteEmail('');
             setIsInviteDialogOpen(false);
           },
           onError: (error) => {
-            toast.error(error instanceof Error ? error.message : 'Failed to add member');
+            toast.error(error instanceof Error ? error.message : t('errors.general'));
           },
         }
       );
     } else {
-      toast.success(`Invitation sent to ${inviteEmail}`);
+      toast.success(t('team.messages.invitationSent', { email: inviteEmail }));
       setInviteEmail('');
       setIsInviteDialogOpen(false);
     }
@@ -241,10 +272,10 @@ export default function ProjectsPage() {
       { projectId: selectedProjectId, userId },
       {
         onSuccess: () => {
-          toast.success('Member removed');
+          toast.success(t('team.messages.memberRemoved'));
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Failed to remove member');
+          toast.error(error instanceof Error ? error.message : t('errors.general'));
         },
       }
     );
@@ -257,12 +288,12 @@ export default function ProjectsPage() {
       { title: newTaskTitle, projectId: selectedProjectId },
       {
         onSuccess: () => {
-          toast.success('Task created');
+          toast.success(t('tasks.messages.created'));
           setNewTaskTitle('');
           setIsAddingTask(false);
         },
         onError: (error) => {
-          toast.error(error instanceof Error ? error.message : 'Failed to create task');
+          toast.error(error instanceof Error ? error.message : t('errors.general'));
         },
       }
     );
@@ -282,9 +313,9 @@ export default function ProjectsPage() {
       return (
         <div className="flex flex-col items-center justify-center h-64 gap-4">
           <AlertCircle className="h-12 w-12 text-muted-foreground" />
-          <p className="text-muted-foreground">Project not found</p>
+          <p className="text-muted-foreground">{t('projects.projectNotFound')}</p>
           <Button variant="outline" onClick={() => router.push('/projects')}>
-            Back to Projects
+            {t('projects.backToProjects')}
           </Button>
         </div>
       );
@@ -309,7 +340,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center gap-3">
                   <h1 className="text-2xl font-bold">{projectData.name}</h1>
                   <Badge className={`${statusColors[projectData.status]} text-white`}>
-                    {projectData.status}
+                    {getStatusLabel(projectData.status)}
                   </Badge>
                 </div>
                 {projectData.description && (
@@ -322,7 +353,7 @@ export default function ProjectsPage() {
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setIsInviteDialogOpen(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
-              Invite
+              {t('team.inviteToProject')}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -333,16 +364,16 @@ export default function ProjectsPage() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem>
                   <Edit2 className="h-4 w-4 mr-2" />
-                  Edit Project
+                  {t('projects.editProject')}
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Settings className="h-4 w-4 mr-2" />
-                  Settings
+                  {t('common.settings')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive">
                   <Trash2 className="h-4 w-4 mr-2" />
-                  Delete Project
+                  {t('projects.deleteProject')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -354,19 +385,19 @@ export default function ProjectsPage() {
           <TabsList>
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="h-4 w-4" />
-              Overview
+              {t('projects.overview')}
             </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2">
               <ListTodo className="h-4 w-4" />
-              Tasks
+              {t('projects.tasks')}
             </TabsTrigger>
             <TabsTrigger value="board" className="gap-2">
               <KanbanSquare className="h-4 w-4" />
-              Board
+              {t('projects.board')}
             </TabsTrigger>
             <TabsTrigger value="team" className="gap-2">
               <Users className="h-4 w-4" />
-              Team
+              {t('projects.team')}
             </TabsTrigger>
           </TabsList>
 
@@ -375,7 +406,7 @@ export default function ProjectsPage() {
             <div className="grid gap-6 md:grid-cols-3">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Progress</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t('projects.stats.progress')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{projectData.progress}%</div>
@@ -393,20 +424,20 @@ export default function ProjectsPage() {
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Tasks</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t('projects.tasks')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{tasks.length}</div>
                   <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
-                    <span>{tasksByStatus.DONE.length} completed</span>
-                    <span>{tasksByStatus.IN_PROGRESS.length} in progress</span>
+                    <span>{tasksByStatus.DONE.length} {t('common.completed').toLowerCase()}</span>
+                    <span>{tasksByStatus.IN_PROGRESS.length} {t('common.inProgress').toLowerCase()}</span>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Team</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{t('projects.team')}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold">{projectData.members?.length || 0}</div>
@@ -434,25 +465,25 @@ export default function ProjectsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Task Overview</CardTitle>
+                <CardTitle>{t('projects.taskOverview')}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-4 gap-4">
                   <div className="bg-muted/50 rounded-lg p-4 text-center">
                     <div className="text-3xl font-bold">{tasksByStatus.TODO.length}</div>
-                    <div className="text-sm text-muted-foreground mt-1">To Do</div>
+                    <div className="text-sm text-muted-foreground mt-1">{getTaskStatusLabel('TODO')}</div>
                   </div>
                   <div className="bg-blue-500/10 rounded-lg p-4 text-center">
                     <div className="text-3xl font-bold text-blue-500">{tasksByStatus.IN_PROGRESS.length}</div>
-                    <div className="text-sm text-muted-foreground mt-1">In Progress</div>
+                    <div className="text-sm text-muted-foreground mt-1">{getTaskStatusLabel('IN_PROGRESS')}</div>
                   </div>
                   <div className="bg-yellow-500/10 rounded-lg p-4 text-center">
                     <div className="text-3xl font-bold text-yellow-500">{tasksByStatus.IN_REVIEW.length}</div>
-                    <div className="text-sm text-muted-foreground mt-1">In Review</div>
+                    <div className="text-sm text-muted-foreground mt-1">{getTaskStatusLabel('IN_REVIEW')}</div>
                   </div>
                   <div className="bg-green-500/10 rounded-lg p-4 text-center">
                     <div className="text-3xl font-bold text-green-500">{tasksByStatus.DONE.length}</div>
-                    <div className="text-sm text-muted-foreground mt-1">Done</div>
+                    <div className="text-sm text-muted-foreground mt-1">{getTaskStatusLabel('DONE')}</div>
                   </div>
                 </div>
               </CardContent>
@@ -461,20 +492,20 @@ export default function ProjectsPage() {
             <div className="grid gap-6 md:grid-cols-2">
               <Card>
                 <CardHeader>
-                  <CardTitle>Details</CardTitle>
+                  <CardTitle>{t('common.details')}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {projectData.priority && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Priority</span>
+                      <span className="text-muted-foreground">{t('common.priority')}</span>
                       <span className={`font-medium ${priorityColors[projectData.priority]}`}>
-                        {projectData.priority}
+                        {getPriorityLabel(projectData.priority)}
                       </span>
                     </div>
                   )}
                   {projectData.startDate && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Start Date</span>
+                      <span className="text-muted-foreground">{t('projects.fields.startDate')}</span>
                       <span className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         {formatDate(projectData.startDate)}
@@ -483,7 +514,7 @@ export default function ProjectsPage() {
                   )}
                   {projectData.dueDate && (
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Due Date</span>
+                      <span className="text-muted-foreground">{t('projects.fields.dueDate')}</span>
                       <span className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
                         {formatDate(projectData.dueDate)}
@@ -495,10 +526,10 @@ export default function ProjectsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Activity</CardTitle>
+                  <CardTitle>{t('projects.recentActivity')}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-muted-foreground text-center py-8">No recent activity</p>
+                  <p className="text-muted-foreground text-center py-8">{t('projects.noRecentActivity')}</p>
                 </CardContent>
               </Card>
             </div>
@@ -507,10 +538,10 @@ export default function ProjectsPage() {
           {/* Tasks Tab */}
           <TabsContent value="tasks" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">All Tasks</h3>
+              <h3 className="text-lg font-semibold">{t('projects.allTasks')}</h3>
               <Button onClick={() => setIsAddingTask(true)}>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Task
+                {t('tasks.addTask')}
               </Button>
             </div>
 
@@ -519,17 +550,17 @@ export default function ProjectsPage() {
                 <CardContent className="pt-4">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Task title..."
+                      placeholder={t('tasks.taskTitle')}
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleQuickAddTask()}
                       autoFocus
                     />
                     <Button onClick={handleQuickAddTask} disabled={createTaskMutation.isPending}>
-                      Add
+                      {t('common.add')}
                     </Button>
                     <Button variant="ghost" onClick={() => setIsAddingTask(false)}>
-                      Cancel
+                      {t('common.cancel')}
                     </Button>
                   </div>
                 </CardContent>
@@ -541,9 +572,9 @@ export default function ProjectsPage() {
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <ListTodo className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                    <p className="text-muted-foreground">No tasks yet</p>
+                    <p className="text-muted-foreground">{t('tasks.noTasksYet')}</p>
                     <Button variant="link" onClick={() => setIsAddingTask(true)}>
-                      Create your first task
+                      {t('tasks.createFirstTask')}
                     </Button>
                   </CardContent>
                 </Card>
@@ -577,7 +608,7 @@ export default function ProjectsPage() {
                           </span>
                         )}
                         <Badge variant="outline" className={priorityColors[task.priority]}>
-                          {task.priority}
+                          {getPriorityLabel(task.priority)}
                         </Badge>
                       </div>
                     </CardContent>
@@ -588,7 +619,7 @@ export default function ProjectsPage() {
 
             <Link href={`/tasks?project=${selectedProjectId}`}>
               <Button variant="outline" className="w-full">
-                View All in Task Manager
+                {t('projects.viewAllInTaskManager')}
               </Button>
             </Link>
           </TabsContent>
@@ -606,7 +637,7 @@ export default function ProjectsPage() {
                         status === 'IN_REVIEW' ? 'bg-yellow-500' : 'bg-gray-500'
                       }`} />
                       <h4 className="font-medium text-sm">
-                        {status.replace('_', ' ')}
+                        {getTaskStatusLabel(status)}
                       </h4>
                     </div>
                     <Badge variant="secondary">{statusTasks.length}</Badge>
@@ -614,10 +645,7 @@ export default function ProjectsPage() {
                   <div className="space-y-2 min-h-[300px] p-2 rounded-lg border-2 border-dashed border-white/10 bg-white/[0.02]">
                     {statusTasks.length === 0 ? (
                       <div className="flex h-full min-h-[200px] items-center justify-center text-center text-sm text-muted-foreground">
-                        <div>
-                          <p>No tasks</p>
-                          <p className="text-xs">Drag here to move</p>
-                        </div>
+                        <p>{t('tasks.noTasksYet')}</p>
                       </div>
                     ) : (
                       statusTasks.map((task) => (
@@ -636,7 +664,7 @@ export default function ProjectsPage() {
                                 <span />
                               )}
                               <Badge variant="outline" className={`text-xs ${priorityColors[task.priority]}`}>
-                                {task.priority}
+                                {getPriorityLabel(task.priority)}
                               </Badge>
                             </div>
                           </CardContent>
@@ -652,10 +680,10 @@ export default function ProjectsPage() {
           {/* Team Tab */}
           <TabsContent value="team" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Team Members</h3>
+              <h3 className="text-lg font-semibold">{t('team.teamMembers')}</h3>
               <Button onClick={() => setIsInviteDialogOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add Member
+                {t('team.addMember')}
               </Button>
             </div>
 
@@ -672,12 +700,12 @@ export default function ProjectsPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate">{user?.name || 'Unknown'}</p>
+                        <p className="font-medium truncate">{user?.name || t('common.unknown')}</p>
                         <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <Badge variant={member.role === 'OWNER' ? 'default' : 'secondary'}>
-                          {member.role}
+                          {getRoleLabel(member.role)}
                         </Badge>
                         {member.role !== 'OWNER' && (
                           <Button
@@ -702,19 +730,19 @@ export default function ProjectsPage() {
         <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Invite to Project</DialogTitle>
+              <DialogTitle>{t('team.inviteToProject')}</DialogTitle>
               <DialogDescription>
-                Add existing users or invite new people by email
+                {t('team.inviteDescription')}
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-6">
               <div className="space-y-3">
-                <Label>Add Existing User</Label>
+                <Label>{t('team.addExistingUser')}</Label>
                 <div className="flex gap-2">
                   <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select user..." />
+                      <SelectValue placeholder={t('team.selectUser')} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableUsers.map((user) => (
@@ -737,13 +765,13 @@ export default function ProjectsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
-                      <SelectItem value="MEMBER">Member</SelectItem>
-                      <SelectItem value="VIEWER">Viewer</SelectItem>
+                      <SelectItem value="ADMIN">{t('team.roles.admin')}</SelectItem>
+                      <SelectItem value="MEMBER">{t('team.roles.member')}</SelectItem>
+                      <SelectItem value="VIEWER">{t('team.roles.viewer')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button onClick={handleAddMember} disabled={!selectedUserId || addMemberMutation.isPending}>
-                    Add
+                    {t('common.add')}
                   </Button>
                 </div>
               </div>
@@ -753,14 +781,14 @@ export default function ProjectsPage() {
                   <span className="w-full border-t" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">Or</span>
+                  <span className="bg-background px-2 text-muted-foreground">{t('common.or')}</span>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <Label>Invite by Email</Label>
+                <Label>{t('team.inviteByEmail')}</Label>
                 <p className="text-sm text-muted-foreground">
-                  Send an invitation to someone who is not registered yet
+                  {t('team.inviteDescription')}
                 </p>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -775,7 +803,7 @@ export default function ProjectsPage() {
                   </div>
                   <Button onClick={handleInviteByEmail} disabled={!inviteEmail.trim()}>
                     <Mail className="h-4 w-4 mr-2" />
-                    Send Invite
+                    {t('team.sendInvite')}
                   </Button>
                 </div>
               </div>
@@ -792,12 +820,12 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Projects</h1>
-          <p className="text-muted-foreground">Manage your projects and track progress</p>
+          <h1 className="text-3xl font-bold">{t('projects.title')}</h1>
+          <p className="text-muted-foreground">{t('projects.subtitle')}</p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          New Project
+          {t('projects.newProject')}
         </Button>
       </div>
 
@@ -805,7 +833,7 @@ export default function ProjectsPage() {
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search projects..."
+          placeholder={t('projects.searchProjects')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -820,9 +848,9 @@ export default function ProjectsPage() {
       ) : projects.length === 0 ? (
         <div className="text-center py-12">
           <FolderKanban className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-          <p className="text-muted-foreground">No projects yet</p>
+          <p className="text-muted-foreground">{t('projects.noProjects')}</p>
           <Button variant="link" onClick={() => setIsCreateDialogOpen(true)}>
-            Create your first project
+            {t('projects.createFirstProject')}
           </Button>
         </div>
       ) : (
@@ -850,18 +878,18 @@ export default function ProjectsPage() {
                     </div>
                   </div>
                   <Badge variant="secondary" className={`${statusColors[project.status]} text-white`}>
-                    {project.status}
+                    {getStatusLabel(project.status)}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <CardDescription className="mb-4 line-clamp-2">
-                  {project.description || 'No description'}
+                  {project.description || t('projects.noDescription')}
                 </CardDescription>
 
                 <div className="mb-4">
                   <div className="mb-1 flex justify-between text-sm">
-                    <span className="text-muted-foreground">Progress</span>
+                    <span className="text-muted-foreground">{t('projects.stats.progress')}</span>
                     <span className="font-medium">{project.progress}%</span>
                   </div>
                   <div className="h-2 rounded-full bg-muted">
@@ -876,9 +904,9 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{project._count?.tasks || 0} tasks</span>
+                  <span>{project._count?.tasks || 0} {t('projects.tasks').toLowerCase()}</span>
                   {project.dueDate && (
-                    <span>Due {formatDate(project.dueDate)}</span>
+                    <span>{t('common.due')} {formatDate(project.dueDate)}</span>
                   )}
                 </div>
               </CardContent>
@@ -891,38 +919,37 @@ export default function ProjectsPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
+            <DialogTitle>{t('projects.createNewProject')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Project Name</Label>
+              <Label htmlFor="name">{t('projects.projectName')}</Label>
               <Input
                 id="name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="My Project"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">{t('common.description')}</Label>
               <Textarea
                 id="description"
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Project description..."
+                placeholder={t('projects.projectDescription')}
                 rows={3}
               />
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleCreateProject}
               disabled={!newName.trim() || createProjectMutation.isPending}
             >
-              {createProjectMutation.isPending ? 'Creating...' : 'Create Project'}
+              {createProjectMutation.isPending ? t('projects.creating') : t('projects.createProject')}
             </Button>
           </div>
         </DialogContent>

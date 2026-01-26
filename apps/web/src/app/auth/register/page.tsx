@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Loader2, Mail, Lock, User } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { api, ApiError } from '@/lib/api';
 import { useAuthStore } from '@/stores/auth';
 import { toast } from 'sonner';
@@ -58,6 +59,7 @@ function JanusLogo({ className = 'w-10 h-10' }: { className?: string }) {
 }
 
 export default function RegisterPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
 
@@ -72,17 +74,17 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (!email || !password) {
-      toast.error('Please fill in all required fields');
+      toast.error(t('settings.messages.fillAllFields'));
       return;
     }
 
     if (password.length < 6) {
-      toast.error('Password must be at least 6 characters');
+      toast.error(t('settings.messages.passwordMinLength'));
       return;
     }
 
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('settings.messages.passwordsDoNotMatch'));
       return;
     }
 
@@ -95,7 +97,7 @@ export default function RegisterPage() {
         name: name || undefined,
       });
       setAuth(user, token);
-      toast.success('Account created successfully!');
+      toast.success(t('common.success'));
       router.push('/dashboard');
     } catch (error) {
       console.error('Registration error:', error);
@@ -108,7 +110,7 @@ export default function RegisterPage() {
       } else if (error instanceof Error) {
         toast.error(`Error: ${error.message}`);
       } else {
-        toast.error('Network error. Check if API is running.');
+        toast.error(t('errors.networkError'));
       }
     } finally {
       setIsLoading(false);
@@ -134,14 +136,14 @@ export default function RegisterPage() {
 
         {/* Form card */}
         <div className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-8 backdrop-blur-sm">
-          <h1 className="text-2xl font-bold text-white mb-2">Create account</h1>
-          <p className="text-white/50 mb-6">Start your journey with Janus CRM</p>
+          <h1 className="text-2xl font-bold text-white mb-2">{t('auth.register.title')}</h1>
+          <p className="text-white/50 mb-6">{t('auth.register.subtitle')}</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Name <span className="text-white/30">(optional)</span>
+                {t('auth.register.name')} <span className="text-white/30">({t('common.optional')})</span>
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
@@ -158,7 +160,7 @@ export default function RegisterPage() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Email
+                {t('auth.register.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
@@ -176,7 +178,7 @@ export default function RegisterPage() {
             {/* Password */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Password
+                {t('auth.register.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
@@ -202,14 +204,14 @@ export default function RegisterPage() {
                 </button>
               </div>
               <p className="text-xs text-white/30 mt-1">
-                Must be at least 6 characters
+                {t('settings.messages.passwordMinLength')}
               </p>
             </div>
 
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-white/70 mb-2">
-                Confirm Password
+                {t('auth.register.confirmPassword')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
@@ -233,22 +235,22 @@ export default function RegisterPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Creating account...
+                  {t('auth.register.signingUp')}
                 </>
               ) : (
-                'Create account'
+                t('auth.register.signUp')
               )}
             </button>
           </form>
 
           {/* Login link */}
           <p className="mt-6 text-center text-white/50">
-            Already have an account?{' '}
+            {t('auth.register.haveAccount')}{' '}
             <Link
               href="/auth/login"
               className="text-indigo-400 hover:text-indigo-300 transition-colors"
             >
-              Sign in
+              {t('auth.register.signIn')}
             </Link>
           </p>
         </div>

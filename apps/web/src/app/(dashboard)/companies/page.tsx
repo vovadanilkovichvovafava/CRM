@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Filter, Loader2, Building2, Trash2, Eye, AlertCircle, Globe, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ interface CompanyRecord {
 }
 
 export default function CompaniesPage() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -120,7 +122,7 @@ export default function CompaniesPage() {
               <Building2 className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Companies</h1>
+              <h1 className="text-2xl font-bold text-white">{t('companies.title')}</h1>
               <p className="text-sm text-white/50">
                 {companies.length} compan{companies.length !== 1 ? 'ies' : 'y'}
               </p>
@@ -138,7 +140,7 @@ export default function CompaniesPage() {
           ) : (
             <Plus className="mr-2 h-4 w-4" />
           )}
-          Add Company
+          {t('companies.addCompany')}
         </Button>
       </div>
 
@@ -147,7 +149,7 @@ export default function CompaniesPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
           <Input
-            placeholder="Search companies..."
+            placeholder={t('companies.searchCompanies')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 bg-white/5 border-white/10"
@@ -168,16 +170,16 @@ export default function CompaniesPage() {
           ) : companies.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Building2 className="h-12 w-12 text-white/20 mb-4" />
-              <h3 className="text-lg font-medium text-white mb-1">No companies yet</h3>
+              <h3 className="text-lg font-medium text-white mb-1">{t('companies.noCompanies')}</h3>
               <p className="text-sm text-white/50 mb-4">
-                Get started by adding your first company
+                {t('companies.createFirstCompany')}
               </p>
               <Button
                 onClick={handleAddCompany}
                 className="bg-gradient-to-r from-green-500 to-emerald-500"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Add Company
+                {t('companies.addCompany')}
               </Button>
             </div>
           ) : (
@@ -186,19 +188,19 @@ export default function CompaniesPage() {
                 <thead>
                   <tr className="border-b border-white/5">
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Company
+                      {t('companies.fields.name')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Industry
+                      {t('companies.fields.industry')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Website
+                      {t('companies.fields.website')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Location
+                      {t('companies.fields.address')}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Added
+                      {t('common.date')}
                     </th>
                     <th className="w-24"></th>
                   </tr>
@@ -301,7 +303,7 @@ export default function CompaniesPage() {
       <SlideOver
         isOpen={!!selectedCompanyId}
         onClose={() => setSelectedCompanyId(null)}
-        title="Company Details"
+        title={t('common.details')}
       >
         {selectedCompany && (
           <div className="space-y-6">
@@ -358,7 +360,7 @@ export default function CompaniesPage() {
             {/* Description */}
             {selectedCompany.data?.description && (
               <div className="p-4 rounded-lg bg-white/[0.02]">
-                <h3 className="text-sm font-medium text-white/50 mb-2">Description</h3>
+                <h3 className="text-sm font-medium text-white/50 mb-2">{t('common.description')}</h3>
                 <p className="text-white/70 whitespace-pre-wrap">
                   {selectedCompany.data.description}
                 </p>

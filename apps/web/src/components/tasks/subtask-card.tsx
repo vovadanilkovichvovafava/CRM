@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import {
   CalendarDays,
   Flag,
@@ -27,41 +28,43 @@ interface SubtaskCardProps {
   onDelete?: (subtaskId: string) => void;
 }
 
-const columns = [
-  { id: 'TODO', name: 'To Do', color: 'bg-gray-500', textColor: 'text-gray-400' },
-  { id: 'IN_PROGRESS', name: 'In Progress', color: 'bg-blue-500', textColor: 'text-blue-400' },
-  { id: 'IN_REVIEW', name: 'In Review', color: 'bg-yellow-500', textColor: 'text-yellow-400' },
-  { id: 'DONE', name: 'Done', color: 'bg-green-500', textColor: 'text-green-400' },
+const columnDefinitions = [
+  { id: 'TODO', nameKey: 'tasks.status.todo', color: 'bg-gray-500', textColor: 'text-gray-400' },
+  { id: 'IN_PROGRESS', nameKey: 'tasks.status.inProgress', color: 'bg-blue-500', textColor: 'text-blue-400' },
+  { id: 'IN_REVIEW', nameKey: 'tasks.status.inReview', color: 'bg-yellow-500', textColor: 'text-yellow-400' },
+  { id: 'DONE', nameKey: 'tasks.status.done', color: 'bg-green-500', textColor: 'text-green-400' },
 ];
 
-const priorities = [
-  { id: 'URGENT', name: 'Urgent', color: 'text-red-500', bgColor: 'bg-red-500/20' },
-  { id: 'HIGH', name: 'High', color: 'text-orange-500', bgColor: 'bg-orange-500/20' },
-  { id: 'MEDIUM', name: 'Medium', color: 'text-yellow-500', bgColor: 'bg-yellow-500/20' },
-  { id: 'LOW', name: 'Low', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
+const priorityDefinitions = [
+  { id: 'URGENT', nameKey: 'tasks.priority.urgent', color: 'text-red-500', bgColor: 'bg-red-500/20' },
+  { id: 'HIGH', nameKey: 'tasks.priority.high', color: 'text-orange-500', bgColor: 'bg-orange-500/20' },
+  { id: 'MEDIUM', nameKey: 'tasks.priority.medium', color: 'text-yellow-500', bgColor: 'bg-yellow-500/20' },
+  { id: 'LOW', nameKey: 'tasks.priority.low', color: 'text-gray-400', bgColor: 'bg-gray-500/20' },
 ];
-
-function formatDueDate(dateStr: string): { text: string; className: string } {
-  const date = new Date(dateStr);
-
-  if (isToday(date)) {
-    return { text: 'Today', className: 'text-yellow-400' };
-  }
-  if (isTomorrow(date)) {
-    return { text: 'Tomorrow', className: 'text-blue-400' };
-  }
-  if (isPast(date)) {
-    return { text: 'Overdue', className: 'text-red-400' };
-  }
-  return { text: format(date, 'MMM d'), className: 'text-white/50' };
-}
 
 export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: SubtaskCardProps) {
+  const { t } = useTranslation();
   const isDone = subtask.status === 'DONE';
-  const currentStatus = columns.find(c => c.id === subtask.status);
-  const currentPriority = priorities.find(p => p.id === subtask.priority);
-  const dueInfo = subtask.dueDate ? formatDueDate(subtask.dueDate) : null;
+  const currentStatusDef = columnDefinitions.find(c => c.id === subtask.status);
+  const currentPriorityDef = priorityDefinitions.find(p => p.id === subtask.priority);
   const commentCount = subtask._count?.comments || 0;
+
+  // Format due date with translations
+  const formatDueDate = (dateStr: string): { text: string; className: string } => {
+    const date = new Date(dateStr);
+    if (isToday(date)) {
+      return { text: t('common.today'), className: 'text-yellow-400' };
+    }
+    if (isTomorrow(date)) {
+      return { text: t('common.tomorrow'), className: 'text-blue-400' };
+    }
+    if (isPast(date)) {
+      return { text: t('common.overdue'), className: 'text-red-400' };
+    }
+    return { text: format(date, 'MMM d'), className: 'text-white/50' };
+  };
+
+  const dueInfo = subtask.dueDate ? formatDueDate(subtask.dueDate) : null;
 
   return (
     <div
@@ -107,26 +110,26 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
             variant="outline"
             className={cn(
               'text-[10px] px-1.5 py-0 h-5 border-0',
-              currentStatus?.textColor,
-              `bg-${currentStatus?.color?.replace('bg-', '')}/20`
+              currentStatusDef?.textColor,
+              `bg-${currentStatusDef?.color?.replace('bg-', '')}/20`
             )}
           >
-            <span className={cn('w-1.5 h-1.5 rounded-full mr-1', currentStatus?.color)} />
-            {currentStatus?.name}
+            <span className={cn('w-1.5 h-1.5 rounded-full mr-1', currentStatusDef?.color)} />
+            {currentStatusDef && t(currentStatusDef.nameKey)}
           </Badge>
 
           {/* Priority */}
-          {currentPriority && subtask.priority !== 'MEDIUM' && (
+          {currentPriorityDef && subtask.priority !== 'MEDIUM' && (
             <Badge
               variant="outline"
               className={cn(
                 'text-[10px] px-1.5 py-0 h-5 border-0',
-                currentPriority.color,
-                currentPriority.bgColor
+                currentPriorityDef.color,
+                currentPriorityDef.bgColor
               )}
             >
               <Flag className="h-2.5 w-2.5 mr-1" />
-              {currentPriority.name}
+              {t(currentPriorityDef.nameKey)}
             </Badge>
           )}
 
@@ -151,7 +154,7 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
           {/* Comments count */}
           {commentCount > 0 && (
             <span className="text-[10px] text-white/40">
-              {commentCount} comments
+              {commentCount} {t('tasks.fields.comments')}
             </span>
           )}
         </div>
@@ -178,7 +181,7 @@ export function SubtaskCard({ subtask, onClick, onStatusChange, onDelete }: Subt
               className="text-red-400"
             >
               <Trash2 className="h-3 w-3 mr-2" />
-              Delete
+              {t('common.delete')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import {
@@ -47,6 +48,7 @@ const STEPS: { key: Step; title: string; icon: React.ComponentType<{ className?:
 ];
 
 export default function ImportPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [step, setStep] = useState<Step>('select');
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
@@ -210,7 +212,7 @@ export default function ImportPage() {
             <Upload className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Import Data</h1>
+            <h1 className="text-xl font-bold text-white">{t('import.title')}</h1>
             <p className="text-sm text-white/40">
               Import contacts, companies, and other records from CSV or Excel
             </p>
@@ -222,7 +224,7 @@ export default function ImportPage() {
           className="border-white/10"
           onClick={() => router.back()}
         >
-          Cancel
+          {t('common.cancel')}
         </Button>
       </div>
 
@@ -312,7 +314,7 @@ export default function ImportPage() {
           {step === 'upload' && (
             <div className="space-y-4">
               <h2 className="text-lg font-semibold text-white mb-4">
-                Upload your file
+                {t('import.uploadFile')}
               </h2>
 
               <div
@@ -384,7 +386,7 @@ export default function ImportPage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">
-                  Map columns to fields
+                  {t('import.mappingFields')}
                 </h2>
                 <p className="text-sm text-white/40">
                   {previewData.totalRows} rows found
@@ -441,7 +443,7 @@ export default function ImportPage() {
                                 onChange={(e) => updateMapping(idx, 'transform', e.target.value)}
                                 className="bg-white/5 border border-white/10 rounded-md px-3 py-1.5 text-white text-sm"
                               >
-                                <option value="none">None</option>
+                                <option value="none">{t('common.none')}</option>
                                 <option value="trim">Trim</option>
                                 <option value="lowercase">Lowercase</option>
                                 <option value="uppercase">Uppercase</option>
@@ -465,7 +467,7 @@ export default function ImportPage() {
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                   <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5" />
                   <div>
-                    <p className="text-sm text-amber-200">Required fields:</p>
+                    <p className="text-sm text-amber-200">{t('common.required')}:</p>
                     <p className="text-xs text-amber-200/70">
                       {fields.filter((f) => f.isRequired).map((f) => f.displayName).join(', ')}
                     </p>
@@ -597,7 +599,7 @@ export default function ImportPage() {
             disabled={step === 'select'}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+            {t('common.back')}
           </Button>
 
           <Button
@@ -615,7 +617,7 @@ export default function ImportPage() {
               </>
             ) : (
               <>
-                Next
+                {t('common.next')}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </>
             )}

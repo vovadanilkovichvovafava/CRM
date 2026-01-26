@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   BarChart3,
@@ -88,6 +89,7 @@ function SimpleBarChart({
 }
 
 function MiniLineChart({ data }: { data: Array<{ date: string; count: number }> }) {
+  const { t } = useTranslation();
   const maxCount = Math.max(...data.map((d) => d.count), 1);
   const total = data.reduce((sum, d) => sum + d.count, 0);
   const avg = total / data.length;
@@ -119,7 +121,7 @@ function MiniLineChart({ data }: { data: Array<{ date: string; count: number }> 
       </div>
       <div className="flex justify-between text-xs text-white/30">
         <span>30 days ago</span>
-        <span>Today</span>
+        <span>{t('common.today')}</span>
       </div>
     </div>
   );
@@ -174,6 +176,7 @@ function DealsPipelineChart({
 }
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation();
   const { data: analytics, isLoading, error } = useQuery({
     queryKey: ['analytics'],
     queryFn: () => api.dashboard.getAnalytics(),
@@ -214,8 +217,8 @@ export default function AnalyticsPage() {
             <BarChart3 className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">Analytics</h1>
-            <p className="text-sm text-white/50">Business insights and performance metrics</p>
+            <h1 className="text-2xl font-bold text-white">{t('analytics.title')}</h1>
+            <p className="text-sm text-white/50">{t('analytics.metrics')}</p>
           </div>
         </div>
       </div>
@@ -265,7 +268,7 @@ export default function AnalyticsPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-white/40">
                 <Users className="h-8 w-8 mb-2 opacity-50" />
-                <p>No data yet</p>
+                <p>{t('common.noData')}</p>
               </div>
             )}
           </CardContent>
@@ -285,7 +288,7 @@ export default function AnalyticsPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-white/40">
                 <TrendingUp className="h-8 w-8 mb-2 opacity-50" />
-                <p>No activity data</p>
+                <p>{t('common.noData')}</p>
               </div>
             )}
           </CardContent>
@@ -305,8 +308,8 @@ export default function AnalyticsPage() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-white/40">
                 <DollarSign className="h-8 w-8 mb-2 opacity-50" />
-                <p>No deals data</p>
-                <p className="text-sm mt-1">Create some deals to see pipeline analytics</p>
+                <p>{t('deals.noDeals')}</p>
+                <p className="text-sm mt-1">{t('deals.createFirstDeal')}</p>
               </div>
             )}
           </CardContent>

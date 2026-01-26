@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,20 +49,21 @@ interface UserProfile {
 
 const timezones = [
   { value: 'UTC', label: 'UTC' },
-  { value: 'Europe/Moscow', label: 'Moscow (GMT+3)' },
-  { value: 'Europe/Kiev', label: 'Kyiv (GMT+2)' },
-  { value: 'Europe/London', label: 'London (GMT+0)' },
-  { value: 'America/New_York', label: 'New York (GMT-5)' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles (GMT-8)' },
-  { value: 'Asia/Tokyo', label: 'Tokyo (GMT+9)' },
+  { value: 'Europe/Moscow', label: 'Москва (GMT+3)' },
+  { value: 'Europe/Kiev', label: 'Киев (GMT+2)' },
+  { value: 'Europe/London', label: 'Лондон (GMT+0)' },
+  { value: 'America/New_York', label: 'Нью-Йорк (GMT-5)' },
+  { value: 'America/Los_Angeles', label: 'Лос-Анджелес (GMT-8)' },
+  { value: 'Asia/Tokyo', label: 'Токио (GMT+9)' },
 ];
 
 const locales = [
-  { value: 'en', label: 'English' },
   { value: 'ru', label: 'Русский' },
+  { value: 'en', label: 'English' },
 ];
 
 export default function SettingsPage() {
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { setAuth, logout, token } = useAuthStore();
@@ -69,7 +71,7 @@ export default function SettingsPage() {
   // Form state
   const [name, setName] = useState('');
   const [timezone, setTimezone] = useState('UTC');
-  const [locale, setLocale] = useState('en');
+  const [locale, setLocale] = useState('ru');
 
   // Password change state
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -108,7 +110,7 @@ export default function SettingsPage() {
     if (profile) {
       setName(profile.name || '');
       setTimezone(profile.timezone || 'UTC');
-      setLocale(profile.locale || 'en');
+      setLocale(profile.locale || 'ru');
     }
   }, [profile]);
 
@@ -125,7 +127,7 @@ export default function SettingsPage() {
     mutationFn: (data: { name?: string; timezone?: string; locale?: string }) =>
       api.users.updateMe(data) as Promise<UserProfile>,
     onSuccess: (updatedUser) => {
-      toast.success('Profile updated successfully');
+      toast.success(t('settings.messages.profileUpdated'));
       queryClient.invalidateQueries({ queryKey: ['users', 'me'] });
 
       // Update auth store with new user data
@@ -143,7 +145,7 @@ export default function SettingsPage() {
     },
     onError: (err) => {
       if (err instanceof ApiError) {
-        const message = (err.data as { message?: string })?.message || 'Failed to update profile';
+        const message = (err.data as { message?: string })?.message || t('errors.general');
         toast.error(message);
       }
     },
@@ -154,7 +156,7 @@ export default function SettingsPage() {
     mutationFn: (data: { currentPassword: string; newPassword: string }) =>
       api.users.changePassword(data),
     onSuccess: () => {
-      toast.success('Password changed successfully');
+      toast.success(t('settings.messages.passwordChanged'));
       setIsPasswordModalOpen(false);
       setCurrentPassword('');
       setNewPassword('');
@@ -162,7 +164,7 @@ export default function SettingsPage() {
     },
     onError: (err) => {
       if (err instanceof ApiError) {
-        const message = (err.data as { message?: string })?.message || 'Failed to change password';
+        const message = (err.data as { message?: string })?.message || t('errors.general');
         toast.error(message);
       }
     },
@@ -173,18 +175,23 @@ export default function SettingsPage() {
     mutationFn: (data: { resend_api_key?: string; email_from?: string }) =>
       api.systemSettings.update(data),
     onSuccess: () => {
-      toast.success('Email settings updated');
+      toast.success(t('settings.messages.emailSettingsUpdated'));
       queryClient.invalidateQueries({ queryKey: ['system-settings'] });
     },
     onError: (err) => {
       if (err instanceof ApiError) {
-        const message = (err.data as { message?: string })?.message || 'Failed to update settings';
+        const message = (err.data as { message?: string })?.message || t('errors.general');
         toast.error(message);
       }
     },
   });
 
   const handleSaveProfile = () => {
+    // Change language in i18n
+    if (locale !== i18n.language) {
+      i18n.changeLanguage(locale);
+      localStorage.setItem('janus-locale', locale);
+    }
     updateMutation.mutate({ name, timezone, locale });
   };
 
@@ -197,15 +204,15 @@ export default function SettingsPage() {
 
   const handleChangePassword = () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error('Please fill in all fields');
+      toast.error(t('settings.messages.fillAllFields'));
       return;
     }
     if (newPassword.length < 6) {
-      toast.error('New password must be at least 6 characters');
+      toast.error(t('settings.messages.passwordMinLength'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('settings.messages.passwordsDoNotMatch'));
       return;
     }
     changePasswordMutation.mutate({ currentPassword, newPassword });
@@ -227,8 +234,8 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-white">Settings</h1>
-        <p className="text-white/50">Manage your account and preferences</p>
+        <h1 className="text-3xl font-bold text-white">{t('settings.title')}</h1>
+        <p className="text-white/50">{t('settings.subtitle')}</p>
       </div>
 
       <div className="grid gap-6">
@@ -240,9 +247,9 @@ export default function SettingsPage() {
                 <User className="h-5 w-5 text-indigo-400" />
               </div>
               <div>
-                <CardTitle className="text-white">Profile</CardTitle>
+                <CardTitle className="text-white">{t('settings.profile.title')}</CardTitle>
                 <CardDescription className="text-white/50">
-                  Update your personal information
+                  {t('settings.profile.subtitle')}
                 </CardDescription>
               </div>
             </div>
@@ -256,23 +263,23 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div>
-                <p className="text-lg font-medium text-white">{name || 'User'}</p>
+                <p className="text-lg font-medium text-white">{name || t('common.user')}</p>
                 <p className="text-sm text-white/50">{profile?.email}</p>
                 <p className="text-xs text-white/30 mt-1">
-                  Role: <span className="text-indigo-400">{profile?.role}</span>
+                  {t('settings.profile.role')}: <span className="text-indigo-400">{profile?.role}</span>
                 </p>
               </div>
             </div>
 
             {/* Name */}
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">Display Name</label>
+              <label className="text-sm font-medium text-white/70">{t('settings.profile.displayName')}</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t('common.name')}
                   className="pl-10 bg-white/[0.03] border-white/10"
                 />
               </div>
@@ -280,7 +287,7 @@ export default function SettingsPage() {
 
             {/* Email (read-only) */}
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">Email</label>
+              <label className="text-sm font-medium text-white/70">{t('settings.profile.email')}</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                 <Input
@@ -289,12 +296,12 @@ export default function SettingsPage() {
                   className="pl-10 bg-white/[0.02] border-white/5 text-white/50 cursor-not-allowed"
                 />
               </div>
-              <p className="text-xs text-white/30">Email cannot be changed</p>
+              <p className="text-xs text-white/30">{t('settings.profile.emailCannotChange')}</p>
             </div>
 
             {/* Timezone */}
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">Timezone</label>
+              <label className="text-sm font-medium text-white/70">{t('settings.profile.timezone')}</label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10 pointer-events-none" />
                 <Select value={timezone} onValueChange={setTimezone}>
@@ -314,7 +321,7 @@ export default function SettingsPage() {
 
             {/* Locale */}
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">Language</label>
+              <label className="text-sm font-medium text-white/70">{t('settings.profile.language')}</label>
               <div className="relative">
                 <Globe2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10 pointer-events-none" />
                 <Select value={locale} onValueChange={setLocale}>
@@ -341,12 +348,12 @@ export default function SettingsPage() {
               {updateMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {t('settings.profile.saving')}
                 </>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />
-                  Save Changes
+                  {t('settings.profile.saveChanges')}
                 </>
               )}
             </Button>
@@ -361,9 +368,9 @@ export default function SettingsPage() {
                 <Shield className="h-5 w-5 text-amber-400" />
               </div>
               <div>
-                <CardTitle className="text-white">Security</CardTitle>
+                <CardTitle className="text-white">{t('settings.security.title')}</CardTitle>
                 <CardDescription className="text-white/50">
-                  Manage your security settings
+                  {t('settings.security.subtitle')}
                 </CardDescription>
               </div>
             </div>
@@ -374,8 +381,8 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <Key className="h-5 w-5 text-white/40" />
                 <div>
-                  <p className="font-medium text-white">Password</p>
-                  <p className="text-sm text-white/50">Change your password</p>
+                  <p className="font-medium text-white">{t('settings.security.password')}</p>
+                  <p className="text-sm text-white/50">{t('settings.security.changePassword')}</p>
                 </div>
               </div>
               <Button
@@ -383,7 +390,7 @@ export default function SettingsPage() {
                 className="border-white/10"
                 onClick={() => setIsPasswordModalOpen(true)}
               >
-                Change
+                {t('settings.security.change')}
               </Button>
             </div>
 
@@ -392,12 +399,12 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <Globe2 className="h-5 w-5 text-white/40" />
                 <div>
-                  <p className="font-medium text-white">Active Sessions</p>
-                  <p className="text-sm text-white/50">Manage your active sessions</p>
+                  <p className="font-medium text-white">{t('settings.security.activeSessions')}</p>
+                  <p className="text-sm text-white/50">{t('settings.security.manageSessions')}</p>
                 </div>
               </div>
               <Button variant="outline" className="border-white/10" disabled>
-                View
+                {t('common.view')}
               </Button>
             </div>
           </CardContent>
@@ -411,9 +418,9 @@ export default function SettingsPage() {
                 <Bell className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <CardTitle className="text-white">Notifications</CardTitle>
+                <CardTitle className="text-white">{t('settings.notifications.title')}</CardTitle>
                 <CardDescription className="text-white/50">
-                  Configure notification preferences
+                  {t('settings.notifications.subtitle')}
                 </CardDescription>
               </div>
             </div>
@@ -422,20 +429,20 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Email Notifications</p>
-                  <p className="text-sm text-white/50">Receive email updates</p>
+                  <p className="font-medium text-white">{t('settings.notifications.email')}</p>
+                  <p className="text-sm text-white/50">{t('settings.notifications.emailDescription')}</p>
                 </div>
                 <Button variant="outline" className="border-white/10" disabled>
-                  Configure
+                  {t('settings.notifications.configure')}
                 </Button>
               </div>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">Telegram</p>
-                  <p className="text-sm text-white/50">Get notifications in Telegram</p>
+                  <p className="font-medium text-white">{t('settings.notifications.telegram')}</p>
+                  <p className="text-sm text-white/50">{t('settings.notifications.telegramDescription')}</p>
                 </div>
                 <Button variant="outline" className="border-white/10" disabled>
-                  Connect
+                  {t('settings.notifications.connect')}
                 </Button>
               </div>
             </div>
@@ -452,21 +459,21 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-white">Email Settings</CardTitle>
+                    <CardTitle className="text-white">{t('settings.email.title')}</CardTitle>
                     {integrationStatus?.email ? (
                       <span className="flex items-center gap-1 text-xs text-green-400">
                         <CheckCircle2 className="h-3 w-3" />
-                        Connected
+                        {t('settings.email.connected')}
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-xs text-amber-400">
                         <AlertCircle className="h-3 w-3" />
-                        Not configured
+                        {t('settings.email.notConfigured')}
                       </span>
                     )}
                   </div>
                   <CardDescription className="text-white/50">
-                    Configure email sending via Resend
+                    {t('settings.email.subtitle')}
                   </CardDescription>
                 </div>
               </div>
@@ -480,14 +487,14 @@ export default function SettingsPage() {
                 <>
                   {/* Resend API Key */}
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium text-white/70">Resend API Key</label>
+                    <label className="text-sm font-medium text-white/70">{t('settings.email.apiKey')}</label>
                     <div className="relative">
                       <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                       <Input
                         type={showResendKey ? 'text' : 'password'}
                         value={resendApiKey}
                         onChange={(e) => setResendApiKey(e.target.value)}
-                        placeholder="re_xxxx..."
+                        placeholder={t('settings.email.apiKeyPlaceholder')}
                         className="pl-10 pr-10 bg-white/[0.03] border-white/10"
                       />
                       <button
@@ -499,7 +506,7 @@ export default function SettingsPage() {
                       </button>
                     </div>
                     <p className="text-xs text-white/30">
-                      Get your API key from{' '}
+                      {t('settings.email.apiKeyHelp')}{' '}
                       <a
                         href="https://resend.com"
                         target="_blank"
@@ -513,19 +520,19 @@ export default function SettingsPage() {
 
                   {/* Email From */}
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium text-white/70">From Email Address</label>
+                    <label className="text-sm font-medium text-white/70">{t('settings.email.fromAddress')}</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                       <Input
                         type="email"
                         value={emailFrom}
                         onChange={(e) => setEmailFrom(e.target.value)}
-                        placeholder="noreply@yourdomain.com"
+                        placeholder={t('settings.email.fromAddressPlaceholder')}
                         className="pl-10 bg-white/[0.03] border-white/10"
                       />
                     </div>
                     <p className="text-xs text-white/30">
-                      Must be a verified domain in Resend, or use onboarding@resend.dev for testing
+                      {t('settings.email.fromAddressHelp')}
                     </p>
                   </div>
 
@@ -538,12 +545,12 @@ export default function SettingsPage() {
                     {updateEmailSettingsMutation.isPending ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Saving...
+                        {t('settings.profile.saving')}
                       </>
                     ) : (
                       <>
                         <Save className="mr-2 h-4 w-4" />
-                        Save Email Settings
+                        {t('settings.email.saveEmailSettings')}
                       </>
                     )}
                   </Button>
@@ -556,20 +563,20 @@ export default function SettingsPage() {
         {/* Integrations Card */}
         <Card className="bg-white/[0.02] border-white/[0.05]">
           <CardHeader>
-            <CardTitle className="text-white">Integrations</CardTitle>
+            <CardTitle className="text-white">{t('settings.integrations.title')}</CardTitle>
             <CardDescription className="text-white/50">
-              Connect external services
+              {t('settings.integrations.subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02]">
                 <div>
-                  <p className="font-medium text-white">Keitaro</p>
-                  <p className="text-sm text-white/50">Connect your Keitaro tracker</p>
+                  <p className="font-medium text-white">{t('settings.integrations.keitaro')}</p>
+                  <p className="text-sm text-white/50">{t('settings.integrations.keitaroDescription')}</p>
                 </div>
                 <Button variant="outline" className="border-white/10" disabled>
-                  Connect
+                  {t('settings.notifications.connect')}
                 </Button>
               </div>
             </div>
@@ -579,16 +586,16 @@ export default function SettingsPage() {
         {/* Danger Zone */}
         <Card className="bg-red-500/5 border-red-500/20">
           <CardHeader>
-            <CardTitle className="text-red-400">Danger Zone</CardTitle>
+            <CardTitle className="text-red-400">{t('settings.danger.title')}</CardTitle>
             <CardDescription className="text-white/50">
-              Irreversible actions
+              {t('settings.danger.subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium text-white">Log out</p>
-                <p className="text-sm text-white/50">Sign out from your account</p>
+                <p className="font-medium text-white">{t('settings.danger.logout')}</p>
+                <p className="text-sm text-white/50">{t('settings.danger.logoutDescription')}</p>
               </div>
               <Button
                 variant="outline"
@@ -596,7 +603,7 @@ export default function SettingsPage() {
                 className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Log out
+                {t('common.logout')}
               </Button>
             </div>
           </CardContent>
@@ -612,19 +619,19 @@ export default function SettingsPage() {
           setNewPassword('');
           setConfirmPassword('');
         }}
-        title="Change Password"
-        description="Enter your current password and choose a new one"
+        title={t('settings.security.changePassword')}
+        description={t('settings.security.enterCurrentPassword')}
       >
         <div className="space-y-4">
           {/* Current Password */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">Current Password</label>
+            <label className="text-sm font-medium text-white/70">{t('settings.security.currentPassword')}</label>
             <div className="relative">
               <Input
                 type={showCurrentPassword ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password"
+                placeholder={t('settings.security.enterCurrentPassword')}
                 className="pr-10 bg-white/[0.03] border-white/10"
               />
               <button
@@ -639,13 +646,13 @@ export default function SettingsPage() {
 
           {/* New Password */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">New Password</label>
+            <label className="text-sm font-medium text-white/70">{t('settings.security.newPassword')}</label>
             <div className="relative">
               <Input
                 type={showNewPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password (min 6 characters)"
+                placeholder={t('settings.security.enterNewPassword')}
                 className="pr-10 bg-white/[0.03] border-white/10"
               />
               <button
@@ -660,12 +667,12 @@ export default function SettingsPage() {
 
           {/* Confirm Password */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">Confirm New Password</label>
+            <label className="text-sm font-medium text-white/70">{t('settings.security.confirmPassword')}</label>
             <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm new password"
+              placeholder={t('settings.security.confirmNewPassword')}
               className="bg-white/[0.03] border-white/10"
             />
           </div>
@@ -682,7 +689,7 @@ export default function SettingsPage() {
                 setConfirmPassword('');
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleChangePassword}
@@ -692,10 +699,10 @@ export default function SettingsPage() {
               {changePasswordMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Changing...
+                  {t('settings.security.changing')}
                 </>
               ) : (
-                'Change Password'
+                t('settings.security.changePassword')
               )}
             </Button>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useTranslation } from 'react-i18next';
 import { Plus, Search, LayoutGrid, List, Calendar, GripVertical, CalendarDays, User, ListChecks, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,11 +79,11 @@ interface Task {
   _count?: { subtasks: number; comments: number; files?: number };
 }
 
-const columns = [
-  { id: 'TODO', name: 'To Do', color: 'bg-gray-500' },
-  { id: 'IN_PROGRESS', name: 'In Progress', color: 'bg-blue-500' },
-  { id: 'IN_REVIEW', name: 'In Review', color: 'bg-yellow-500' },
-  { id: 'DONE', name: 'Done', color: 'bg-green-500' },
+const columnDefinitions = [
+  { id: 'TODO', nameKey: 'tasks.status.todo', color: 'bg-gray-500' },
+  { id: 'IN_PROGRESS', nameKey: 'tasks.status.inProgress', color: 'bg-blue-500' },
+  { id: 'IN_REVIEW', nameKey: 'tasks.status.inReview', color: 'bg-yellow-500' },
+  { id: 'DONE', nameKey: 'tasks.status.done', color: 'bg-green-500' },
 ];
 
 const priorityColors: Record<string, string> = {
@@ -100,15 +101,16 @@ const priorityWeights: Record<string, number> = {
   LOW: 1,
 };
 
-const priorityOptions = [
-  { value: 'URGENT', label: 'Urgent' },
-  { value: 'HIGH', label: 'High' },
-  { value: 'MEDIUM', label: 'Medium' },
-  { value: 'LOW', label: 'Low' },
+const priorityOptionDefinitions = [
+  { value: 'URGENT', labelKey: 'tasks.priority.urgent' },
+  { value: 'HIGH', labelKey: 'tasks.priority.high' },
+  { value: 'MEDIUM', labelKey: 'tasks.priority.medium' },
+  { value: 'LOW', labelKey: 'tasks.priority.low' },
 ];
 
 // Sortable Task Card Component
 function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
+  const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
 
   const style = {
@@ -146,7 +148,7 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
               {/* Parent task indicator */}
               {task.parent && (
                 <div className="flex items-center gap-1 text-xs text-indigo-400 mb-2">
-                  <span className="opacity-60">Subtask of</span>
+                  <span className="opacity-60">{t('tasks.subtaskOf')}</span>
                   <span className="truncate">{task.parent.title}</span>
                 </div>
               )}
@@ -202,11 +204,13 @@ function DroppableColumn({
   tasks,
   onAddTask,
   onTaskClick,
+  addTaskLabel,
 }: {
-  column: (typeof columns)[0];
+  column: (typeof columnDefinitions)[0] & { name: string };
   tasks: Task[];
   onAddTask: (status: string) => void;
   onTaskClick: (task: Task) => void;
+  addTaskLabel: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -236,7 +240,7 @@ function DroppableColumn({
           onClick={() => onAddTask(column.id)}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add task
+          {addTaskLabel}
         </Button>
       </div>
     </div>
@@ -265,10 +269,21 @@ function TaskCardOverlay({ task }: { task: Task }) {
 }
 
 export default function TasksPage() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const router = useRouter();
   const taskIdFromUrl = searchParams.get('taskId');
   const { pendingTaskId, clearPendingTaskId } = useNavigationStore();
+
+  // Create translated columns and priority options
+  const columns = useMemo(
+    () => columnDefinitions.map((col) => ({ ...col, name: t(col.nameKey) })),
+    [t]
+  );
+  const priorityOptions = useMemo(
+    () => priorityOptionDefinitions.map((opt) => ({ ...opt, label: t(opt.labelKey) })),
+    [t]
+  );
 
   // Use pending task ID from store or URL parameter
   const targetTaskId = pendingTaskId || taskIdFromUrl;
@@ -308,9 +323,9 @@ export default function TasksPage() {
   useEffect(() => {
     if (tasksError) {
       console.error('Tasks fetch error:', tasksError);
-      toast.error('Failed to load tasks: ' + (tasksError instanceof Error ? tasksError.message : 'Unknown error'));
+      toast.error(t('errors.general') + ': ' + (tasksError instanceof Error ? tasksError.message : t('common.unknown')));
     }
-  }, [tasksError]);
+  }, [tasksError, t]);
 
   // Open task from URL parameter or pending navigation
   useEffect(() => {
@@ -345,7 +360,7 @@ export default function TasksPage() {
   }, [data?.data, showMyTasks, currentUser]);
 
   const tasksByStatus = useMemo(() => {
-    return columns.reduce(
+    return columnDefinitions.reduce(
       (acc, col) => {
         acc[col.id] = tasks
           .filter((t) => t.status === col.id)
@@ -400,18 +415,20 @@ export default function TasksPage() {
     if (targetColumn) {
       const task = tasks.find((t) => t.id === taskId);
       if (task && task.status !== targetColumn.id) {
-        moveTaskMutation.mutate({ id: taskId, status: targetColumn.id, position: 0 }, { onSuccess: () => toast.success(`Task moved to ${targetColumn.name}`) });
+        const statusName = t(columnDefinitions.find((c) => c.id === targetColumn.id)?.nameKey || '');
+        moveTaskMutation.mutate({ id: taskId, status: targetColumn.id, position: 0 }, { onSuccess: () => toast.success(t('tasks.messages.moved', { status: statusName })) });
       }
       return;
     }
 
-    const targetTask = tasks.find((t) => t.id === overId);
+    const targetTask = tasks.find((tsk) => tsk.id === overId);
     if (targetTask) {
-      const sourceTask = tasks.find((t) => t.id === taskId);
+      const sourceTask = tasks.find((tsk) => tsk.id === taskId);
       if (sourceTask && sourceTask.status !== targetTask.status) {
+        const statusName = t(columnDefinitions.find((c) => c.id === targetTask.status)?.nameKey || '');
         moveTaskMutation.mutate(
           { id: taskId, status: targetTask.status, position: targetTask.position || 0 },
-          { onSuccess: () => toast.success(`Task moved to ${columns.find((c) => c.id === targetTask.status)?.name}`) }
+          { onSuccess: () => toast.success(t('tasks.messages.moved', { status: statusName })) }
         );
       }
     }
@@ -426,7 +443,7 @@ export default function TasksPage() {
       today.setHours(0, 0, 0, 0);
       const dueDate = new Date(newDueDate);
       if (dueDate < today) {
-        toast.error('Due date cannot be in the past');
+        toast.error(t('tasks.messages.dueDatePast'));
         return;
       }
     }
@@ -443,13 +460,13 @@ export default function TasksPage() {
       },
       {
         onSuccess: () => {
-          toast.success('Task created');
+          toast.success(t('tasks.messages.created'));
           setIsCreateDialogOpen(false);
           resetForm();
         },
         onError: (error) => {
           console.error('Task creation error:', error);
-          const message = error instanceof Error ? error.message : 'Failed to create task';
+          const message = error instanceof Error ? error.message : t('errors.general');
           toast.error(message);
         },
       }
@@ -457,7 +474,7 @@ export default function TasksPage() {
   };
 
   const handleUpdateTask = (taskId: string, updates: Partial<TaskType>) => {
-    updateTaskMutation.mutate({ id: taskId, data: updates }, { onSuccess: () => toast.success('Task updated') });
+    updateTaskMutation.mutate({ id: taskId, data: updates }, { onSuccess: () => toast.success(t('tasks.messages.updated')) });
   };
 
   const resetForm = () => {
@@ -487,14 +504,14 @@ export default function TasksPage() {
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold">Tasks</h1>
+              <h1 className="text-2xl font-bold">{t('tasks.title')}</h1>
               <p className="text-sm text-white/50">
-                {selectedProjectId ? 'Project tasks' : 'All tasks across projects'}
+                {selectedProjectId ? t('tasks.projectTasks') : t('tasks.allTasks')}
               </p>
             </div>
             <Button onClick={() => openCreateDialog()}>
               <Plus className="mr-2 h-4 w-4" />
-              Add Task
+              {t('tasks.addTask')}
             </Button>
           </div>
 
@@ -503,7 +520,7 @@ export default function TasksPage() {
             <div className="flex items-center gap-3">
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Search tasks..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
+                <Input placeholder={t('tasks.searchTasks')} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
               </div>
 
               <Button
@@ -513,7 +530,7 @@ export default function TasksPage() {
                 className={cn(showMyTasks && 'bg-indigo-500 hover:bg-indigo-600', !showMyTasks && 'border-white/10 hover:bg-white/10')}
               >
                 <User className="h-4 w-4 mr-2" />
-                My Tasks
+                {t('tasks.myTasks')}
               </Button>
             </div>
 
@@ -545,7 +562,7 @@ export default function TasksPage() {
             <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
               <div className="flex gap-4 overflow-x-auto pb-4">
                 {columns.map((column) => (
-                  <DroppableColumn key={column.id} column={column} tasks={tasksByStatus[column.id] || []} onAddTask={openCreateDialog} onTaskClick={setSelectedTask} />
+                  <DroppableColumn key={column.id} column={column} tasks={tasksByStatus[column.id] || []} onAddTask={openCreateDialog} onTaskClick={setSelectedTask} addTaskLabel={t('tasks.addTask')} />
                 ))}
               </div>
               <DragOverlay>{activeTask ? <TaskCardOverlay task={activeTask} /> : null}</DragOverlay>
@@ -559,19 +576,19 @@ export default function TasksPage() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-white/10 bg-white/5">
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Task</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Status</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Priority</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Assignee</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Due Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">Project</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.title')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.status')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.priority')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.assignee')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.dueDate')}</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-white/60">{t('tasks.fields.project')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {tasks.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="px-4 py-8 text-center text-white/40">
-                          No tasks found. Create your first task!
+                          {t('tasks.noTasks')}
                         </td>
                       </tr>
                     ) : (
@@ -639,23 +656,23 @@ export default function TasksPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Task</DialogTitle>
+            <DialogTitle>{t('tasks.createNewTask')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
-              <Input id="title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Task title..." />
+              <Label htmlFor="title">{t('tasks.fields.title')} *</Label>
+              <Input id="title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder={t('tasks.fields.title') + '...'} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Add a description..." rows={3} />
+              <Label htmlFor="description">{t('tasks.fields.description')}</Label>
+              <Textarea id="description" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder={t('tasks.fields.description') + '...'} rows={3} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>{t('tasks.fields.status')}</Label>
                 <Select value={createForStatus} onValueChange={setCreateForStatus}>
                   <SelectTrigger>
                     <SelectValue />
@@ -674,7 +691,7 @@ export default function TasksPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Priority</Label>
+                <Label>{t('tasks.fields.priority')}</Label>
                 <Select value={newPriority} onValueChange={setNewPriority}>
                   <SelectTrigger>
                     <SelectValue />
@@ -695,7 +712,7 @@ export default function TasksPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
+                <Label htmlFor="dueDate">{t('tasks.fields.dueDate')}</Label>
                 <Input
                   id="dueDate"
                   type="date"
@@ -706,14 +723,14 @@ export default function TasksPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Assignee</Label>
+                <Label>{t('tasks.fields.assignee')}</Label>
                 <Select value={newAssigneeId || '__none__'} onValueChange={(val) => setNewAssigneeId(val === '__none__' ? '' : val)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select assignee" />
+                    <SelectValue placeholder={t('tasks.fields.assignee')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none__">
-                      <span className="text-white/50">Unassigned</span>
+                      <span className="text-white/50">{t('common.unassigned')}</span>
                     </SelectItem>
                     {usersList.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
@@ -734,10 +751,10 @@ export default function TasksPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleCreateTask} disabled={!newTitle.trim() || createTaskMutation.isPending}>
-              {createTaskMutation.isPending ? 'Creating...' : 'Create Task'}
+              {createTaskMutation.isPending ? t('tasks.creating') : t('tasks.createTask')}
             </Button>
           </DialogFooter>
         </DialogContent>
