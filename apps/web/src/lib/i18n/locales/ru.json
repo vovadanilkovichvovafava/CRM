@@ -445,7 +445,14 @@
     "editAutomation": "Редактировать автоматизацию",
     "deleteAutomation": "Удалить автоматизацию",
     "searchAutomations": "Поиск автоматизаций...",
-    "noAutomations": "Пока нет автоматизаций"
+    "noAutomations": "Пока нет автоматизаций",
+    "workflows": "автоматизаций",
+    "active": "Активные",
+    "inactive": "Неактивные",
+    "actions": "действий",
+    "runs": "запусков",
+    "activate": "Активировать",
+    "deactivate": "Деактивировать"
   },
   "analytics": {
     "title": "Аналитика",

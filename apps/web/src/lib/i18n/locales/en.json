@@ -445,7 +445,14 @@
     "editAutomation": "Edit Automation",
     "deleteAutomation": "Delete Automation",
     "searchAutomations": "Search automations...",
-    "noAutomations": "No automations yet"
+    "noAutomations": "No automations yet",
+    "workflows": "workflows",
+    "active": "Active",
+    "inactive": "Inactive",
+    "actions": "action",
+    "runs": "runs",
+    "activate": "Activate",
+    "deactivate": "Deactivate"
   },
   "analytics": {
     "title": "Analytics",
