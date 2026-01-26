@@ -1,143 +1,276 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import {
-  Users,
-  Building2,
-  DollarSign,
-  CheckSquare,
+  RefreshCw,
+  ChevronDown,
+  Plus,
   TrendingUp,
   TrendingDown,
-  ArrowUpRight,
-  Plus,
-  Clock,
-  Zap,
-  Eye,
-  History,
+  Info,
+  Pencil,
   Loader2,
-  CalendarClock,
-  AlertTriangle,
-  FolderKanban,
+  Clock,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-interface StatCardData {
-  title: string;
-  value: string;
-  change: string;
-  trend: 'up' | 'down';
-  icon: React.ComponentType<{ className?: string }>;
-  gradient: string;
-  href: string;
+interface QuarterlyData {
+  closed: number;
+  open70: number;
+  goal: number | null;
 }
 
-function formatCurrency(value: number): string {
-  if (value >= 1000000) {
-    return `$${(value / 1000000).toFixed(1)}M`;
-  }
-  if (value >= 1000) {
-    return `$${(value / 1000).toFixed(0)}K`;
-  }
-  return `$${value}`;
-}
-
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat().format(value);
-}
-
-function StatCard({ stat, vsLastMonthText }: { stat: StatCardData; vsLastMonthText: string }) {
+function EmptyStateIllustration({ variant = 'default' }: { variant?: 'default' | 'events' | 'tasks' }) {
   return (
-    <Link
-      href={stat.href}
-      className="group relative overflow-hidden rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6 transition-all duration-300 hover:border-white/10 hover:bg-white/[0.04]"
-    >
-      <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-5 transition-opacity`} />
+    <div className="flex flex-col items-center justify-center py-8 animate-fade-in">
+      <svg
+        viewBox="0 0 200 140"
+        className="w-48 h-32 mb-4"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Sky */}
+        <rect width="200" height="140" fill="#f0f7ff" rx="8" />
 
-      <div className="relative">
-        <div className="flex items-center justify-between mb-4">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${stat.gradient}`}>
-            <stat.icon className="h-5 w-5 text-white" />
-          </div>
-          <ArrowUpRight className="h-4 w-4 text-white/20 group-hover:text-white/40 transition-colors" />
-        </div>
+        {/* Clouds */}
+        <g className="animate-float" style={{ animationDelay: '0s' }}>
+          <ellipse cx="40" cy="30" rx="15" ry="8" fill="#d6e8f7" />
+          <ellipse cx="50" cy="28" rx="12" ry="6" fill="#d6e8f7" />
+          <ellipse cx="32" cy="32" rx="10" ry="5" fill="#d6e8f7" />
+        </g>
 
-        <div className="space-y-1">
-          <p className="text-sm text-white/50">{stat.title}</p>
-          <p className="text-3xl font-bold text-white">{stat.value}</p>
-        </div>
+        <g className="animate-float" style={{ animationDelay: '1s' }}>
+          <ellipse cx="160" cy="40" rx="18" ry="9" fill="#d6e8f7" />
+          <ellipse cx="175" cy="38" rx="14" ry="7" fill="#d6e8f7" />
+          <ellipse cx="150" cy="42" rx="12" ry="6" fill="#d6e8f7" />
+        </g>
 
-        <div className="mt-4 flex items-center gap-1.5">
-          {stat.trend === 'up' ? (
-            <TrendingUp className="h-4 w-4 text-emerald-400" />
-          ) : (
-            <TrendingDown className="h-4 w-4 text-red-400" />
-          )}
-          <span className={stat.trend === 'up' ? 'text-emerald-400' : 'text-red-400'}>
-            {stat.change}
-          </span>
-          <span className="text-white/30 text-sm">{vsLastMonthText}</span>
-        </div>
-      </div>
-    </Link>
+        {/* Sun */}
+        <circle cx="170" cy="25" r="12" fill="#ffd166" className="animate-pulse-soft" />
+
+        {/* Mountains */}
+        <path d="M0 140 L40 80 L80 140 Z" fill="#a8d5e5" />
+        <path d="M60 140 L100 70 L140 140 Z" fill="#7ec8e3" />
+        <path d="M120 140 L160 85 L200 140 Z" fill="#a8d5e5" />
+
+        {/* Trees */}
+        {variant === 'events' && (
+          <>
+            <rect x="85" y="100" width="4" height="20" fill="#8b6914" />
+            <path d="M87 70 L97 100 L77 100 Z" fill="#52b788" />
+            <path d="M87 80 L95 95 L79 95 Z" fill="#40916c" />
+          </>
+        )}
+
+        {variant === 'tasks' && (
+          <>
+            <rect x="115" y="105" width="3" height="15" fill="#8b6914" />
+            <path d="M116 85 L124 105 L108 105 Z" fill="#52b788" />
+
+            <rect x="45" y="108" width="3" height="12" fill="#8b6914" />
+            <path d="M46 92 L53 108 L39 108 Z" fill="#52b788" />
+          </>
+        )}
+
+        {/* Ground */}
+        <path d="M0 130 Q50 120 100 130 Q150 140 200 130 L200 140 L0 140 Z" fill="#c7f9cc" />
+
+        {/* Birds */}
+        <g className="animate-float" style={{ animationDelay: '0.5s' }}>
+          <path d="M55 55 Q60 50 65 55" stroke="#0070d2" strokeWidth="1.5" fill="none" />
+          <path d="M70 50 Q75 45 80 50" stroke="#0070d2" strokeWidth="1.5" fill="none" />
+        </g>
+      </svg>
+    </div>
   );
 }
 
-interface ActivityItemProps {
-  activity: { id: string; type: string; title: string; description: string | null; occurredAt: string };
-  timeAgoTexts: {
-    justNow: string;
-    minutesAgo: string;
-    hoursAgo: string;
-    daysAgo: string;
-  };
+function PerformanceChart({ data }: { data: QuarterlyData }) {
+  const { t } = useTranslation();
+  const _maxValue = Math.max(data.closed, data.open70, data.goal || 0, 500000);
+
+  const months = ['Feb', 'Mar', 'Apr'];
+  const yLabels = ['500k', '400k', '300k', '200k', '100k', '0'];
+
+  return (
+    <div className="relative h-72">
+      {/* Y-axis labels */}
+      <div className="absolute left-0 top-0 bottom-8 w-12 flex flex-col justify-between text-xs text-gray-400">
+        {yLabels.map((label) => (
+          <span key={label}>{label}</span>
+        ))}
+      </div>
+
+      {/* Grid lines */}
+      <div className="absolute left-14 right-4 top-0 bottom-8">
+        {yLabels.map((_, i) => (
+          <div
+            key={i}
+            className="absolute left-0 right-0 border-t border-dashed border-gray-200"
+            style={{ top: `${(i / (yLabels.length - 1)) * 100}%` }}
+          />
+        ))}
+      </div>
+
+      {/* X-axis labels */}
+      <div className="absolute left-14 right-4 bottom-0 h-8 flex justify-around items-center text-xs text-gray-400">
+        {months.map((month) => (
+          <span key={month}>{month}</span>
+        ))}
+      </div>
+
+      {/* Empty state message */}
+      <div className="absolute left-14 right-4 top-1/3 text-center text-gray-500">
+        <p className="text-sm">
+          {t('dashboard.addOpportunities', "Add the opportunities you're working on, then come back here to view your performance.")}
+        </p>
+      </div>
+
+      {/* Legend */}
+      <div className="absolute left-14 bottom-12 flex items-center gap-6 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-amber-400" />
+          <span className="text-gray-600">{t('dashboard.closed', 'Closed')}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-green-500" />
+          <span className="text-gray-600">{t('dashboard.goal', 'Goal')}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 rounded-sm bg-blue-400" />
+          <span className="text-gray-600">{t('dashboard.closedOpen70', 'Closed + Open (>70%)')}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function ActivityItem({ activity, timeAgoTexts }: ActivityItemProps) {
-  const typeColors: Record<string, string> = {
-    NOTE: 'bg-blue-500/10 text-blue-400',
-    EMAIL_SENT: 'bg-emerald-500/10 text-emerald-400',
-    EMAIL_RECEIVED: 'bg-teal-500/10 text-teal-400',
-    CALL_MADE: 'bg-amber-500/10 text-amber-400',
-    CALL_RECEIVED: 'bg-orange-500/10 text-orange-400',
-    MEETING: 'bg-pink-500/10 text-pink-400',
-    TASK_CREATED: 'bg-violet-500/10 text-violet-400',
-    TASK_COMPLETED: 'bg-green-500/10 text-green-400',
-    STAGE_CHANGED: 'bg-indigo-500/10 text-indigo-400',
-    FIELD_UPDATED: 'bg-slate-500/10 text-slate-400',
-    FILE_UPLOADED: 'bg-cyan-500/10 text-cyan-400',
-    COMMENT_ADDED: 'bg-purple-500/10 text-purple-400',
+function QuarterlyPerformanceWidget() {
+  const { t } = useTranslation();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => api.dashboard.getStats(),
+    staleTime: 30000,
+  });
+
+  const quarterlyData: QuarterlyData = {
+    closed: stats?.deals?.value || 0,
+    open70: 0,
+    goal: null,
   };
 
-  const timeAgo = (date: string) => {
-    const now = new Date();
-    const then = new Date(date);
-    const diffMs = now.getTime() - then.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return timeAgoTexts.justNow;
-    if (diffMins < 60) return timeAgoTexts.minutesAgo.replace('{{count}}', String(diffMins));
-    if (diffHours < 24) return timeAgoTexts.hoursAgo.replace('{{count}}', String(diffHours));
-    return timeAgoTexts.daysAgo.replace('{{count}}', String(diffDays));
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 1000);
   };
 
   return (
-    <div className="flex items-center gap-4 py-3 border-b border-white/5 last:border-0">
-      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${typeColors[activity.type] || 'bg-white/10 text-white/60'}`}>
-        <Zap className="h-4 w-4" />
+    <div className="sf-card p-0 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t('dashboard.quarterlyPerformance', 'Quarterly Performance')}
+        </h2>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <span>{t('dashboard.asOfToday', 'As of Today')}</span>
+          <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <button
+            onClick={handleRefresh}
+            className={cn(
+              'p-1.5 rounded-md text-gray-400 transition-all duration-200 hover:bg-gray-100 hover:text-gray-600',
+              isRefreshing && 'animate-spin'
+            )}
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        </div>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">{activity.title}</p>
-        {activity.description && (
-          <p className="text-xs text-white/40 truncate">{activity.description}</p>
+
+      {/* Metrics row */}
+      <div className="flex items-center gap-8 px-4 py-3 border-b border-gray-100">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-500 uppercase">{t('dashboard.closed', 'CLOSED')}</span>
+          <span className="text-lg font-bold text-gray-900">
+            ${quarterlyData.closed.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-500 uppercase">{t('dashboard.open70', 'OPEN (>70%)')}</span>
+          <span className="text-lg font-bold text-gray-900">
+            ${quarterlyData.open70.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-500 uppercase">{t('dashboard.goal', 'GOAL')}</span>
+          <span className="text-lg font-bold text-gray-400">--</span>
+          <button className="p-1 text-gray-400 hover:text-gray-600 transition-colors">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="p-4">
+        <PerformanceChart data={quarterlyData} />
+      </div>
+    </div>
+  );
+}
+
+function AssistantWidget() {
+  const { t } = useTranslation();
+
+  return (
+    <div className="sf-card p-0 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+      <div className="p-4 border-b border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t('dashboard.assistant', 'Assistant')}
+        </h2>
+      </div>
+      <div className="p-6">
+        <EmptyStateIllustration variant="default" />
+        <p className="text-center text-gray-500 text-sm">
+          {t('dashboard.nothingNeedsAttention', 'Nothing needs your attention right now. Check back later.')}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function TodaysEventsWidget() {
+  const { t } = useTranslation();
+
+  const { data: events, isLoading } = useQuery({
+    queryKey: ['dashboard', 'events'],
+    queryFn: () => Promise.resolve([]),
+    staleTime: 30000,
+  });
+
+  return (
+    <div className="sf-card p-0 animate-fade-in" style={{ animationDelay: '0.2s' }}>
+      <div className="p-4 border-b border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t('dashboard.todaysEvents', "Today's Events")}
+        </h2>
+      </div>
+      <div className="p-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ) : events && events.length > 0 ? (
+          <div className="space-y-3">
+            {/* Events list */}
+          </div>
+        ) : (
+          <EmptyStateIllustration variant="events" />
         )}
-      </div>
-      <div className="flex items-center gap-1 text-xs text-white/30">
-        <Clock className="h-3 w-3" />
-        {timeAgo(activity.occurredAt)}
       </div>
     </div>
   );
@@ -153,81 +286,151 @@ interface UpcomingTask {
   project: { id: string; name: string } | null;
 }
 
-interface TaskItemProps {
-  task: UpcomingTask;
-  dateTexts: {
-    overdue: string;
-    today: string;
-    tomorrow: string;
-    daysFormat: string;
-  };
-}
+function TodaysTasksWidget() {
+  const { t } = useTranslation();
 
-function TaskItem({ task, dateTexts }: TaskItemProps) {
+  const { data: tasks, isLoading } = useQuery({
+    queryKey: ['dashboard', 'upcoming-tasks'],
+    queryFn: () => api.dashboard.getUpcomingTasks(5) as Promise<UpcomingTask[]>,
+    staleTime: 30000,
+  });
+
   const priorityColors: Record<string, string> = {
-    URGENT: 'bg-red-500/10 text-red-400 border-red-500/30',
-    HIGH: 'bg-orange-500/10 text-orange-400 border-orange-500/30',
-    MEDIUM: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-    LOW: 'bg-slate-500/10 text-slate-400 border-slate-500/30',
+    URGENT: 'bg-red-100 text-red-700 border-red-200',
+    HIGH: 'bg-orange-100 text-orange-700 border-orange-200',
+    MEDIUM: 'bg-amber-100 text-amber-700 border-amber-200',
+    LOW: 'bg-gray-100 text-gray-600 border-gray-200',
   };
-
-  const formatDueDate = (date: string | null) => {
-    if (!date) return null;
-    const dueDate = new Date(date);
-    const now = new Date();
-    const diffMs = dueDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / 86400000);
-
-    if (diffDays < 0) return { text: dateTexts.overdue, isOverdue: true };
-    if (diffDays === 0) return { text: dateTexts.today, isOverdue: false };
-    if (diffDays === 1) return { text: dateTexts.tomorrow, isOverdue: false };
-    return { text: dateTexts.daysFormat.replace('{{count}}', String(diffDays)), isOverdue: false };
-  };
-
-  const dueDateInfo = formatDueDate(task.dueDate);
 
   return (
-    <Link
-      href={`/tasks?task=${task.id}`}
-      className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0 hover:bg-white/[0.02] -mx-3 px-3 rounded-lg transition-colors"
-    >
-      <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${priorityColors[task.priority] || 'bg-white/10'}`}>
-        {task.priority === 'URGENT' ? (
-          <AlertTriangle className="h-4 w-4" />
-        ) : (
-          <CheckSquare className="h-4 w-4" />
-        )}
+    <div className="sf-card p-0 animate-fade-in" style={{ animationDelay: '0.3s' }}>
+      <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-900">
+          {t('dashboard.todaysTasks', "Today's Tasks")}
+        </h2>
+        <button className="p-1.5 rounded-md text-gray-400 transition-all duration-200 hover:bg-gray-100 hover:text-gray-600">
+          <ChevronDown className="h-4 w-4" />
+        </button>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-white truncate">{task.title}</p>
-        {task.project && (
-          <div className="flex items-center gap-1 text-xs text-white/40">
-            <FolderKanban className="h-3 w-3" />
-            {task.project.name}
+      <div className="p-4">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
           </div>
+        ) : tasks && tasks.length > 0 ? (
+          <div className="space-y-2">
+            {tasks.map((task, index) => (
+              <Link
+                key={task.id}
+                href={`/tasks?task=${task.id}`}
+                className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 transition-all duration-200 hover:border-gray-200 hover:shadow-sm hover:bg-gray-50 animate-fade-in"
+                style={{ animationDelay: `${0.1 * index}s` }}
+              >
+                <div className={cn('flex-shrink-0 w-1 h-8 rounded-full',
+                  task.priority === 'URGENT' ? 'bg-red-500' :
+                  task.priority === 'HIGH' ? 'bg-orange-500' :
+                  task.priority === 'MEDIUM' ? 'bg-amber-500' : 'bg-gray-300'
+                )} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{task.title}</p>
+                  {task.project && (
+                    <p className="text-xs text-gray-500 truncate">{task.project.name}</p>
+                  )}
+                </div>
+                {task.dueDate && (
+                  <div className="flex items-center gap-1 text-xs text-gray-400">
+                    <Clock className="h-3 w-3" />
+                    <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <EmptyStateIllustration variant="tasks" />
         )}
       </div>
-      {dueDateInfo && (
-        <span className={`text-xs px-2 py-1 rounded-full ${dueDateInfo.isOverdue ? 'bg-red-500/10 text-red-400' : 'bg-white/5 text-white/50'}`}>
-          {dueDateInfo.text}
-        </span>
-      )}
-    </Link>
+    </div>
   );
 }
 
-function LoadingSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+function MetricsRow() {
+  const { t } = useTranslation();
+
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => api.dashboard.getStats(),
+    staleTime: 30000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-4 gap-4">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6">
-            <div className="h-10 w-10 rounded-xl bg-white/10 mb-4" />
-            <div className="h-4 w-24 bg-white/10 rounded mb-2" />
-            <div className="h-8 w-16 bg-white/10 rounded" />
+          <div key={i} className="sf-card p-4 animate-pulse">
+            <div className="h-4 w-20 bg-gray-200 rounded mb-2" />
+            <div className="h-8 w-16 bg-gray-200 rounded" />
           </div>
         ))}
       </div>
+    );
+  }
+
+  const metrics = [
+    {
+      label: t('dashboard.totalContacts', 'Total Contacts'),
+      value: stats?.contacts?.total || 0,
+      change: stats?.contacts?.change || 0,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      label: t('dashboard.companies', 'Companies'),
+      value: stats?.companies?.total || 0,
+      change: stats?.companies?.change || 0,
+      color: 'text-emerald-600',
+      bgColor: 'bg-emerald-50',
+    },
+    {
+      label: t('dashboard.openDeals', 'Open Deals'),
+      value: `$${(stats?.deals?.value || 0).toLocaleString()}`,
+      change: stats?.deals?.change || 0,
+      color: 'text-amber-600',
+      bgColor: 'bg-amber-50',
+    },
+    {
+      label: t('dashboard.tasksDue', 'Tasks Due'),
+      value: stats?.tasks?.due || 0,
+      change: stats?.tasks?.completed || 0,
+      changeLabel: t('common.completed', 'completed'),
+      color: 'text-violet-600',
+      bgColor: 'bg-violet-50',
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-4 gap-4 stagger-children">
+      {metrics.map((metric, index) => (
+        <div
+          key={metric.label}
+          className="sf-card p-4 hover-lift"
+        >
+          <p className="text-sm text-gray-500 mb-1">{metric.label}</p>
+          <div className="flex items-end justify-between">
+            <p className={cn('text-2xl font-bold', metric.color)}>{metric.value}</p>
+            <div className="flex items-center gap-1 text-xs">
+              {metric.change >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-green-500" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-500" />
+              )}
+              <span className={metric.change >= 0 ? 'text-green-600' : 'text-red-600'}>
+                {metric.changeLabel || `${metric.change >= 0 ? '+' : ''}${metric.change}%`}
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -235,210 +438,89 @@ function LoadingSkeleton() {
 export default function DashboardPage() {
   const { t } = useTranslation();
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['dashboard', 'stats'],
-    queryFn: () => api.dashboard.getStats(),
-    staleTime: 30000,
-  });
-
-  const { data: activities, isLoading: activitiesLoading } = useQuery({
-    queryKey: ['dashboard', 'activities'],
-    queryFn: () => api.dashboard.getRecentActivities(10),
-    staleTime: 30000,
-  });
-
-  const { data: upcomingTasks, isLoading: tasksLoading } = useQuery({
-    queryKey: ['dashboard', 'upcoming-tasks'],
-    queryFn: () => api.dashboard.getUpcomingTasks(5),
-    staleTime: 30000,
-  });
-
-  const quickActions = [
-    { label: t('dashboard.addContact'), icon: Users, color: 'text-blue-400', href: '/contacts' },
-    { label: t('dashboard.addCompany'), icon: Building2, color: 'text-emerald-400', href: '/companies' },
-    { label: t('dashboard.createDeal'), icon: DollarSign, color: 'text-amber-400', href: '/deals' },
-    { label: t('dashboard.addTask'), icon: CheckSquare, color: 'text-violet-400', href: '/tasks' },
-  ];
-
-  const timeAgoTexts = {
-    justNow: t('common.justNow'),
-    minutesAgo: t('common.minutesAgo'),
-    hoursAgo: t('common.hoursAgo'),
-    daysAgo: t('common.daysAgo'),
-  };
-
-  const dateTexts = {
-    overdue: t('common.overdue'),
-    today: t('common.today'),
-    tomorrow: t('common.tomorrow'),
-    daysFormat: t('common.daysFormat'),
-  };
-
-  const statCards: StatCardData[] = stats
-    ? [
-        {
-          title: t('dashboard.totalContacts'),
-          value: formatNumber(stats.contacts.total),
-          change: `${stats.contacts.change >= 0 ? '+' : ''}${stats.contacts.change}%`,
-          trend: stats.contacts.change >= 0 ? 'up' : 'down',
-          icon: Users,
-          gradient: 'from-blue-500 to-cyan-500',
-          href: '/contacts',
-        },
-        {
-          title: t('dashboard.companies'),
-          value: formatNumber(stats.companies.total),
-          change: `${stats.companies.change >= 0 ? '+' : ''}${stats.companies.change}%`,
-          trend: stats.companies.change >= 0 ? 'up' : 'down',
-          icon: Building2,
-          gradient: 'from-emerald-500 to-green-500',
-          href: '/companies',
-        },
-        {
-          title: t('dashboard.openDeals'),
-          value: formatCurrency(stats.deals.value),
-          change: `${stats.deals.change >= 0 ? '+' : ''}${stats.deals.change}%`,
-          trend: stats.deals.change >= 0 ? 'up' : 'down',
-          icon: DollarSign,
-          gradient: 'from-amber-500 to-orange-500',
-          href: '/deals',
-        },
-        {
-          title: t('dashboard.tasksDue'),
-          value: String(stats.tasks.due),
-          change: `${stats.tasks.completed} ${t('common.completed')}`,
-          trend: stats.tasks.due <= 5 ? 'up' : 'down',
-          icon: CheckSquare,
-          gradient: 'from-violet-500 to-purple-500',
-          href: '/tasks',
-        },
-      ]
-    : [];
-
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <Eye className="h-6 w-6 text-indigo-400" />
-            <h1 className="text-3xl font-bold text-white">{t('dashboard.title')}</h1>
-          </div>
-          <p className="text-white/50">
-            <span className="text-sky-400">{t('dashboard.seePast')}</span>
-            <span className="mx-2">·</span>
-            <span className="text-purple-400">{t('dashboard.buildFuture')}</span>
-          </p>
-        </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all shadow-lg shadow-indigo-500/25">
-          <Plus className="h-4 w-4" />
-          {t('dashboard.quickAdd')}
+    <div className="p-6 space-y-6">
+      {/* Info banner */}
+      <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 border border-blue-100 animate-fade-in">
+        <Info className="h-5 w-5 text-blue-500 flex-shrink-0" />
+        <p className="text-sm text-blue-700">
+          {t('dashboard.welcomeMessage', 'Welcome to your CRM dashboard. Customize this page to show the information most important to you.')}
+        </p>
+        <button className="ml-auto text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors whitespace-nowrap">
+          {t('dashboard.customize', 'Customize')}
         </button>
       </div>
 
-      {/* Stats Grid */}
-      {statsLoading ? (
-        <LoadingSkeleton />
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {statCards.map((stat) => (
-            <StatCard key={stat.title} stat={stat} vsLastMonthText={t('common.vsLastMonth')} />
-          ))}
-        </div>
-      )}
+      {/* Metrics row */}
+      <MetricsRow />
 
-      {/* Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Activity */}
-        <div className="lg:col-span-2 rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <History className="h-5 w-5 text-sky-400" />
-              <h2 className="text-lg font-semibold text-white">{t('dashboard.recentActivity')}</h2>
-            </div>
-            <button className="text-sm text-white/40 hover:text-white transition-colors">
-              {t('common.viewAll')}
-            </button>
-          </div>
-          <div>
-            {activitiesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-white/40" />
-              </div>
-            ) : activities && activities.length > 0 ? (
-              activities.map((activity) => (
-                <ActivityItem key={activity.id} activity={activity} timeAgoTexts={timeAgoTexts} />
-              ))
-            ) : (
-              <div className="text-center py-8 text-white/40">
-                <Zap className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>{t('dashboard.noRecentActivities')}</p>
-                <p className="text-sm mt-1">{t('dashboard.activitiesWillAppear')}</p>
-              </div>
-            )}
+      {/* Main grid */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Main content - 2 columns */}
+        <div className="col-span-2 space-y-6">
+          <QuarterlyPerformanceWidget />
+
+          {/* Bottom row */}
+          <div className="grid grid-cols-2 gap-6">
+            <TodaysEventsWidget />
+            <TodaysTasksWidget />
           </div>
         </div>
 
-        {/* Right column */}
+        {/* Sidebar - 1 column */}
         <div className="space-y-6">
-          {/* Upcoming Tasks */}
-          <div className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <CalendarClock className="h-5 w-5 text-violet-400" />
-                <h2 className="text-lg font-semibold text-white">{t('dashboard.upcomingTasks')}</h2>
-              </div>
-              <Link href="/tasks" className="text-sm text-white/40 hover:text-white transition-colors">
-                {t('common.viewAll')}
-              </Link>
-            </div>
-            <div>
-              {tasksLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-5 w-5 animate-spin text-white/40" />
-                </div>
-              ) : upcomingTasks && upcomingTasks.length > 0 ? (
-                upcomingTasks.map((task) => (
-                  <TaskItem key={task.id} task={task} dateTexts={dateTexts} />
-                ))
-              ) : (
-                <div className="text-center py-6 text-white/40">
-                  <CheckSquare className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">{t('dashboard.noUpcomingTasks')}</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <AssistantWidget />
 
           {/* Quick Actions */}
-          <div className="rounded-2xl bg-white/[0.02] border border-white/[0.05] p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">{t('dashboard.quickActions')}</h2>
+          <div className="sf-card p-4 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+              {t('dashboard.quickActions', 'Quick Actions')}
+            </h3>
             <div className="space-y-2">
-              {quickActions.map((action) => (
-                <Link
-                  key={action.label}
-                  href={action.href}
-                  className="flex items-center gap-3 w-full p-3 rounded-xl border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all group"
-                >
-                  <div className="h-9 w-9 rounded-lg bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <action.icon className={`h-4 w-4 ${action.color}`} />
-                  </div>
-                  <span className="text-sm font-medium text-white/80 group-hover:text-white transition-colors">
-                    {action.label}
-                  </span>
-                  <Plus className="h-4 w-4 text-white/20 ml-auto group-hover:text-white/40 transition-colors" />
-                </Link>
-              ))}
-            </div>
-
-            {/* Janus Tip */}
-            <div className="mt-4 p-3 rounded-xl bg-gradient-to-br from-sky-500/10 via-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-              <div className="flex items-start gap-2">
-                <Eye className="h-4 w-4 text-indigo-400 mt-0.5 flex-shrink-0" />
-                <p className="text-xs text-white/50">
-                  {t('dashboard.pressToSearch')}
-                </p>
-              </div>
+              <Link
+                href="/contacts"
+                className="flex items-center gap-3 p-2 rounded-md transition-all duration-150 hover:bg-blue-50 group"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-100 group-hover:bg-blue-200 transition-colors">
+                  <Plus className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                  {t('dashboard.addContact', 'Add Contact')}
+                </span>
+              </Link>
+              <Link
+                href="/companies"
+                className="flex items-center gap-3 p-2 rounded-md transition-all duration-150 hover:bg-emerald-50 group"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-100 group-hover:bg-emerald-200 transition-colors">
+                  <Plus className="h-4 w-4 text-emerald-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-emerald-600 transition-colors">
+                  {t('dashboard.addCompany', 'Add Company')}
+                </span>
+              </Link>
+              <Link
+                href="/deals"
+                className="flex items-center gap-3 p-2 rounded-md transition-all duration-150 hover:bg-amber-50 group"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-100 group-hover:bg-amber-200 transition-colors">
+                  <Plus className="h-4 w-4 text-amber-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-amber-600 transition-colors">
+                  {t('dashboard.createDeal', 'Create Deal')}
+                </span>
+              </Link>
+              <Link
+                href="/tasks"
+                className="flex items-center gap-3 p-2 rounded-md transition-all duration-150 hover:bg-violet-50 group"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-violet-100 group-hover:bg-violet-200 transition-colors">
+                  <Plus className="h-4 w-4 text-violet-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-violet-600 transition-colors">
+                  {t('dashboard.addTask', 'Add Task')}
+                </span>
+              </Link>
             </div>
           </div>
         </div>
