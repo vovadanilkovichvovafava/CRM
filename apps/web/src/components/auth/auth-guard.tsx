@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/auth';
-import { Loader2, Eye } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -11,7 +11,7 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
-  const { user, token } = useAuthStore();
+  const { token } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -31,13 +31,12 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (isChecking) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-[#f4f6f9] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full border-2 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-            <Eye className="absolute inset-0 m-auto h-6 w-6 text-indigo-400" />
+            <div className="w-16 h-16 rounded-full border-4 border-[#0070d2]/20 border-t-[#0070d2] animate-spin" />
           </div>
-          <p className="text-white/50 text-sm">Loading Janus...</p>
+          <p className="text-gray-500 text-sm font-medium">Loading CRM...</p>
         </div>
       </div>
     );
@@ -45,10 +44,10 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-[#f4f6f9] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-          <p className="text-white/50 text-sm">Redirecting to login...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-[#0070d2]" />
+          <p className="text-gray-500 text-sm font-medium">Redirecting to login...</p>
         </div>
       </div>
     );
