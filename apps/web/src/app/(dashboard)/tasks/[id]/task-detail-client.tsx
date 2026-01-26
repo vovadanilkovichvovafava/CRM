@@ -36,6 +36,11 @@ import {
   FileText,
   FileSpreadsheet,
   File as FileIconGeneric,
+  Reply,
+  Send,
+  Heart,
+  MoreHorizontal,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -98,6 +103,23 @@ interface FileItem {
   size: number;
   url: string;
   createdAt: string;
+}
+
+interface CommentAuthor {
+  id: string;
+  name?: string;
+  email: string;
+  avatar?: string;
+}
+
+interface CommentItem {
+  id: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  author: CommentAuthor;
+  parentId?: string;
+  replies?: CommentItem[];
 }
 
 function formatFileSize(bytes: number): string {
@@ -455,6 +477,21 @@ export function TaskDetailClient() {
     enabled: !!taskId && taskId !== '_placeholder',
   });
 
+  // Fetch comments for this task
+  const { data: comments = [], isLoading: isLoadingComments } = useQuery({
+    queryKey: ['comments', 'task', taskId],
+    queryFn: () => api.comments.listByTask(taskId) as Promise<CommentItem[]>,
+    enabled: !!taskId && taskId !== '_placeholder',
+  });
+
+  // Comment states
+  const [commentText, setCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+
+  // File preview modal state
+  const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
+
   // Mutations
   const updateTaskMutation = useMutation({
     mutationFn: (data: Partial<Task>) => api.tasks.update(taskId, data),
@@ -510,6 +547,41 @@ export function TaskDetailClient() {
       toast.error(t('errors.general'));
     },
   });
+
+  const createCommentMutation = useMutation({
+    mutationFn: (data: { content: string; parentId?: string }) =>
+      api.comments.create({ ...data, taskId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', 'task', taskId] });
+      setCommentText('');
+      setReplyText('');
+      setReplyingTo(null);
+    },
+    onError: () => {
+      toast.error(t('errors.general'));
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (id: string) => api.comments.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', 'task', taskId] });
+    },
+    onError: () => {
+      toast.error(t('errors.general'));
+    },
+  });
+
+  // Comment handlers
+  const handleSendComment = () => {
+    if (!commentText.trim()) return;
+    createCommentMutation.mutate({ content: commentText.trim() });
+  };
+
+  const handleSendReply = (parentId: string) => {
+    if (!replyText.trim()) return;
+    createCommentMutation.mutate({ content: replyText.trim(), parentId });
+  };
 
   // File upload handler
   const handleFileUpload = async (fileList: FileList | null) => {
@@ -900,7 +972,8 @@ export function TaskDetailClient() {
                       {files.map((file) => (
                         <div
                           key={file.id}
-                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 group transition-colors"
+                          onClick={() => setPreviewFile(file)}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 group transition-colors cursor-pointer"
                         >
                           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white border border-gray-200">
                             {getFileIcon(file.mimeType)}
@@ -917,8 +990,17 @@ export function TaskDetailClient() {
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-blue-600"
+                              onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }}
+                              title={t('files.preview')}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                              onClick={() => handleDownloadFile(file)}
+                              onClick={(e) => { e.stopPropagation(); handleDownloadFile(file); }}
                               title={t('common.download')}
                             >
                               <Download className="h-4 w-4" />
@@ -927,7 +1009,7 @@ export function TaskDetailClient() {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-gray-400 hover:text-red-500"
-                              onClick={() => handleDeleteFile(file.id, file.originalName)}
+                              onClick={(e) => { e.stopPropagation(); handleDeleteFile(file.id, file.originalName); }}
                               disabled={deleteFileMutation.isPending}
                               title={t('common.delete')}
                             >
@@ -1065,22 +1147,18 @@ export function TaskDetailClient() {
           </div>
         </div>
 
-        {/* Right Panel - Activity */}
+        {/* Right Panel - Activity & Comments */}
         <div className="w-96 border-l border-gray-200 bg-gray-50 flex flex-col">
           <div className="px-4 py-3 border-b border-gray-200 bg-white flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">{t('tasks.activity')}</h2>
-            <div className="flex items-center gap-2">
-              <button className="p-1.5 hover:bg-gray-100 rounded-md transition-colors">
-                <Search className="h-4 w-4 text-gray-400" />
-              </button>
-              <button className="p-1.5 hover:bg-gray-100 rounded-md transition-colors">
-                <Filter className="h-4 w-4 text-gray-400" />
-              </button>
-            </div>
+            <span className="text-xs text-gray-400">
+              {comments.length} {t('tasks.fields.comments').toLowerCase()}
+            </span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4">
-            <div className="space-y-4">
+            {/* Activity History */}
+            <div className="space-y-3 mb-6">
               {activities.map((activity) => (
                 <div key={activity.id} className="flex gap-3">
                   <div className="flex-shrink-0 w-1 bg-gray-200 rounded-full" />
@@ -1108,19 +1186,189 @@ export function TaskDetailClient() {
                   </div>
                 </div>
               ))}
+            </div>
 
-              {(task._count?.comments || 0) === 0 && (
-                <div className="text-center py-8">
+            {/* Comments Section */}
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                {t('tasks.fields.comments')}
+              </h3>
+
+              {isLoadingComments ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="text-center py-6">
                   <MessageSquare className="h-8 w-8 text-gray-300 mx-auto mb-2" />
                   <p className="text-sm text-gray-400">{t('tasks.noComments')}</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="group">
+                      {/* Main Comment */}
+                      <div className="flex gap-3">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarImage src={comment.author?.avatar} />
+                          <AvatarFallback className="text-xs bg-blue-500 text-white">
+                            {comment.author?.name?.charAt(0) || comment.author?.email?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium text-sm text-gray-900">
+                                {comment.author?.name || comment.author?.email}
+                              </span>
+                              <span className="text-xs text-gray-400">
+                                {format(new Date(comment.createdAt), 'MMM d, h:mm a')}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.content}</p>
+                          </div>
+                          <div className="flex items-center gap-3 mt-1 ml-1">
+                            <button
+                              onClick={() => {
+                                setReplyingTo(replyingTo === comment.id ? null : comment.id);
+                                setReplyText('');
+                              }}
+                              className="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1"
+                            >
+                              <Reply className="h-3 w-3" />
+                              {t('comments.reply')}
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(t('common.delete') + '?')) {
+                                  deleteCommentMutation.mutate(comment.id);
+                                }
+                              }}
+                              className="text-xs text-gray-500 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              {t('common.delete')}
+                            </button>
+                          </div>
+
+                          {/* Reply Form */}
+                          {replyingTo === comment.id && (
+                            <div className="mt-2 flex gap-2">
+                              <input
+                                type="text"
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                placeholder={t('comments.writeComment')}
+                                className="flex-1 text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && replyText.trim()) {
+                                    handleSendReply(comment.id);
+                                  }
+                                  if (e.key === 'Escape') {
+                                    setReplyingTo(null);
+                                    setReplyText('');
+                                  }
+                                }}
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleSendReply(comment.id)}
+                                disabled={!replyText.trim() || createCommentMutation.isPending}
+                                className="bg-blue-500 hover:bg-blue-600"
+                              >
+                                {createCommentMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Replies */}
+                          {comment.replies && comment.replies.length > 0 && (
+                            <div className="mt-3 ml-4 space-y-3 border-l-2 border-gray-100 pl-3">
+                              {comment.replies.map((reply) => (
+                                <div key={reply.id} className="flex gap-2 group/reply">
+                                  <Avatar className="h-6 w-6 flex-shrink-0">
+                                    <AvatarImage src={reply.author?.avatar} />
+                                    <AvatarFallback className="text-xs bg-gray-400 text-white">
+                                      {reply.author?.name?.charAt(0) || reply.author?.email?.charAt(0) || 'U'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="bg-gray-50 rounded-lg p-2">
+                                      <div className="flex items-center justify-between mb-1">
+                                        <span className="font-medium text-xs text-gray-900">
+                                          {reply.author?.name || reply.author?.email}
+                                        </span>
+                                        <span className="text-xs text-gray-400">
+                                          {format(new Date(reply.createdAt), 'MMM d, h:mm a')}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-gray-700 whitespace-pre-wrap">{reply.content}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => {
+                                        if (confirm(t('common.delete') + '?')) {
+                                          deleteCommentMutation.mutate(reply.id);
+                                        }
+                                      }}
+                                      className="text-xs text-gray-400 hover:text-red-600 ml-1 mt-0.5 opacity-0 group-hover/reply:opacity-100 transition-opacity"
+                                    >
+                                      {t('common.delete')}
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           </div>
 
+          {/* Comment Input */}
           <div className="p-4 border-t border-gray-200 bg-white">
-            <div className="text-center py-3">
-              <p className="text-sm text-gray-400">{t('tasks.commentsComingSoon')}</p>
+            <div className="flex items-start gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-blue-500 text-white text-sm">U</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <textarea
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  placeholder={t('tasks.writeComment')}
+                  rows={2}
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && commentText.trim()) {
+                      e.preventDefault();
+                      handleSendComment();
+                    }
+                  }}
+                />
+                <div className="flex items-center justify-end mt-2">
+                  <Button
+                    size="sm"
+                    disabled={!commentText.trim() || createCommentMutation.isPending}
+                    onClick={handleSendComment}
+                    className="bg-blue-500 hover:bg-blue-600"
+                  >
+                    {createCommentMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-1" />
+                    )}
+                    {t('common.send')}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1160,6 +1408,52 @@ export function TaskDetailClient() {
             <Button onClick={handleSaveEdit} disabled={!editTitle.trim() || isUpdating}>
               {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File Preview Modal */}
+      <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {previewFile && getFileIcon(previewFile.mimeType)}
+              {previewFile?.originalName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-4">
+            {previewFile?.mimeType.startsWith('image/') ? (
+              <img
+                src={api.files.getDownloadUrl(previewFile.id)}
+                alt={previewFile.originalName}
+                className="max-w-full max-h-[60vh] object-contain rounded-lg"
+              />
+            ) : previewFile?.mimeType === 'application/pdf' ? (
+              <iframe
+                src={api.files.getDownloadUrl(previewFile.id)}
+                className="w-full h-[60vh] rounded-lg border"
+                title={previewFile.originalName}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gray-100 mx-auto mb-4">
+                  {previewFile && getFileIcon(previewFile.mimeType)}
+                </div>
+                <p className="text-gray-500 mb-2">{t('files.preview')}</p>
+                <p className="text-sm text-gray-400">
+                  {previewFile && formatFileSize(previewFile.size)}
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewFile(null)}>
+              {t('common.close')}
+            </Button>
+            <Button onClick={() => previewFile && handleDownloadFile(previewFile)}>
+              <Download className="h-4 w-4 mr-2" />
+              {t('common.download')}
             </Button>
           </DialogFooter>
         </DialogContent>
