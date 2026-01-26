@@ -112,33 +112,66 @@ export function NotificationBell() {
       id: notification.id,
       type: notification.type,
       data: notification.data,
+      dataType: typeof notification.data,
     });
 
     if (!notification.isRead) {
       markAsReadMutation.mutate(notification.id);
     }
 
-    // Navigate based on notification type and data
-    const data = notification.data as {
-      taskId?: string;
-      recordId?: string;
-      objectId?: string;
-      objectName?: string;
-    } | null;
+    // Parse data - it might be stringified JSON
+    let data: Record<string, unknown> | null = null;
+    if (notification.data) {
+      if (typeof notification.data === 'string') {
+        try {
+          data = JSON.parse(notification.data);
+        } catch {
+          data = null;
+        }
+      } else {
+        data = notification.data as Record<string, unknown>;
+      }
+    }
 
-    if (data?.taskId) {
-      // Task-related notifications - navigate directly to task detail page
-      console.log('[NotificationBell] Navigating to task:', data.taskId);
+    console.log('[NotificationBell] Parsed data:', data);
+
+    // Check for taskId in data
+    const taskId = data?.taskId as string | undefined;
+    if (taskId) {
+      console.log('[NotificationBell] Navigating to task:', taskId);
       setIsOpen(false);
-      router.push(`/tasks/${data.taskId}`);
+      router.push(`/tasks/${taskId}`);
       return;
     }
 
-    if (data?.recordId && data?.objectName) {
-      // Record-related notifications - navigate to the specific entity page
-      console.log('[NotificationBell] Navigating to record:', data.recordId, 'object:', data.objectName);
+    // Check for task-related notification types
+    if (notification.type === 'task_assigned' ||
+        notification.type === 'task_due_soon' ||
+        notification.type === 'comment_added' ||
+        notification.type === 'comment_reply' ||
+        notification.type === 'comment_mention') {
+      // Try to extract taskId from different possible locations
+      const possibleTaskId = data?.taskId || data?.task_id;
+      if (possibleTaskId) {
+        console.log('[NotificationBell] Navigating to task from type:', possibleTaskId);
+        setIsOpen(false);
+        router.push(`/tasks/${possibleTaskId}`);
+        return;
+      }
+      // If no taskId but task-related, go to tasks list
+      console.log('[NotificationBell] Task notification without taskId, going to tasks list');
       setIsOpen(false);
-      // Map object names to routes
+      router.push('/tasks');
+      return;
+    }
+
+    // Check for record-related notifications
+    const recordId = data?.recordId as string | undefined;
+    const objectName = data?.objectName as string | undefined;
+
+    if (recordId && objectName) {
+      console.log('[NotificationBell] Navigating to record:', recordId, 'object:', objectName);
+      setIsOpen(false);
       const objectRoutes: Record<string, string> = {
         contacts: 'contacts',
         companies: 'companies',
@@ -146,12 +179,22 @@ export function NotificationBell() {
         webmasters: 'webmasters',
         partners: 'partners',
       };
-      const route = objectRoutes[data.objectName] || data.objectName;
-      router.push(`/${route}/${data.recordId}`);
+      const route = objectRoutes[objectName] || objectName;
+      router.push(`/${route}/${recordId}`);
       return;
     }
 
-    console.log('[NotificationBell] No navigation - data does not contain taskId or recordId/objectName');
+    // Check for record_created notification type
+    if (notification.type === 'record_created' && recordId) {
+      // Go to a general records page or use objectName if available
+      const route = objectName ? `/${objectName}/${recordId}` : `/`;
+      console.log('[NotificationBell] Navigating to created record:', route);
+      setIsOpen(false);
+      router.push(route);
+      return;
+    }
+
+    console.log('[NotificationBell] No navigation - unhandled notification type or missing data');
   };
 
   return (

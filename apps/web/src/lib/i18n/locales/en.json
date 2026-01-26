@@ -417,6 +417,7 @@
       "closeDate": "Close Date",
       "expectedCloseDate": "Expected Close",
       "probability": "Probability",
+      "pipeline": "Pipeline",
       "notes": "Notes"
     },
     "metrics": {
@@ -439,6 +440,18 @@
       "active": "Active",
       "paused": "Paused",
       "blocked": "Blocked"
+    },
+    "fields": {
+      "name": "Name",
+      "website": "Website",
+      "email": "Email",
+      "phone": "Phone",
+      "telegram": "Telegram",
+      "traffic": "Traffic Source",
+      "geos": "GEOs",
+      "verticals": "Verticals",
+      "status": "Status",
+      "notes": "Notes"
     }
   },
   "partners": {
@@ -454,6 +467,17 @@
       "active": "Active",
       "paused": "Paused",
       "inactive": "Inactive"
+    },
+    "fields": {
+      "name": "Name",
+      "website": "Website",
+      "email": "Email",
+      "phone": "Phone",
+      "type": "Type",
+      "manager": "Manager",
+      "verticals": "Verticals",
+      "status": "Status",
+      "notes": "Notes"
     }
   },
   "calendar": {

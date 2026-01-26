@@ -417,6 +417,7 @@
       "closeDate": "Дата закрытия",
       "expectedCloseDate": "Ожидаемая дата закрытия",
       "probability": "Вероятность",
+      "pipeline": "Воронка",
       "notes": "Заметки"
     },
     "metrics": {
@@ -439,6 +440,18 @@
       "active": "Активный",
       "paused": "Приостановлен",
       "blocked": "Заблокирован"
+    },
+    "fields": {
+      "name": "Имя",
+      "website": "Сайт",
+      "email": "Email",
+      "phone": "Телефон",
+      "telegram": "Telegram",
+      "traffic": "Источник трафика",
+      "geos": "ГЕО",
+      "verticals": "Вертикали",
+      "status": "Статус",
+      "notes": "Заметки"
     }
   },
   "partners": {
@@ -454,6 +467,17 @@
       "active": "Активный",
       "paused": "Приостановлен",
       "inactive": "Неактивный"
+    },
+    "fields": {
+      "name": "Название",
+      "website": "Сайт",
+      "email": "Email",
+      "phone": "Телефон",
+      "type": "Тип",
+      "manager": "Менеджер",
+      "verticals": "Вертикали",
+      "status": "Статус",
+      "notes": "Заметки"
     }
   },
   "calendar": {
