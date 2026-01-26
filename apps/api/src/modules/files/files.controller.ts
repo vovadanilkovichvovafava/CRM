@@ -119,7 +119,7 @@ export class FilesController {
   @UseGuards(AuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete file' })
-  remove(@Param('id') id: string) {
-    return this.filesService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.filesService.remove(id, user.id);
   }
 }

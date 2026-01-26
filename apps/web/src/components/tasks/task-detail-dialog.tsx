@@ -75,15 +75,19 @@ import { SubtaskCard } from './subtask-card';
 
 /**
  * Task role for permission checks
+ * project_owner has the same permissions as creator
  */
-type TaskRole = 'creator' | 'assignee' | 'viewer';
+type TaskRole = 'creator' | 'project_owner' | 'assignee' | 'viewer';
 
 /**
  * Get user role for a task
+ * Includes check for project owner (createdBy of the project)
  */
 function getUserRole(task: Task, userId: string | undefined): TaskRole {
   if (!userId) return 'viewer';
   if (task.createdBy === userId) return 'creator';
+  // Project owner has the same permissions as task creator
+  if (task.project?.createdBy === userId) return 'project_owner';
   if (task.assigneeId === userId) return 'assignee';
   return 'viewer';
 }
@@ -113,7 +117,7 @@ interface Task {
   startDate?: string;
   createdAt?: string;
   createdBy: string;
-  project?: { id: string; name: string; color?: string };
+  project?: { id: string; name: string; color?: string; createdBy?: string };
   assignee?: User;
   assigneeId?: string;
   subtasks?: Task[];
@@ -254,6 +258,7 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   // File upload states
   const [isUploadingTaskFile, setIsUploadingTaskFile] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [deletingFileId, setDeletingFileId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const taskFileInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
@@ -308,12 +313,15 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
   // Get current user for permission checks
   const currentUser = useAuthStore((state) => state.user);
   const userRole = displayTask ? getUserRole(displayTask as Task, currentUser?.id) : 'viewer';
-  const isCreator = userRole === 'creator';
+  // Creator and project owner have full permissions
+  const isCreator = userRole === 'creator' || userRole === 'project_owner';
   const isAssignee = userRole === 'assignee';
-  // Only creator can change status - assignee has view-only access to status
+  // Only creator/project_owner can change status - assignee has view-only access to status
   const canEditStatus = isCreator;
   const canEditAllFields = isCreator;
   const canAddAttachments = isCreator || isAssignee;
+  // Can delete files: creator, project owner, or the one who uploaded
+  const canDeleteFiles = isCreator || isAssignee;
   // Use fullTaskData subtasks if available for accurate status check
   const subtasksForCheck = displayTask?.subtasks;
   const hasIncompleteSubtasks = displayTask ? !areAllSubtasksDone(subtasksForCheck as Task[] | undefined) : false;
@@ -568,6 +576,28 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
     setIsDragging(false);
     if (e.dataTransfer.files && canAddAttachments) {
       handleTaskFileUpload(e.dataTransfer.files);
+    }
+  };
+
+  // Handle file deletion
+  const handleDeleteFile = async (fileId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setDeletingFileId(fileId);
+    try {
+      await api.files.delete(fileId);
+      toast.success('File deleted');
+      // Refresh task data
+      if (viewingTaskId) {
+        refetchViewingTask();
+      } else {
+        refetchTask();
+      }
+    } catch (error) {
+      toast.error('Failed to delete file');
+    } finally {
+      setDeletingFileId(null);
     }
   };
 
@@ -1127,21 +1157,39 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                         onDrop={canAddAttachments ? handleDrop : undefined}
                       >
                         {displayTask.files.map((file) => (
-                          <a
+                          <div
                             key={file.id}
-                            href={file.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2 p-2 rounded bg-white/5 hover:bg-white/10 transition-colors"
+                            className="flex items-center gap-2 p-2 rounded bg-white/5 hover:bg-white/10 transition-colors group"
                           >
-                            {isImageFile(file.mimeType) ? (
-                              <ImageIcon className="h-4 w-4 text-green-400" />
-                            ) : (
-                              <File className="h-4 w-4 text-blue-400" />
+                            <a
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 flex-1 min-w-0"
+                            >
+                              {isImageFile(file.mimeType) ? (
+                                <ImageIcon className="h-4 w-4 text-green-400 flex-shrink-0" />
+                              ) : (
+                                <File className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                              )}
+                              <span className="text-sm truncate flex-1">{file.originalName}</span>
+                              <span className="text-xs text-white/40 flex-shrink-0">{formatFileSize(file.size)}</span>
+                            </a>
+                            {canDeleteFiles && (
+                              <button
+                                onClick={(e) => handleDeleteFile(file.id, e)}
+                                disabled={deletingFileId === file.id}
+                                className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all flex-shrink-0"
+                                title="Delete file"
+                              >
+                                {deletingFileId === file.id ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-red-400" />
+                                ) : (
+                                  <X className="h-3 w-3 text-red-400" />
+                                )}
+                              </button>
                             )}
-                            <span className="text-sm truncate flex-1">{file.originalName}</span>
-                            <span className="text-xs text-white/40">{formatFileSize(file.size)}</span>
-                          </a>
+                          </div>
                         ))}
                         {isUploadingTaskFile && (
                           <div className="flex items-center gap-2 p-2 rounded bg-white/5">
@@ -1241,8 +1289,11 @@ export function TaskDetailDialog({ task, users, onClose, onUpdate }: TaskDetailD
                   {comments.length}
                 </Badge>
                 {/* Show user role */}
-                {isCreator && (
+                {userRole === 'creator' && (
                   <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-400 text-[10px]">Creator</Badge>
+                )}
+                {userRole === 'project_owner' && (
+                  <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 text-[10px]">Project Owner</Badge>
                 )}
                 {isAssignee && !isCreator && (
                   <Badge variant="secondary" className="bg-green-500/20 text-green-400 text-[10px]">Assignee</Badge>

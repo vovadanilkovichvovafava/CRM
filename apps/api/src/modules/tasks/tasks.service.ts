@@ -15,9 +15,11 @@ import { Task, TaskStatus, Priority, Prisma, File } from '../../../generated/pri
 
 /**
  * Task role enum for permission checks
+ * PROJECT_OWNER has the same permissions as CREATOR
  */
 export enum TaskRole {
   CREATOR = 'creator',
+  PROJECT_OWNER = 'project_owner',
   ASSIGNEE = 'assignee',
   VIEWER = 'viewer',
 }
@@ -103,10 +105,22 @@ export class TasksService {
 
   /**
    * Get user role for a task
+   * Includes check for project owner (createdBy of the project)
    */
-  getUserRole(task: { createdBy: string; assigneeId?: string | null }, userId: string): TaskRole {
+  getUserRole(
+    task: {
+      createdBy: string;
+      assigneeId?: string | null;
+      project?: { createdBy?: string } | null;
+    },
+    userId: string,
+  ): TaskRole {
     if (task.createdBy === userId) {
       return TaskRole.CREATOR;
+    }
+    // Project owner has the same permissions as task creator
+    if (task.project?.createdBy === userId) {
+      return TaskRole.PROJECT_OWNER;
     }
     if (task.assigneeId === userId) {
       return TaskRole.ASSIGNEE;
@@ -118,14 +132,18 @@ export class TasksService {
    * Check if user can update specific fields
    */
   validateUpdatePermissions(
-    task: { createdBy: string; assigneeId?: string | null },
+    task: {
+      createdBy: string;
+      assigneeId?: string | null;
+      project?: { createdBy?: string } | null;
+    },
     dto: UpdateTaskDto,
     userId: string,
   ): void {
     const role = this.getUserRole(task, userId);
 
-    // Creator can update everything
-    if (role === TaskRole.CREATOR) {
+    // Creator and Project Owner can update everything
+    if (role === TaskRole.CREATOR || role === TaskRole.PROJECT_OWNER) {
       return;
     }
 
@@ -250,6 +268,17 @@ export class TasksService {
 
     const where: Prisma.TaskWhereInput = {};
 
+    // Visibility filter: user can only see their own tasks and tasks for their projects
+    // Task is visible if:
+    // 1. User created the task (createdBy)
+    // 2. User is assigned to the task (assigneeId)
+    // 3. User created the project (project.createdBy)
+    where.OR = [
+      { createdBy: userId },
+      { assigneeId: userId },
+      { project: { createdBy: userId } },
+    ];
+
     if (query.projectId) {
       where.projectId = query.projectId;
     }
@@ -293,7 +322,7 @@ export class TasksService {
         skip,
         take: limit,
         include: {
-          project: { select: { id: true, name: true, color: true } },
+          project: { select: { id: true, name: true, color: true, createdBy: true } },
           parent: { select: { id: true, title: true } },
           assignee: { select: { id: true, name: true, email: true, avatar: true } },
           _count: { select: { subtasks: true, comments: true, files: true, checklist: true } },
@@ -312,7 +341,7 @@ export class TasksService {
     const task = await this.prisma.task.findUnique({
       where: { id },
       include: {
-        project: { select: { id: true, name: true, color: true } },
+        project: { select: { id: true, name: true, color: true, createdBy: true } },
         parent: { select: { id: true, title: true } },
         subtasks: {
           where: { isArchived: false },
@@ -458,10 +487,10 @@ export class TasksService {
   async remove(id: string, userId: string, hard = false): Promise<void> {
     const task = await this.findOne(id);
 
-    // Only creator can delete/archive tasks
+    // Only creator or project owner can delete/archive tasks
     const role = this.getUserRole(task, userId);
-    if (role !== TaskRole.CREATOR) {
-      throw new ForbiddenException('Only the task creator can delete or archive this task');
+    if (role !== TaskRole.CREATOR && role !== TaskRole.PROJECT_OWNER) {
+      throw new ForbiddenException('Only the task creator or project owner can delete or archive this task');
     }
 
     if (hard) {

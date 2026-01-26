@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnModuleInit, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from './storage.service';
 import { File } from '../../../generated/prisma';
@@ -133,12 +133,62 @@ export class FilesService implements OnModuleInit {
     return this.storage.getUrl(file.name);
   }
 
-  async remove(id: string): Promise<void> {
+  /**
+   * Check if user can delete a file
+   * User can delete if:
+   * 1. User uploaded the file (uploadedBy)
+   * 2. User is the task creator (task.createdBy)
+   * 3. User is the project owner (task.project.createdBy or project.createdBy)
+   */
+  private async canDeleteFile(file: File, userId: string): Promise<boolean> {
+    // User uploaded the file
+    if (file.uploadedBy === userId) {
+      return true;
+    }
+
+    // Check task permissions
+    if (file.taskId) {
+      const task = await this.prisma.task.findUnique({
+        where: { id: file.taskId },
+        select: {
+          createdBy: true,
+          project: { select: { createdBy: true } },
+        },
+      });
+
+      if (task) {
+        // User is task creator
+        if (task.createdBy === userId) return true;
+        // User is project owner
+        if (task.project?.createdBy === userId) return true;
+      }
+    }
+
+    // Check project permissions (for files attached directly to project)
+    if (file.projectId) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: file.projectId },
+        select: { createdBy: true },
+      });
+
+      if (project?.createdBy === userId) return true;
+    }
+
+    return false;
+  }
+
+  async remove(id: string, userId: string): Promise<void> {
     const file = await this.findOne(id);
+
+    // Check permissions
+    const canDelete = await this.canDeleteFile(file, userId);
+    if (!canDelete) {
+      throw new ForbiddenException('You do not have permission to delete this file');
+    }
 
     await this.storage.delete(file.name);
     await this.prisma.file.delete({ where: { id } });
 
-    this.logger.log('File deleted', { fileId: id });
+    this.logger.log('File deleted', { fileId: id, deletedBy: userId });
   }
 }
