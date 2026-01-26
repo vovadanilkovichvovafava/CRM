@@ -11,6 +11,7 @@
     "start": "pnpm --filter api start",
     "start:api": "pnpm --filter api start",
     "start:web": "pnpm --filter web start",
+    "start:prod": "node apps/web/.next/standalone/apps/web/server.js & pnpm --filter api start:prod",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
