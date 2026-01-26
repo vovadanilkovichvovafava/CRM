@@ -192,11 +192,16 @@ export default function CalendarPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t('calendar.title')}</h1>
-          <p className="text-muted-foreground">View and manage tasks by date</p>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg">
+            <Calendar className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('calendar.title')}</h1>
+            <p className="text-gray-600">View and manage tasks by date</p>
+          </div>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
+        <Button onClick={() => setIsCreateDialogOpen(true)} className="shadow-sm">
           <Plus className="mr-2 h-4 w-4" />
           {t('tasks.addTask')}
         </Button>
@@ -204,58 +209,92 @@ export default function CalendarPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-red-500/10 border-red-500/20">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="p-2 rounded-lg bg-red-500/20">
-              <AlertCircle className="h-5 w-5 text-red-400" />
+        <Card className="sf-card border-l-4 border-l-red-500 hover:shadow-md transition-shadow">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="p-3 rounded-xl bg-red-100">
+              <AlertCircle className="h-5 w-5 text-red-600" />
             </div>
             <div>
-              <p className="text-sm text-red-400">{t('common.overdue')}</p>
-              <p className="text-2xl font-bold text-red-300">{stats.overdue}</p>
+              <p className="text-sm font-medium text-gray-600">{t('common.overdue')}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.overdue}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-yellow-500/10 border-yellow-500/20">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="p-2 rounded-lg bg-yellow-500/20">
-              <Clock className="h-5 w-5 text-yellow-400" />
+        <Card className="sf-card border-l-4 border-l-amber-500 hover:shadow-md transition-shadow">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="p-3 rounded-xl bg-amber-100">
+              <Clock className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-yellow-400">{t('common.today')}</p>
-              <p className="text-2xl font-bold text-yellow-300">{stats.dueToday}</p>
+              <p className="text-sm font-medium text-gray-600">{t('common.today')}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.dueToday}</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-500/10 border-blue-500/20">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="p-2 rounded-lg bg-blue-500/20">
-              <Calendar className="h-5 w-5 text-blue-400" />
+        <Card className="sf-card border-l-4 border-l-blue-500 hover:shadow-md transition-shadow">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="p-3 rounded-xl bg-blue-100">
+              <Calendar className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-sm text-blue-400">{t('timeTracking.thisWeek')}</p>
-              <p className="text-2xl font-bold text-blue-300">{stats.thisWeek}</p>
+              <p className="text-sm font-medium text-gray-600">{t('timeTracking.thisWeek')}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.thisWeek}</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Calendar */}
-      <Card>
-        <CardContent className="p-6">
+      <Card className="sf-card overflow-hidden">
+        <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg text-gray-900">Task Calendar</CardTitle>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                Tasks
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                Overdue
+              </span>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center h-96">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500" />
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+                <p className="text-sm text-gray-500">Loading calendar...</p>
+              </div>
+            </div>
+          ) : calendarEvents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+              <div className="w-20 h-20 mb-6 rounded-full bg-blue-50 flex items-center justify-center">
+                <Calendar className="w-10 h-10 text-blue-500/60" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No scheduled tasks</h3>
+              <p className="text-gray-600 max-w-sm mb-6">
+                Your calendar is empty. Create a task with a due date to see it here.
+              </p>
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Task
+              </Button>
             </div>
           ) : (
-            <CalendarView
-              events={calendarEvents}
-              onEventClick={handleEventClick}
-              onDateSelect={handleDateSelect}
-              onEventDrop={handleEventDrop}
-              editable={true}
-            />
+            <div className="p-6">
+              <CalendarView
+                events={calendarEvents}
+                onEventClick={handleEventClick}
+                onDateSelect={handleDateSelect}
+                onEventDrop={handleEventDrop}
+                editable={true}
+              />
+            </div>
           )}
         </CardContent>
       </Card>

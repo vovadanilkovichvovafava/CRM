@@ -4,59 +4,71 @@
 
 @layer base {
   :root {
-    /* Salesforce-inspired light theme */
+    /* Salesforce-inspired light theme - WCAG AA compliant colors */
     --background: 0 0% 97%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 210 100% 50%;
+    --primary: 210 100% 45%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
     --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted-foreground: 215 25% 35%;
     --accent: 210 40% 96%;
     --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 210 100% 50%;
+    --border: 214 32% 85%;
+    --input: 214 32% 85%;
+    --ring: 210 100% 45%;
     --radius: 0.5rem;
 
-    /* Salesforce brand colors */
-    --sf-blue: 210 100% 50%;
-    --sf-blue-dark: 210 100% 42%;
+    /* Salesforce brand colors - improved contrast */
+    --sf-blue: 210 100% 45%;
+    --sf-blue-dark: 210 100% 38%;
     --sf-cloud: 200 100% 97%;
     --sf-navy: 213 33% 23%;
-    --sf-success: 152 69% 45%;
-    --sf-warning: 38 92% 50%;
-    --sf-error: 4 90% 58%;
-    --sf-info: 199 89% 48%;
+    --sf-success: 152 69% 38%;
+    --sf-warning: 38 92% 45%;
+    --sf-error: 4 90% 50%;
+    --sf-info: 199 89% 42%;
+
+    /* Text color hierarchy - WCAG compliant */
+    --text-primary: 222 47% 11%;
+    --text-secondary: 215 20% 35%;
+    --text-tertiary: 215 16% 50%;
+    --text-disabled: 215 10% 65%;
   }
 
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
-    --card: 222 47% 13%;
+    --card: 222 47% 14%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 13%;
+    --popover: 222 47% 14%;
     --popover-foreground: 210 40% 98%;
-    --primary: 210 100% 50%;
+    --primary: 210 100% 55%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 217 33% 17%;
+    --secondary: 217 33% 20%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
+    --muted: 217 33% 20%;
+    --muted-foreground: 215 20% 70%;
+    --accent: 217 33% 20%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 210 100% 50%;
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 210 100% 55%;
+
+    /* Text color hierarchy - Dark mode */
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20% 75%;
+    --text-tertiary: 215 16% 60%;
+    --text-disabled: 215 10% 45%;
   }
 }
 
@@ -439,14 +451,16 @@
   box-shadow: 0 4px 20px rgba(0, 112, 210, 0.15);
 }
 
-/* Salesforce-style card */
+/* Salesforce-style card - Enhanced visual hierarchy */
 .sf-card {
-  @apply bg-white rounded-lg border border-gray-200 shadow-sm;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  @apply bg-white rounded-lg border border-gray-200;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
 
 .sf-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-color: hsl(var(--border));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .sf-card-interactive {
@@ -454,8 +468,13 @@
 }
 
 .sf-card-interactive:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 4px 8px rgba(0, 0, 0, 0.06);
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+.sf-card-interactive:active {
+  transform: translateY(0);
 }
 
 /* Salesforce-style button */
@@ -584,14 +603,37 @@
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0070d2] focus-visible:ring-offset-2;
 }
 
-/* Empty state illustration placeholder */
+/* Empty state container */
+.empty-state {
+  @apply flex flex-col items-center justify-center py-16 px-8 text-center;
+  animation: fade-in-up 0.5s ease-out forwards;
+}
+
 .empty-state-illustration {
-  @apply w-48 h-48 mx-auto mb-4 opacity-60;
-  background: linear-gradient(135deg, #e8f4fd 0%, #f0f8ff 100%);
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath d='M100 20 L180 100 L100 180 L20 100 Z' fill='black'/%3E%3C/svg%3E");
-  mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
+  @apply w-64 h-48 mx-auto mb-6;
+}
+
+.empty-state-title {
+  @apply text-xl font-semibold text-gray-900 mb-2;
+}
+
+.empty-state-description {
+  @apply text-base text-gray-600 max-w-md mb-6;
+  line-height: 1.6;
+}
+
+.empty-state-actions {
+  @apply flex flex-wrap items-center justify-center gap-3;
+}
+
+/* Empty state icon placeholder */
+.empty-state-icon {
+  @apply w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center;
+  background: linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--primary) / 0.05) 100%);
+}
+
+.empty-state-icon svg {
+  @apply w-10 h-10 text-primary/60;
 }
 
 /* Loading skeleton */
@@ -602,51 +644,73 @@
   animation: shimmer 1.5s linear infinite;
 }
 
-/* Table styles */
+/* Table styles - Improved contrast and visual hierarchy */
 .sf-table {
   @apply w-full border-collapse;
 }
 
 .sf-table th {
-  @apply px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider;
-  @apply bg-gray-50 border-b border-gray-200;
+  @apply px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider;
+  @apply bg-gray-50/80 border-b-2 border-gray-200;
+  letter-spacing: 0.05em;
 }
 
 .sf-table td {
-  @apply px-4 py-3 text-sm text-gray-700 border-b border-gray-100;
+  @apply px-4 py-3.5 text-sm text-gray-800 border-b border-gray-100;
 }
 
 .sf-table tr {
-  @apply transition-colors duration-150;
+  @apply transition-all duration-150;
 }
 
 .sf-table tbody tr:hover {
-  @apply bg-blue-50/50;
+  @apply bg-blue-50/70;
 }
 
-/* Metric card for dashboard */
+.sf-table tbody tr:hover td {
+  @apply text-gray-900;
+}
+
+/* Table row selection states */
+.sf-table tbody tr.selected {
+  @apply bg-blue-100/80;
+}
+
+.sf-table tbody tr.selected td {
+  @apply text-gray-900 font-medium;
+}
+
+/* Metric card for dashboard - Enhanced visual hierarchy */
 .metric-card {
-  @apply sf-card p-4 flex flex-col gap-1;
+  @apply sf-card p-5 flex flex-col gap-2;
 }
 
 .metric-card .metric-value {
-  @apply text-2xl font-bold text-gray-900;
+  @apply text-2xl font-bold text-gray-900 tracking-tight;
 }
 
 .metric-card .metric-label {
-  @apply text-sm text-gray-500;
+  @apply text-sm font-medium text-gray-600;
+}
+
+.metric-card .metric-sublabel {
+  @apply text-xs text-gray-500;
 }
 
 .metric-card .metric-change {
-  @apply text-xs font-medium;
+  @apply text-xs font-semibold;
 }
 
 .metric-card .metric-change.positive {
-  @apply text-green-600;
+  @apply text-green-700;
 }
 
 .metric-card .metric-change.negative {
-  @apply text-red-600;
+  @apply text-red-700;
+}
+
+.metric-card .metric-icon {
+  @apply p-2.5 rounded-lg;
 }
 
 /* Ripple effect for buttons */
@@ -693,5 +757,137 @@
   .sf-card {
     box-shadow: none !important;
     border: 1px solid #e5e7eb !important;
+  }
+}
+
+/* Typography utilities - WCAG compliant text colors */
+.text-heading {
+  @apply text-gray-900 font-semibold tracking-tight;
+}
+
+.text-subheading {
+  @apply text-gray-800 font-medium;
+}
+
+.text-body {
+  @apply text-gray-700;
+}
+
+.text-body-secondary {
+  @apply text-gray-600;
+}
+
+.text-caption {
+  @apply text-gray-500 text-sm;
+}
+
+.text-label {
+  @apply text-gray-700 text-sm font-medium;
+}
+
+.text-helper {
+  @apply text-gray-500 text-xs;
+}
+
+.text-error {
+  @apply text-red-700 text-sm;
+}
+
+.text-success {
+  @apply text-green-700 text-sm;
+}
+
+/* Page header styles */
+.page-header {
+  @apply mb-8;
+}
+
+.page-header-title {
+  @apply text-2xl font-bold text-gray-900 tracking-tight;
+}
+
+.page-header-subtitle {
+  @apply text-base text-gray-600 mt-1;
+}
+
+/* Section styles */
+.section {
+  @apply mb-8;
+}
+
+.section-title {
+  @apply text-lg font-semibold text-gray-900 mb-4;
+}
+
+.section-subtitle {
+  @apply text-sm text-gray-600 mb-4;
+}
+
+/* Form group styling */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.form-helper {
+  @apply text-xs text-gray-500 mt-1;
+}
+
+.form-error {
+  @apply text-xs text-red-600 mt-1;
+}
+
+/* Status indicators */
+.status-dot {
+  @apply w-2 h-2 rounded-full inline-block;
+}
+
+.status-dot.active {
+  @apply bg-green-500;
+}
+
+.status-dot.inactive {
+  @apply bg-gray-400;
+}
+
+.status-dot.warning {
+  @apply bg-yellow-500;
+}
+
+.status-dot.error {
+  @apply bg-red-500;
+}
+
+/* Interactive states for accessibility */
+.focus-visible-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  @apply absolute left-0 top-0 -translate-y-full bg-primary text-white px-4 py-2 z-50;
+  @apply focus:translate-y-0 transition-transform;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 214 32% 70%;
+    --muted-foreground: 215 25% 25%;
+  }
+
+  .sf-card {
+    border-width: 2px;
+  }
+
+  .sf-table th {
+    @apply text-gray-900;
+  }
+
+  .sf-table td {
+    @apply text-gray-900;
   }
 }

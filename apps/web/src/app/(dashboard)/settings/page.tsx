@@ -233,22 +233,22 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-white">{t('settings.title')}</h1>
-        <p className="text-white/50">{t('settings.subtitle')}</p>
+      <div className="page-header">
+        <h1 className="page-header-title">{t('settings.title')}</h1>
+        <p className="page-header-subtitle">{t('settings.subtitle')}</p>
       </div>
 
       <div className="grid gap-6">
         {/* Profile Card */}
-        <Card className="bg-white/[0.02] border-white/[0.05]">
+        <Card className="sf-card">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10">
-                <User className="h-5 w-5 text-indigo-400" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-100">
+                <User className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
-                <CardTitle className="text-white">{t('settings.profile.title')}</CardTitle>
-                <CardDescription className="text-white/50">
+                <CardTitle className="text-gray-900">{t('settings.profile.title')}</CardTitle>
+                <CardDescription className="text-gray-600">
                   {t('settings.profile.subtitle')}
                 </CardDescription>
               </div>
@@ -256,54 +256,54 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Avatar Preview */}
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-white/[0.02]">
+            <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50 border border-gray-100">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500">
                 <span className="text-2xl font-bold text-white uppercase">
                   {name?.charAt(0) || profile?.email?.charAt(0) || 'U'}
                 </span>
               </div>
               <div>
-                <p className="text-lg font-medium text-white">{name || t('common.user')}</p>
-                <p className="text-sm text-white/50">{profile?.email}</p>
-                <p className="text-xs text-white/30 mt-1">
-                  {t('settings.profile.role')}: <span className="text-indigo-400">{profile?.role}</span>
+                <p className="text-lg font-medium text-gray-900">{name || t('common.user')}</p>
+                <p className="text-sm text-gray-600">{profile?.email}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('settings.profile.role')}: <span className="text-indigo-600 font-medium">{profile?.role}</span>
                 </p>
               </div>
             </div>
 
             {/* Name */}
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">{t('settings.profile.displayName')}</label>
+            <div className="form-group">
+              <label className="form-label">{t('settings.profile.displayName')}</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder={t('common.name')}
-                  className="pl-10 bg-white/[0.03] border-white/10"
+                  className="pl-10"
                 />
               </div>
             </div>
 
             {/* Email (read-only) */}
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">{t('settings.profile.email')}</label>
+            <div className="form-group">
+              <label className="form-label">{t('settings.profile.email')}</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   value={profile?.email || ''}
                   disabled
-                  className="pl-10 bg-white/[0.02] border-white/5 text-white/50 cursor-not-allowed"
+                  className="pl-10 bg-gray-50 text-gray-500 cursor-not-allowed"
                 />
               </div>
-              <p className="text-xs text-white/30">{t('settings.profile.emailCannotChange')}</p>
+              <p className="form-helper">{t('settings.profile.emailCannotChange')}</p>
             </div>
 
             {/* Timezone */}
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">{t('settings.profile.timezone')}</label>
+            <div className="form-group">
+              <label className="form-label">{t('settings.profile.timezone')}</label>
               <div className="relative">
-                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10 pointer-events-none" />
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10 pointer-events-none" />
                 <Select value={timezone} onValueChange={setTimezone}>
                   <SelectTrigger className="pl-10">
                     <SelectValue />
@@ -320,10 +320,10 @@ export default function SettingsPage() {
             </div>
 
             {/* Locale */}
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-white/70">{t('settings.profile.language')}</label>
+            <div className="form-group">
+              <label className="form-label">{t('settings.profile.language')}</label>
               <div className="relative">
-                <Globe2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30 z-10 pointer-events-none" />
+                <Globe2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 z-10 pointer-events-none" />
                 <Select value={locale} onValueChange={setLocale}>
                   <SelectTrigger className="pl-10">
                     <SelectValue />
@@ -361,15 +361,15 @@ export default function SettingsPage() {
         </Card>
 
         {/* Security Card */}
-        <Card className="bg-white/[0.02] border-white/[0.05]">
+        <Card className="sf-card">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                <Shield className="h-5 w-5 text-amber-400" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                <Shield className="h-5 w-5 text-amber-600" />
               </div>
               <div>
-                <CardTitle className="text-white">{t('settings.security.title')}</CardTitle>
-                <CardDescription className="text-white/50">
+                <CardTitle className="text-gray-900">{t('settings.security.title')}</CardTitle>
+                <CardDescription className="text-gray-600">
                   {t('settings.security.subtitle')}
                 </CardDescription>
               </div>
@@ -377,17 +377,16 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Change Password */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02]">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100 hover:bg-gray-100 transition-colors">
               <div className="flex items-center gap-3">
-                <Key className="h-5 w-5 text-white/40" />
+                <Key className="h-5 w-5 text-gray-500" />
                 <div>
-                  <p className="font-medium text-white">{t('settings.security.password')}</p>
-                  <p className="text-sm text-white/50">{t('settings.security.changePassword')}</p>
+                  <p className="font-medium text-gray-900">{t('settings.security.password')}</p>
+                  <p className="text-sm text-gray-600">{t('settings.security.changePassword')}</p>
                 </div>
               </div>
               <Button
                 variant="outline"
-                className="border-white/10"
                 onClick={() => setIsPasswordModalOpen(true)}
               >
                 {t('settings.security.change')}
@@ -395,15 +394,15 @@ export default function SettingsPage() {
             </div>
 
             {/* Sessions (placeholder) */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02]">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
               <div className="flex items-center gap-3">
-                <Globe2 className="h-5 w-5 text-white/40" />
+                <Globe2 className="h-5 w-5 text-gray-500" />
                 <div>
-                  <p className="font-medium text-white">{t('settings.security.activeSessions')}</p>
-                  <p className="text-sm text-white/50">{t('settings.security.manageSessions')}</p>
+                  <p className="font-medium text-gray-900">{t('settings.security.activeSessions')}</p>
+                  <p className="text-sm text-gray-600">{t('settings.security.manageSessions')}</p>
                 </div>
               </div>
-              <Button variant="outline" className="border-white/10" disabled>
+              <Button variant="outline" disabled>
                 {t('common.view')}
               </Button>
             </div>
@@ -411,15 +410,15 @@ export default function SettingsPage() {
         </Card>
 
         {/* Notifications Card */}
-        <Card className="bg-white/[0.02] border-white/[0.05]">
+        <Card className="sf-card">
           <CardHeader>
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
-                <Bell className="h-5 w-5 text-blue-400" />
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
+                <Bell className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <CardTitle className="text-white">{t('settings.notifications.title')}</CardTitle>
-                <CardDescription className="text-white/50">
+                <CardTitle className="text-gray-900">{t('settings.notifications.title')}</CardTitle>
+                <CardDescription className="text-gray-600">
                   {t('settings.notifications.subtitle')}
                 </CardDescription>
               </div>
@@ -427,21 +426,21 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
                 <div>
-                  <p className="font-medium text-white">{t('settings.notifications.email')}</p>
-                  <p className="text-sm text-white/50">{t('settings.notifications.emailDescription')}</p>
+                  <p className="font-medium text-gray-900">{t('settings.notifications.email')}</p>
+                  <p className="text-sm text-gray-600">{t('settings.notifications.emailDescription')}</p>
                 </div>
-                <Button variant="outline" className="border-white/10" disabled>
+                <Button variant="outline" disabled>
                   {t('settings.notifications.configure')}
                 </Button>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
                 <div>
-                  <p className="font-medium text-white">{t('settings.notifications.telegram')}</p>
-                  <p className="text-sm text-white/50">{t('settings.notifications.telegramDescription')}</p>
+                  <p className="font-medium text-gray-900">{t('settings.notifications.telegram')}</p>
+                  <p className="text-sm text-gray-600">{t('settings.notifications.telegramDescription')}</p>
                 </div>
-                <Button variant="outline" className="border-white/10" disabled>
+                <Button variant="outline" disabled>
                   {t('settings.notifications.connect')}
                 </Button>
               </div>
@@ -451,28 +450,28 @@ export default function SettingsPage() {
 
         {/* Email Settings Card (Admin only) */}
         {profile?.role === 'ADMIN' && (
-          <Card className="bg-white/[0.02] border-white/[0.05]">
+          <Card className="sf-card">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                  <Send className="h-5 w-5 text-green-400" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
+                  <Send className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-white">{t('settings.email.title')}</CardTitle>
+                    <CardTitle className="text-gray-900">{t('settings.email.title')}</CardTitle>
                     {integrationStatus?.email ? (
-                      <span className="flex items-center gap-1 text-xs text-green-400">
+                      <span className="flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
                         <CheckCircle2 className="h-3 w-3" />
                         {t('settings.email.connected')}
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-xs text-amber-400">
+                      <span className="flex items-center gap-1 text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
                         <AlertCircle className="h-3 w-3" />
                         {t('settings.email.notConfigured')}
                       </span>
                     )}
                   </div>
-                  <CardDescription className="text-white/50">
+                  <CardDescription className="text-gray-600">
                     {t('settings.email.subtitle')}
                   </CardDescription>
                 </div>
@@ -481,37 +480,37 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               {isLoadingSettings ? (
                 <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-white/30" />
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
                 </div>
               ) : (
                 <>
                   {/* Resend API Key */}
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium text-white/70">{t('settings.email.apiKey')}</label>
+                  <div className="form-group">
+                    <label className="form-label">{t('settings.email.apiKey')}</label>
                     <div className="relative">
-                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                      <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         type={showResendKey ? 'text' : 'password'}
                         value={resendApiKey}
                         onChange={(e) => setResendApiKey(e.target.value)}
                         placeholder={t('settings.email.apiKeyPlaceholder')}
-                        className="pl-10 pr-10 bg-white/[0.03] border-white/10"
+                        className="pl-10 pr-10"
                       />
                       <button
                         type="button"
                         onClick={() => setShowResendKey(!showResendKey)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         {showResendKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
-                    <p className="text-xs text-white/30">
+                    <p className="form-helper">
                       {t('settings.email.apiKeyHelp')}{' '}
                       <a
                         href="https://resend.com"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-green-400 hover:underline"
+                        className="text-green-600 hover:underline font-medium"
                       >
                         resend.com
                       </a>
@@ -519,19 +518,19 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Email From */}
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium text-white/70">{t('settings.email.fromAddress')}</label>
+                  <div className="form-group">
+                    <label className="form-label">{t('settings.email.fromAddress')}</label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                       <Input
                         type="email"
                         value={emailFrom}
                         onChange={(e) => setEmailFrom(e.target.value)}
                         placeholder={t('settings.email.fromAddressPlaceholder')}
-                        className="pl-10 bg-white/[0.03] border-white/10"
+                        className="pl-10"
                       />
                     </div>
-                    <p className="text-xs text-white/30">
+                    <p className="form-helper">
                       {t('settings.email.fromAddressHelp')}
                     </p>
                   </div>
@@ -561,21 +560,21 @@ export default function SettingsPage() {
         )}
 
         {/* Integrations Card */}
-        <Card className="bg-white/[0.02] border-white/[0.05]">
+        <Card className="sf-card">
           <CardHeader>
-            <CardTitle className="text-white">{t('settings.integrations.title')}</CardTitle>
-            <CardDescription className="text-white/50">
+            <CardTitle className="text-gray-900">{t('settings.integrations.title')}</CardTitle>
+            <CardDescription className="text-gray-600">
               {t('settings.integrations.subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-lg bg-white/[0.02]">
+              <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-100">
                 <div>
-                  <p className="font-medium text-white">{t('settings.integrations.keitaro')}</p>
-                  <p className="text-sm text-white/50">{t('settings.integrations.keitaroDescription')}</p>
+                  <p className="font-medium text-gray-900">{t('settings.integrations.keitaro')}</p>
+                  <p className="text-sm text-gray-600">{t('settings.integrations.keitaroDescription')}</p>
                 </div>
-                <Button variant="outline" className="border-white/10" disabled>
+                <Button variant="outline" disabled>
                   {t('settings.notifications.connect')}
                 </Button>
               </div>
@@ -584,23 +583,23 @@ export default function SettingsPage() {
         </Card>
 
         {/* Danger Zone */}
-        <Card className="bg-red-500/5 border-red-500/20">
+        <Card className="border-red-200 bg-red-50">
           <CardHeader>
-            <CardTitle className="text-red-400">{t('settings.danger.title')}</CardTitle>
-            <CardDescription className="text-white/50">
+            <CardTitle className="text-red-700">{t('settings.danger.title')}</CardTitle>
+            <CardDescription className="text-red-600/80">
               {t('settings.danger.subtitle')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between p-4 rounded-lg bg-white border border-red-100">
               <div>
-                <p className="font-medium text-white">{t('settings.danger.logout')}</p>
-                <p className="text-sm text-white/50">{t('settings.danger.logoutDescription')}</p>
+                <p className="font-medium text-gray-900">{t('settings.danger.logout')}</p>
+                <p className="text-sm text-gray-600">{t('settings.danger.logoutDescription')}</p>
               </div>
               <Button
                 variant="outline"
                 onClick={handleLogout}
-                className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                className="border-red-300 text-red-700 hover:bg-red-100 hover:text-red-800"
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 {t('common.logout')}
@@ -624,20 +623,20 @@ export default function SettingsPage() {
       >
         <div className="space-y-4">
           {/* Current Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">{t('settings.security.currentPassword')}</label>
+          <div className="form-group">
+            <label className="form-label">{t('settings.security.currentPassword')}</label>
             <div className="relative">
               <Input
                 type={showCurrentPassword ? 'text' : 'password'}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder={t('settings.security.enterCurrentPassword')}
-                className="pr-10 bg-white/[0.03] border-white/10"
+                className="pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -645,20 +644,20 @@ export default function SettingsPage() {
           </div>
 
           {/* New Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">{t('settings.security.newPassword')}</label>
+          <div className="form-group">
+            <label className="form-label">{t('settings.security.newPassword')}</label>
             <div className="relative">
               <Input
                 type={showNewPassword ? 'text' : 'password'}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder={t('settings.security.enterNewPassword')}
-                className="pr-10 bg-white/[0.03] border-white/10"
+                className="pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
               >
                 {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -666,14 +665,13 @@ export default function SettingsPage() {
           </div>
 
           {/* Confirm Password */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">{t('settings.security.confirmPassword')}</label>
+          <div className="form-group">
+            <label className="form-label">{t('settings.security.confirmPassword')}</label>
             <Input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder={t('settings.security.confirmNewPassword')}
-              className="bg-white/[0.03] border-white/10"
             />
           </div>
 
@@ -681,7 +679,7 @@ export default function SettingsPage() {
           <div className="flex gap-3 pt-4">
             <Button
               variant="outline"
-              className="flex-1 border-white/10"
+              className="flex-1"
               onClick={() => {
                 setIsPasswordModalOpen(false);
                 setCurrentPassword('');

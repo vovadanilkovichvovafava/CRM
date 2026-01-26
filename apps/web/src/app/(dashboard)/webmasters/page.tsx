@@ -70,9 +70,9 @@ interface WebmasterRecord {
 }
 
 const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30',
-  paused: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-  blocked: 'bg-red-500/10 text-red-400 border-red-500/30',
+  active: 'bg-emerald-100 text-emerald-700 border-emerald-300',
+  paused: 'bg-amber-100 text-amber-700 border-amber-300',
+  blocked: 'bg-red-100 text-red-700 border-red-300',
 };
 
 export default function WebmastersPage() {
@@ -151,22 +151,20 @@ export default function WebmastersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-500">
-              <Globe className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">{t('webmasters.title')}</h1>
-              <p className="text-sm text-white/50">
-                {webmasters.length} webmaster{webmasters.length !== 1 ? 's' : ''}
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+            <Globe className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('webmasters.title')}</h1>
+            <p className="text-gray-600">
+              {webmasters.length} webmaster{webmasters.length !== 1 ? 's' : ''}
+            </p>
           </div>
         </div>
         <Button
           onClick={handleAddWebmaster}
-          className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600"
+          className="bg-gradient-to-r from-violet-500 to-purple-500 hover:from-violet-600 hover:to-purple-600 shadow-sm"
         >
           {objectLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -182,31 +180,36 @@ export default function WebmastersPage() {
       {/* Filters */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/30" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             placeholder={t('webmasters.searchWebmasters')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-white/5 border-white/10"
+            className="pl-9"
           />
         </div>
-        <Button variant="outline" size="icon" className="border-white/10">
+        <Button variant="outline" size="icon">
           <Filter className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Webmasters Table */}
-      <Card className="bg-white/[0.02] border-white/[0.05]">
+      <Card className="sf-card overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-violet-500" />
+                <p className="text-sm text-gray-500">Loading webmasters...</p>
+              </div>
             </div>
           ) : webmasters.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Globe className="h-12 w-12 text-white/20 mb-4" />
-              <h3 className="text-lg font-medium text-white mb-1">{t('common.noData')}</h3>
-              <p className="text-sm text-white/50 mb-4">
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-16 h-16 mb-6 rounded-full bg-violet-50 flex items-center justify-center">
+                <Globe className="h-8 w-8 text-violet-500/60" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('common.noData')}</h3>
+              <p className="text-gray-600 mb-6 max-w-sm">
                 Start by adding your first webmaster partner
               </p>
               <Button
@@ -219,93 +222,83 @@ export default function WebmastersPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="sf-table">
                 <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      {t('common.name')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Traffic
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      GEOs
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      {t('common.status')}
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-white/40 uppercase tracking-wider">
-                      Added
-                    </th>
+                  <tr>
+                    <th>{t('common.name')}</th>
+                    <th>Contact</th>
+                    <th>Traffic</th>
+                    <th>GEOs</th>
+                    <th>{t('common.status')}</th>
+                    <th>Added</th>
                     <th className="w-24"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody>
                   {webmasters.map((webmaster) => (
                     <tr
                       key={webmaster.id}
-                      className="hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      className="cursor-pointer"
                       onClick={() => setSelectedWebmasterId(webmaster.id)}
                     >
-                      <td className="px-4 py-3">
+                      <td>
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8 bg-gradient-to-br from-violet-500 to-purple-500">
+                          <Avatar className="h-9 w-9 bg-gradient-to-br from-violet-500 to-purple-500">
                             <AvatarFallback className="text-xs text-white bg-transparent">
                               {getInitials(webmaster.data?.name || 'W')}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="font-medium text-white">
+                          <span className="font-medium text-gray-900">
                             {webmaster.data?.name || 'Unnamed'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2 text-sm text-white/60">
+                      <td>
+                        <div className="flex items-center gap-2 text-gray-600">
                           {webmaster.data?.telegram && (
                             <span className="flex items-center gap-1">
-                              <Send className="h-3 w-3" />
+                              <Send className="h-3 w-3 text-gray-400" />
                               {webmaster.data.telegram}
                             </span>
                           )}
                           {!webmaster.data?.telegram && webmaster.data?.email && (
                             <span>{webmaster.data.email}</span>
                           )}
-                          {!webmaster.data?.telegram && !webmaster.data?.email && '-'}
+                          {!webmaster.data?.telegram && !webmaster.data?.email && (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 text-sm text-white/60">
-                          <TrendingUp className="h-3 w-3 text-violet-400" />
-                          {webmaster.data?.traffic_sources || '-'}
+                      <td>
+                        <div className="flex items-center gap-1.5 text-gray-700">
+                          <TrendingUp className="h-3.5 w-3.5 text-violet-500" />
+                          {webmaster.data?.traffic_sources || <span className="text-gray-400">-</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1 text-sm text-white/60">
-                          <MapPin className="h-3 w-3 text-emerald-400" />
-                          {webmaster.data?.geos || '-'}
+                      <td>
+                        <div className="flex items-center gap-1.5 text-gray-700">
+                          <MapPin className="h-3.5 w-3.5 text-emerald-500" />
+                          {webmaster.data?.geos || <span className="text-gray-400">-</span>}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         {webmaster.data?.status ? (
-                          <span className={`text-xs px-2 py-1 rounded-full border ${statusColors[webmaster.data.status] || 'bg-white/10 text-white/60'}`}>
+                          <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${statusColors[webmaster.data.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                             {webmaster.data.status}
                           </span>
                         ) : (
-                          <span className="text-white/30 text-sm">-</span>
+                          <span className="text-gray-400">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-white/40">
+                      <td className="text-gray-500">
                         {formatRelativeTime(webmaster.createdAt)}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-white/40 hover:text-white"
+                            className="h-8 w-8 text-gray-400 hover:text-violet-600 hover:bg-violet-50"
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedWebmasterId(webmaster.id);
@@ -316,7 +309,7 @@ export default function WebmastersPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-white/40 hover:text-red-400"
+                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
                             onClick={(e) => {
                               e.stopPropagation();
                               if (confirm('Delete this webmaster?')) {

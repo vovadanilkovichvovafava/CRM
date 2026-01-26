@@ -201,22 +201,20 @@ export default function DealsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-500">
-              <DollarSign className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-white">{t('deals.title')}</h1>
-              <p className="text-sm text-white/50">
-                {deals.length} deal{deals.length !== 1 ? 's' : ''} · {formatCurrency(totalValue)} total
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg">
+            <DollarSign className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{t('deals.title')}</h1>
+            <p className="text-gray-600">
+              {deals.length} deal{deals.length !== 1 ? 's' : ''} · {formatCurrency(totalValue)} total
+            </p>
           </div>
         </div>
         <Button
           onClick={handleAddDeal}
-          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+          className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 shadow-sm"
         >
           {objectLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -231,41 +229,41 @@ export default function DealsPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-white/[0.02] border-white/[0.05]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10">
-                <DollarSign className="h-5 w-5 text-indigo-400" />
+        <Card className="sf-card border-l-4 border-l-indigo-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100">
+                <DollarSign className="h-6 w-6 text-indigo-600" />
               </div>
               <div>
-                <p className="text-sm text-white/50">Pipeline Value</p>
-                <p className="text-xl font-bold text-white">{formatCurrency(totalValue)}</p>
+                <p className="text-sm font-medium text-gray-600">Pipeline Value</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalValue)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white/[0.02] border-white/[0.05]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
-                <TrendingUp className="h-5 w-5 text-green-400" />
+        <Card className="sf-card border-l-4 border-l-green-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
+                <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-white/50">Won Value</p>
-                <p className="text-xl font-bold text-green-400">{formatCurrency(wonValue)}</p>
+                <p className="text-sm font-medium text-gray-600">Won Value</p>
+                <p className="text-2xl font-bold text-green-700">{formatCurrency(wonValue)}</p>
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white/[0.02] border-white/[0.05]">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
-                <DollarSign className="h-5 w-5 text-purple-400" />
+        <Card className="sf-card border-l-4 border-l-purple-500 hover:shadow-md transition-shadow">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
+                <DollarSign className="h-6 w-6 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-white/50">Active Deals</p>
-                <p className="text-xl font-bold text-white">
+                <p className="text-sm font-medium text-gray-600">Active Deals</p>
+                <p className="text-2xl font-bold text-gray-900">
                   {deals.filter((d) => d.stage !== 'closed_won' && d.stage !== 'closed_lost').length}
                 </p>
               </div>
@@ -320,20 +318,20 @@ export default function DealsPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-2xl font-bold text-white">
+                  <h1 className="text-2xl font-bold text-gray-900">
                     {selectedDeal.data.name || 'Unnamed Deal'}
                   </h1>
                   {selectedDeal.data.company && (
-                    <p className="text-white/50">{selectedDeal.data.company}</p>
+                    <p className="text-gray-600">{selectedDeal.data.company}</p>
                   )}
                 </div>
               </div>
             </div>
 
             {/* Value */}
-            <div className="p-4 rounded-lg bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20">
-              <p className="text-sm text-green-400/70">Deal Value</p>
-              <p className="text-3xl font-bold text-green-400">
+            <div className="p-5 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+              <p className="text-sm font-medium text-green-700">Deal Value</p>
+              <p className="text-3xl font-bold text-green-700">
                 {formatCurrency(selectedDeal.data.value || 0)}
               </p>
             </div>
@@ -343,7 +341,6 @@ export default function DealsPage() {
               <Button
                 variant="outline"
                 onClick={() => setIsEditOpen(true)}
-                className="border-white/10"
               >
                 {t('common.edit')}
               </Button>
@@ -354,32 +351,32 @@ export default function DealsPage() {
                     deleteMutation.mutate(selectedDeal.id);
                   }
                 }}
-                className="border-red-500/20 text-red-400 hover:bg-red-500/10"
+                className="border-red-200 text-red-700 hover:bg-red-50"
               >
                 {t('common.delete')}
               </Button>
             </div>
 
             {/* Details */}
-            <Card className="bg-white/[0.02] border-white/[0.05]">
-              <CardHeader>
-                <CardTitle className="text-lg text-white">{t('common.details')}</CardTitle>
+            <Card className="sf-card">
+              <CardHeader className="border-b border-gray-100">
+                <CardTitle className="text-lg text-gray-900">{t('common.details')}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-4">
                 {selectedDeal.data.contact && (
                   <div>
-                    <p className="text-xs text-white/40 uppercase tracking-wider">{t('deals.fields.contact')}</p>
-                    <p className="text-white">{selectedDeal.data.contact}</p>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('deals.fields.contact')}</p>
+                    <p className="text-gray-900 mt-1">{selectedDeal.data.contact}</p>
                   </div>
                 )}
                 {selectedDeal.data.expectedCloseDate && (
                   <div>
-                    <p className="text-xs text-white/40 uppercase tracking-wider">{t('deals.fields.closeDate')}</p>
-                    <p className="text-white">{selectedDeal.data.expectedCloseDate}</p>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('deals.fields.closeDate')}</p>
+                    <p className="text-gray-900 mt-1">{selectedDeal.data.expectedCloseDate}</p>
                   </div>
                 )}
                 <div>
-                  <p className="text-xs text-white/40 uppercase tracking-wider">{t('deals.fields.stage')}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{t('deals.fields.stage')}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <div
                       className="h-3 w-3 rounded-full"
@@ -388,26 +385,26 @@ export default function DealsPage() {
                           stages.find((s) => s.id === selectedDeal.stage)?.color || '#6B7280',
                       }}
                     />
-                    <p className="text-white">
+                    <p className="text-gray-900 font-medium">
                       {stages.find((s) => s.id === selectedDeal.stage)?.name || 'Unknown'}
                     </p>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-white/40 uppercase tracking-wider">Created</p>
-                  <p className="text-white">{formatRelativeTime(selectedDeal.createdAt)}</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Created</p>
+                  <p className="text-gray-900 mt-1">{formatRelativeTime(selectedDeal.createdAt)}</p>
                 </div>
               </CardContent>
             </Card>
 
             {/* Notes */}
             {selectedDeal.data.notes && (
-              <Card className="bg-white/[0.02] border-white/[0.05]">
-                <CardHeader>
-                  <CardTitle className="text-lg text-white">{t('contacts.fields.notes')}</CardTitle>
+              <Card className="sf-card">
+                <CardHeader className="border-b border-gray-100">
+                  <CardTitle className="text-lg text-gray-900">{t('contacts.fields.notes')}</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-white/70 whitespace-pre-wrap">{selectedDeal.data.notes}</p>
+                <CardContent className="pt-4">
+                  <p className="text-gray-700 whitespace-pre-wrap">{selectedDeal.data.notes}</p>
                 </CardContent>
               </Card>
             )}
