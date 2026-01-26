@@ -447,7 +447,9 @@ export function TaskDetailClient() {
   const queryClient = useQueryClient();
   const taskId = params.id as string;
 
-  const [activeTab, setActiveTab] = useState<'details' | 'subtasks' | 'actionItems'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'subtasks'>('details');
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [commentText, setCommentText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -497,6 +499,26 @@ export function TaskDetailClient() {
       toast.success(t('tasks.messages.deleted'));
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       router.push('/tasks');
+    },
+    onError: () => {
+      toast.error(t('errors.general'));
+    },
+  });
+
+  const createSubtaskMutation = useMutation({
+    mutationFn: (title: string) => api.tasks.create({
+      title,
+      parentId: taskId,
+      status: 'TODO',
+      priority: 'MEDIUM',
+      projectId: task?.project?.id,
+    }),
+    onSuccess: () => {
+      toast.success(t('tasks.messages.created'));
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setNewSubtaskTitle('');
+      setIsAddingSubtask(false);
     },
     onError: () => {
       toast.error(t('errors.general'));
@@ -798,8 +820,7 @@ export function TaskDetailClient() {
               <div className="flex gap-6">
                 {[
                   { key: 'details', label: t('common.details') },
-                  { key: 'subtasks', label: t('tasks.subtasks'), count: task._count?.subtasks },
-                  { key: 'actionItems', label: t('tasks.actionItems') },
+                  { key: 'subtasks', label: t('tasks.subtasks'), count: task._count?.subtasks || task.subtasks?.length || 0 },
                 ].map(tab => (
                   <button
                     key={tab.key}
@@ -853,24 +874,119 @@ export function TaskDetailClient() {
             )}
 
             {activeTab === 'subtasks' && (
-              <div className="text-center py-12">
-                <ListChecks className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">{t('tasks.noSubtasks')}</p>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-1.5" />
-                  {t('tasks.addSubtask')}
-                </Button>
-              </div>
-            )}
+              <div className="space-y-4">
+                {/* Subtask List */}
+                {task.subtasks && task.subtasks.length > 0 ? (
+                  <div className="space-y-2">
+                    {task.subtasks.map((subtask) => {
+                      const subtaskStatus = statusConfig[subtask.status] || statusConfig.TODO;
+                      const subtaskPriority = priorityConfig[subtask.priority] || priorityConfig.MEDIUM;
+                      return (
+                        <div
+                          key={subtask.id}
+                          onClick={() => router.push(`/tasks/${subtask.id}`)}
+                          className="flex items-center gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-sm cursor-pointer transition-all group"
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateTaskMutation.mutate({
+                                status: subtask.status === 'DONE' ? 'TODO' : 'DONE'
+                              } as Partial<Task>);
+                            }}
+                            className={cn(
+                              "flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+                              subtask.status === 'DONE'
+                                ? "bg-green-500 border-green-500 text-white"
+                                : "border-gray-300 hover:border-blue-400"
+                            )}
+                          >
+                            {subtask.status === 'DONE' && <Check className="h-3 w-3" />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn(
+                              "font-medium text-sm truncate",
+                              subtask.status === 'DONE' && "line-through text-gray-400"
+                            )}>
+                              {subtask.title}
+                            </p>
+                          </div>
+                          <Badge className={cn("text-xs", subtaskPriority.bgColor, subtaskPriority.color)}>
+                            {subtaskPriority.label}
+                          </Badge>
+                          <span className={cn("text-xs", subtaskStatus.color)}>
+                            {subtaskStatus.label}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : !isAddingSubtask ? (
+                  <div className="text-center py-8">
+                    <ListChecks className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm mb-4">{t('tasks.noSubtasks')}</p>
+                  </div>
+                ) : null}
 
-            {activeTab === 'actionItems' && (
-              <div className="text-center py-12">
-                <CheckCircle2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">{t('tasks.noActionItems')}</p>
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-1.5" />
-                  {t('tasks.addActionItem')}
-                </Button>
+                {/* Add Subtask Form */}
+                {isAddingSubtask ? (
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-gray-300" />
+                    <input
+                      type="text"
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      placeholder={t('tasks.taskTitle')}
+                      className="flex-1 bg-transparent text-sm border-none outline-none"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newSubtaskTitle.trim()) {
+                          createSubtaskMutation.mutate(newSubtaskTitle.trim());
+                        }
+                        if (e.key === 'Escape') {
+                          setIsAddingSubtask(false);
+                          setNewSubtaskTitle('');
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (newSubtaskTitle.trim()) {
+                          createSubtaskMutation.mutate(newSubtaskTitle.trim());
+                        }
+                      }}
+                      disabled={!newSubtaskTitle.trim() || createSubtaskMutation.isPending}
+                      className="bg-blue-500 hover:bg-blue-600"
+                    >
+                      {createSubtaskMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsAddingSubtask(false);
+                        setNewSubtaskTitle('');
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsAddingSubtask(true)}
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    {t('tasks.addSubtask')}
+                  </Button>
+                )}
               </div>
             )}
           </div>
