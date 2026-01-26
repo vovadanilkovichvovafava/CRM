@@ -126,7 +126,20 @@
     "noRecentActivities": "No recent activities",
     "activitiesWillAppear": "Activities will appear here as you work",
     "noUpcomingTasks": "No upcoming tasks",
-    "pressToSearch": "Press to search"
+    "pressToSearch": "Press to search",
+    "customize": "Customize",
+    "quarterlyPerformance": "Quarterly Performance",
+    "asOfToday": "As of Today",
+    "closed": "Closed",
+    "open70": "Open (>70%)",
+    "goal": "Goal",
+    "closedOpen70": "Closed + Open (>70%)",
+    "addOpportunities": "Add the opportunities you're working on, then come back here to view your performance.",
+    "assistant": "Assistant",
+    "nothingNeedsAttention": "Nothing needs your attention right now. Check back later.",
+    "todaysEvents": "Today's Events",
+    "todaysTasks": "Today's Tasks",
+    "welcomeMessage": "Welcome to your CRM dashboard. Customize this page to show the information most important to you."
   },
   "tasks": {
     "title": "Tasks",
