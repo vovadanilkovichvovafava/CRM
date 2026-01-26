@@ -190,6 +190,10 @@ export const api = {
         priority: string;
         project?: { id: string; name: string; color?: string };
       }>>('/tasks/calendar/events', { params }),
+    addDependency: (id: string, dependsOnId: string, type: 'BLOCKS' | 'BLOCKED_BY' | 'RELATED' = 'BLOCKS') =>
+      request<void>(`/tasks/${id}/dependencies`, { method: 'POST', body: JSON.stringify({ dependsOnId, type }) }),
+    removeDependency: (id: string, dependsOnId: string) =>
+      request<void>(`/tasks/${id}/dependencies/${dependsOnId}`, { method: 'DELETE' }),
   },
 
   // Pipelines

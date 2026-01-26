@@ -77,6 +77,15 @@ interface Task {
   parent?: { id: string; title: string };
   subtasks?: Task[];
   tags?: { id: string; name: string; color: string }[];
+  labels?: string[];
+  timeEstimate?: number; // minutes
+  timeSpent?: number; // minutes
+  dependencies?: Array<{
+    id: string;
+    dependsOnId: string;
+    type: 'BLOCKS' | 'BLOCKED_BY' | 'RELATED';
+    dependsOn: { id: string; title: string };
+  }>;
   _count?: { subtasks: number; comments: number; files: number };
 }
 
@@ -492,6 +501,20 @@ export function TaskDetailClient() {
   // File preview modal state
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
 
+  // Labels/Tags editing state
+  const [isEditingLabels, setIsEditingLabels] = useState(false);
+  const [newLabel, setNewLabel] = useState('');
+
+  // Time tracking state
+  const [isEditingTime, setIsEditingTime] = useState(false);
+  const [timeEstimateInput, setTimeEstimateInput] = useState('');
+  const [timeSpentInput, setTimeSpentInput] = useState('');
+
+  // Relationships state
+  const [isAddingDependency, setIsAddingDependency] = useState(false);
+  const [dependencySearch, setDependencySearch] = useState('');
+  const [selectedDependencyType, setSelectedDependencyType] = useState<'BLOCKS' | 'BLOCKED_BY' | 'RELATED'>('RELATED');
+
   // Mutations
   const updateTaskMutation = useMutation({
     mutationFn: (data: Partial<Task>) => api.tasks.update(taskId, data),
@@ -570,6 +593,38 @@ export function TaskDetailClient() {
     onError: () => {
       toast.error(t('errors.general'));
     },
+  });
+
+  const addDependencyMutation = useMutation({
+    mutationFn: ({ dependsOnId, type }: { dependsOnId: string; type: 'BLOCKS' | 'BLOCKED_BY' | 'RELATED' }) =>
+      api.tasks.addDependency(taskId, dependsOnId, type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
+      setIsAddingDependency(false);
+      setDependencySearch('');
+      toast.success(t('common.save'));
+    },
+    onError: () => {
+      toast.error(t('errors.general'));
+    },
+  });
+
+  const removeDependencyMutation = useMutation({
+    mutationFn: (dependsOnId: string) => api.tasks.removeDependency(taskId, dependsOnId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', taskId] });
+      toast.success(t('common.delete'));
+    },
+    onError: () => {
+      toast.error(t('errors.general'));
+    },
+  });
+
+  // Search tasks for dependencies (excluding current task)
+  const { data: searchTasksData } = useQuery({
+    queryKey: ['tasks', 'search', dependencySearch],
+    queryFn: () => api.tasks.list({ search: dependencySearch, limit: 5 }) as Promise<{ data: Task[]; meta: unknown }>,
+    enabled: isAddingDependency && dependencySearch.length >= 2,
   });
 
   // Comment handlers
@@ -652,6 +707,64 @@ export function TaskDetailClient() {
 
   const handleUpdateStartDate = (startDate: string | undefined) => {
     updateTaskMutation.mutate({ startDate } as Partial<Task>);
+  };
+
+  // Labels handlers
+  const handleAddLabel = () => {
+    if (!newLabel.trim() || !task) return;
+    const currentLabels = task.labels || [];
+    if (!currentLabels.includes(newLabel.trim())) {
+      updateTaskMutation.mutate({ labels: [...currentLabels, newLabel.trim()] } as Partial<Task>);
+    }
+    setNewLabel('');
+  };
+
+  const handleRemoveLabel = (labelToRemove: string) => {
+    if (!task) return;
+    const currentLabels = task.labels || [];
+    updateTaskMutation.mutate({
+      labels: currentLabels.filter(l => l !== labelToRemove)
+    } as Partial<Task>);
+  };
+
+  // Time tracking handlers
+  const formatMinutesToHours = (minutes?: number) => {
+    if (!minutes) return '0h';
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours === 0) return `${mins}m`;
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  };
+
+  const parseTimeInput = (input: string): number => {
+    // Parse formats like "2h", "30m", "2h 30m", "2.5h", "150"
+    const hoursMatch = input.match(/(\d+(?:\.\d+)?)\s*h/i);
+    const minsMatch = input.match(/(\d+)\s*m/i);
+    const plainNumber = input.match(/^(\d+)$/);
+
+    let totalMinutes = 0;
+    if (hoursMatch) totalMinutes += parseFloat(hoursMatch[1]) * 60;
+    if (minsMatch) totalMinutes += parseInt(minsMatch[1]);
+    if (plainNumber && !hoursMatch && !minsMatch) totalMinutes = parseInt(plainNumber[1]);
+
+    return Math.round(totalMinutes);
+  };
+
+  const handleSaveTimeEstimate = () => {
+    const minutes = parseTimeInput(timeEstimateInput);
+    updateTaskMutation.mutate({ timeEstimate: minutes || undefined } as Partial<Task>);
+    setIsEditingTime(false);
+    setTimeEstimateInput('');
+  };
+
+  const handleAddTimeSpent = () => {
+    const minutesToAdd = parseTimeInput(timeSpentInput);
+    if (minutesToAdd > 0) {
+      const currentSpent = task?.timeSpent || 0;
+      updateTaskMutation.mutate({ timeSpent: currentSpent + minutesToAdd } as Partial<Task>);
+    }
+    setTimeSpentInput('');
   };
 
   const handleOpenEditDialog = () => {
@@ -801,23 +914,65 @@ export function TaskDetailClient() {
                 </FieldRow>
 
                 <FieldRow icon={Tag} label={t('tasks.fields.tags')}>
-                  {task.tags && task.tags.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {task.tags.map(tag => (
-                        <Badge
-                          key={tag.id}
-                          style={{ backgroundColor: tag.color }}
-                          className="text-white text-xs"
+                  <div className="flex flex-wrap gap-1 items-center">
+                    {/* Existing labels */}
+                    {(task.labels || []).map(label => (
+                      <Badge
+                        key={label}
+                        className="bg-blue-100 text-blue-700 text-xs flex items-center gap-1 pr-1"
+                      >
+                        {label}
+                        <button
+                          onClick={() => handleRemoveLabel(label)}
+                          className="hover:bg-blue-200 rounded-full p-0.5"
+                          disabled={isUpdating}
                         >
-                          {tag.name}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : (
-                    <button className="text-gray-400 text-sm hover:bg-gray-100 px-2 py-1 rounded">
-                      Empty
-                    </button>
-                  )}
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    {/* Add label input */}
+                    {isEditingLabels ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text"
+                          value={newLabel}
+                          onChange={(e) => setNewLabel(e.target.value)}
+                          placeholder="Add label..."
+                          className="text-xs px-2 py-1 border border-gray-300 rounded w-24 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleAddLabel();
+                            if (e.key === 'Escape') {
+                              setIsEditingLabels(false);
+                              setNewLabel('');
+                            }
+                          }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={handleAddLabel}
+                          disabled={!newLabel.trim() || isUpdating}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          <Check className="h-3 w-3 text-green-600" />
+                        </button>
+                        <button
+                          onClick={() => { setIsEditingLabels(false); setNewLabel(''); }}
+                          className="p-1 hover:bg-gray-100 rounded"
+                        >
+                          <X className="h-3 w-3 text-gray-400" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setIsEditingLabels(true)}
+                        className="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        {(task.labels || []).length === 0 ? 'Add label' : ''}
+                      </button>
+                    )}
+                  </div>
                 </FieldRow>
               </div>
 
@@ -860,16 +1015,204 @@ export function TaskDetailClient() {
                 </FieldRow>
 
                 <FieldRow icon={Clock} label={t('tasks.fields.trackTime')}>
-                  <button className="flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded transition-colors">
-                    <PlayCircle className="h-4 w-4" />
-                    Add time
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    {/* Time Display */}
+                    <div className="flex items-center gap-3 text-sm">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-500">Est:</span>
+                        {isEditingTime ? (
+                          <input
+                            type="text"
+                            value={timeEstimateInput}
+                            onChange={(e) => setTimeEstimateInput(e.target.value)}
+                            placeholder="e.g. 2h 30m"
+                            className="w-20 px-2 py-0.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveTimeEstimate();
+                              if (e.key === 'Escape') {
+                                setIsEditingTime(false);
+                                setTimeEstimateInput('');
+                              }
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setIsEditingTime(true);
+                              setTimeEstimateInput(task.timeEstimate ? formatMinutesToHours(task.timeEstimate) : '');
+                            }}
+                            className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded"
+                          >
+                            {formatMinutesToHours(task.timeEstimate) || '—'}
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-gray-300">|</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-gray-500">Spent:</span>
+                        <span className="text-gray-700 font-medium">
+                          {formatMinutesToHours(task.timeSpent)}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Add Time Input */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={timeSpentInput}
+                        onChange={(e) => setTimeSpentInput(e.target.value)}
+                        placeholder="Add time (e.g. 1h 30m)"
+                        className="flex-1 text-xs px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && timeSpentInput.trim()) {
+                            handleAddTimeSpent();
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAddTimeSpent}
+                        disabled={!timeSpentInput.trim() || isUpdating}
+                        className="h-7 px-2"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                    {isEditingTime && (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          onClick={handleSaveTimeEstimate}
+                          disabled={isUpdating}
+                          className="h-6 px-2 text-xs bg-blue-500 hover:bg-blue-600"
+                        >
+                          Save Estimate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setIsEditingTime(false);
+                            setTimeEstimateInput('');
+                          }}
+                          className="h-6 px-2 text-xs"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </FieldRow>
 
                 <FieldRow icon={LinkIcon} label={t('tasks.fields.relationships')}>
-                  <button className="text-gray-400 text-sm hover:bg-gray-100 px-2 py-1 rounded">
-                    Empty
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    {/* Existing Dependencies */}
+                    {task.dependencies && task.dependencies.length > 0 && (
+                      <div className="space-y-1">
+                        {task.dependencies.map((dep) => (
+                          <div
+                            key={dep.id}
+                            className="flex items-center gap-2 text-xs bg-gray-50 rounded px-2 py-1.5 group"
+                          >
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] px-1.5",
+                                dep.type === 'BLOCKS' && "border-red-300 text-red-600",
+                                dep.type === 'BLOCKED_BY' && "border-orange-300 text-orange-600",
+                                dep.type === 'RELATED' && "border-blue-300 text-blue-600"
+                              )}
+                            >
+                              {dep.type === 'BLOCKS' ? 'Blocks' : dep.type === 'BLOCKED_BY' ? 'Blocked by' : 'Related'}
+                            </Badge>
+                            <Link
+                              href={`/tasks/${dep.dependsOnId}`}
+                              className="flex-1 text-gray-700 hover:text-blue-600 truncate"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {dep.dependsOn?.title || dep.dependsOnId.slice(0, 8)}
+                            </Link>
+                            <button
+                              onClick={() => removeDependencyMutation.mutate(dep.dependsOnId)}
+                              className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-opacity"
+                              disabled={removeDependencyMutation.isPending}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Add Dependency Form */}
+                    {isAddingDependency ? (
+                      <div className="space-y-2 p-2 bg-gray-50 rounded-lg">
+                        <select
+                          value={selectedDependencyType}
+                          onChange={(e) => setSelectedDependencyType(e.target.value as 'BLOCKS' | 'BLOCKED_BY' | 'RELATED')}
+                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                          <option value="RELATED">Related to</option>
+                          <option value="BLOCKS">Blocks</option>
+                          <option value="BLOCKED_BY">Blocked by</option>
+                        </select>
+                        <input
+                          type="text"
+                          value={dependencySearch}
+                          onChange={(e) => setDependencySearch(e.target.value)}
+                          placeholder="Search tasks..."
+                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          autoFocus
+                        />
+                        {/* Search Results */}
+                        {searchTasksData?.data && searchTasksData.data.length > 0 && (
+                          <div className="max-h-32 overflow-y-auto border border-gray-200 rounded bg-white">
+                            {searchTasksData.data
+                              .filter((t) => t.id !== taskId)
+                              .map((searchTask) => (
+                                <button
+                                  key={searchTask.id}
+                                  onClick={() => addDependencyMutation.mutate({
+                                    dependsOnId: searchTask.id,
+                                    type: selectedDependencyType
+                                  })}
+                                  className="w-full text-left px-2 py-1.5 text-xs hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
+                                  disabled={addDependencyMutation.isPending}
+                                >
+                                  <div className="font-medium text-gray-700 truncate">{searchTask.title}</div>
+                                  {searchTask.project && (
+                                    <div className="text-gray-400 text-[10px]">{searchTask.project.name}</div>
+                                  )}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setIsAddingDependency(false);
+                              setDependencySearch('');
+                            }}
+                            className="h-6 px-2 text-xs"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setIsAddingDependency(true)}
+                        className="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded flex items-center gap-1 w-fit"
+                      >
+                        <Plus className="h-3 w-3" />
+                        {(!task.dependencies || task.dependencies.length === 0) ? 'Add link' : ''}
+                      </button>
+                    )}
+                  </div>
                 </FieldRow>
               </div>
             </div>
