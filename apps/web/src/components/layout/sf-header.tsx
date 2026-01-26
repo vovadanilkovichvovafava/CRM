@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { useUISettingsStore } from '@/stores/ui-settings';
 import { useAuthStore } from '@/stores/auth';
 import { useNotifications, useMarkNotificationAsRead, useMarkAllNotificationsAsRead } from '@/hooks/use-notifications';
+import { api } from '@/lib/api';
 import {
   Search,
   Bell,
@@ -34,6 +36,7 @@ import {
   Clock,
   Mail,
   Upload,
+  Loader2,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -112,16 +115,65 @@ interface SearchModalProps {
   onClose: () => void;
 }
 
+interface SearchResult {
+  id: string;
+  name?: string;
+  title?: string;
+  data?: { name?: string; email?: string; value?: number };
+  type: 'contact' | 'company' | 'deal' | 'task' | 'project';
+}
+
 function SearchModal({ isOpen, onClose }: SearchModalProps) {
   const { t } = useTranslation();
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Reset query when modal opens
   useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus();
+      setQuery('');
+      setDebouncedQuery('');
     }
   }, [isOpen]);
+
+  // Search tasks
+  const { data: tasksData, isLoading: tasksLoading } = useQuery({
+    queryKey: ['search', 'tasks', debouncedQuery],
+    queryFn: () => api.tasks.list({ search: debouncedQuery, limit: 5 }),
+    enabled: isOpen && debouncedQuery.length >= 2,
+  });
+
+  // Search projects
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
+    queryKey: ['search', 'projects', debouncedQuery],
+    queryFn: () => api.projects.list({ search: debouncedQuery, limit: 5 }),
+    enabled: isOpen && debouncedQuery.length >= 2,
+  });
+
+  const isLoading = tasksLoading || projectsLoading;
+  const tasks = (tasksData?.data || []) as Array<{ id: string; title: string; status: string }>;
+  const projects = (projectsData?.data || []) as Array<{ id: string; name: string; status: string }>;
+  const hasResults = tasks.length > 0 || projects.length > 0;
+
+  const handleResultClick = useCallback((type: string, id: string) => {
+    onClose();
+    if (type === 'task') {
+      router.push(`/tasks/${id}`);
+    } else if (type === 'project') {
+      router.push(`/projects/${id}`);
+    }
+  }, [onClose, router]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -143,7 +195,11 @@ function SearchModal({ isOpen, onClose }: SearchModalProps) {
       <div className="absolute left-1/2 top-20 w-full max-w-2xl -translate-x-1/2 animate-fade-in-down">
         <div className="sf-card overflow-hidden shadow-2xl">
           <div className="flex items-center gap-3 border-b border-gray-200 px-4 py-3">
-            <Search className="h-5 w-5 text-gray-400" />
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+            ) : (
+              <Search className="h-5 w-5 text-gray-400" />
+            )}
             <input
               ref={inputRef}
               type="text"
@@ -159,8 +215,62 @@ function SearchModal({ isOpen, onClose }: SearchModalProps) {
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="p-4">
-            <p className="text-sm text-gray-500">{t('nav.searchHint', 'Type to search contacts, companies, deals...')}</p>
+          <div className="max-h-96 overflow-y-auto">
+            {debouncedQuery.length < 2 ? (
+              <div className="p-4">
+                <p className="text-sm text-gray-500">{t('nav.searchHint', 'Type to search contacts, companies, deals...')}</p>
+              </div>
+            ) : !hasResults && !isLoading ? (
+              <div className="p-4 text-center">
+                <p className="text-sm text-gray-500">{t('common.noData', 'No results found')}</p>
+              </div>
+            ) : (
+              <div className="py-2">
+                {/* Tasks */}
+                {tasks.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase">{t('nav.tasks', 'Tasks')}</span>
+                    </div>
+                    {tasks.map((task) => (
+                      <button
+                        key={task.id}
+                        onClick={() => handleResultClick('task', task.id)}
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <CheckSquare className="h-4 w-4 text-blue-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate">{task.title}</p>
+                          <p className="text-xs text-gray-500">{task.status}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Projects */}
+                {projects.length > 0 && (
+                  <div>
+                    <div className="px-4 py-2">
+                      <span className="text-xs font-semibold text-gray-500 uppercase">{t('nav.projects', 'Projects')}</span>
+                    </div>
+                    {projects.map((project) => (
+                      <button
+                        key={project.id}
+                        onClick={() => handleResultClick('project', project.id)}
+                        className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <FolderKanban className="h-4 w-4 text-purple-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-900 truncate">{project.name}</p>
+                          <p className="text-xs text-gray-500">{project.status}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
