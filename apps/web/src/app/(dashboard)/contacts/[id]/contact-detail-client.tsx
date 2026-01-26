@@ -61,12 +61,10 @@ interface ContactRecord {
 
 function ActivityButton({
   icon: Icon,
-  label: _label,
   onClick,
   color = 'blue',
 }: {
   icon: React.ComponentType<{ className?: string }>;
-  label: string;
   onClick?: () => void;
   color?: 'blue' | 'green' | 'orange';
 }) {
@@ -81,7 +79,7 @@ function ActivityButton({
       <button
         onClick={onClick}
         className={cn(
-          'flex h-10 w-10 items-center justify-center rounded-full text-white transition-all duration-200',
+          'flex h-10 w-10 items-center justify-center rounded-full text-white transition-all duration-200 hover:scale-105 active:scale-95',
           colorClasses[color]
         )}
       >
@@ -106,7 +104,7 @@ function DetailField({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start gap-4 py-3 border-b border-gray-100 last:border-0">
+    <div className="flex items-start gap-4 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50/50 transition-colors px-2 -mx-2 rounded">
       <div className="w-1/3 flex-shrink-0">
         <span className="text-sm text-gray-500">{label}</span>
       </div>
@@ -129,22 +127,20 @@ function DetailField({
   );
 }
 
-function EmptyActivities() {
+function EmptyActivities({ t }: { t: (key: string) => string }) {
   return (
     <div className="text-center py-8">
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
         <Calendar className="h-8 w-8 text-gray-400" />
       </div>
-      <p className="text-gray-600 font-medium mb-1">No activities to show.</p>
-      <p className="text-sm text-gray-500">
-        Get started by sending an email, scheduling a task, and more.
-      </p>
+      <p className="text-gray-600 font-medium mb-1">{t('activity.noActivities')}</p>
+      <p className="text-sm text-gray-500">{t('activity.getStartedHint')}</p>
     </div>
   );
 }
 
 export function ContactDetailClient() {
-  useTranslation(); // Initialize i18n
+  const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -160,16 +156,15 @@ export function ContactDetailClient() {
     enabled: !!contactId,
   });
 
-  // Delete mutation for future use
   const _deleteMutation = useMutation({
     mutationFn: () => api.records.delete(contactId),
     onSuccess: () => {
-      toast.success('Contact deleted');
+      toast.success(t('contacts.deleteContact'));
       queryClient.invalidateQueries({ queryKey: ['records'] });
       router.push('/contacts');
     },
     onError: () => {
-      toast.error('Failed to delete contact');
+      toast.error(t('errors.general'));
     },
   });
 
@@ -184,23 +179,23 @@ export function ContactDetailClient() {
   if (error || !contact) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-gray-500">Contact not found</p>
+        <p className="text-gray-500">{t('common.notFound')}</p>
         <Button onClick={() => router.push('/contacts')} variant="outline">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Contacts
+          {t('detail.backTo', { entity: t('contacts.title') })}
         </Button>
       </div>
     );
   }
 
   const data = contact.data || {};
-  const displayName = data.name || 'Unnamed Contact';
-  const ownerName = contact.owner?.name || 'Unknown Owner';
+  const displayName = data.name || t('common.unknown');
+  const ownerName = contact.owner?.name || t('common.unknown');
 
   return (
     <div className="h-full flex flex-col bg-[#f4f6f9]">
       {/* Page Header */}
-      <div className="bg-white border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200 animate-fade-in">
         {/* Breadcrumb and Actions */}
         <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -209,39 +204,39 @@ export function ContactDetailClient() {
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Contacts
+              {t('detail.backTo', { entity: t('contacts.title') })}
             </Link>
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="border-gray-300"
+              className="border-gray-300 hover:bg-gray-50 transition-colors"
               onClick={() => setIsFollowing(!isFollowing)}
             >
               <Plus className="h-4 w-4 mr-1" />
-              {isFollowing ? 'Following' : 'Follow'}
+              {isFollowing ? t('detail.following') : t('detail.follow')}
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50"
+              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50 transition-colors"
             >
-              New Case
+              {t('detail.newCase')}
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50"
+              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50 transition-colors"
             >
-              New Note
+              {t('detail.newNote')}
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50"
+              className="border-[#0070d2] text-[#0070d2] hover:bg-blue-50 transition-colors"
             >
-              Submit for Approval
+              {t('detail.submitForApproval')}
             </Button>
             <Button variant="outline" size="sm" className="border-gray-300">
               <ChevronDown className="h-4 w-4" />
@@ -251,12 +246,12 @@ export function ContactDetailClient() {
 
         {/* Contact Info Header */}
         <div className="px-6 py-4 flex items-start gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[#0070d2] to-[#00a1e0] text-white text-lg font-semibold">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-[#0070d2] to-[#00a1e0] text-white text-lg font-semibold shadow-md">
             {getInitials(displayName)}
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Contact</span>
+              <span className="text-sm text-gray-500">{t('contacts.title').slice(0, -1)}</span>
             </div>
             <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
           </div>
@@ -265,24 +260,24 @@ export function ContactDetailClient() {
         {/* Quick Info Bar */}
         <div className="px-6 pb-4 flex items-center gap-8 text-sm">
           <div>
-            <span className="text-gray-500">Title</span>
+            <span className="text-gray-500">{t('detail.title')}</span>
             <span className="ml-2 text-gray-900">{data.position || '—'}</span>
           </div>
           <div>
-            <span className="text-gray-500">Account Name</span>
+            <span className="text-gray-500">{t('detail.accountName')}</span>
             <span className="ml-2 text-gray-900">{data.company || '—'}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-gray-500">Phone (2)</span>
+            <span className="text-gray-500">{t('contacts.fields.phone')}</span>
             <ChevronDown className="h-4 w-4 text-gray-400" />
           </div>
           <div>
-            <span className="text-gray-500">Email</span>
+            <span className="text-gray-500">{t('contacts.fields.email')}</span>
             <span className="ml-2 text-[#0070d2]">{data.email || '—'}</span>
           </div>
           <div>
-            <span className="text-gray-500">Contact Owner</span>
-            <Link href="#" className="ml-2 text-[#0070d2] hover:underline flex items-center gap-1">
+            <span className="text-gray-500">{t('detail.contactOwner')}</span>
+            <Link href="#" className="ml-2 text-[#0070d2] hover:underline flex items-center gap-1 inline-flex">
               {ownerName}
               <Share2 className="h-3 w-3" />
             </Link>
@@ -295,7 +290,7 @@ export function ContactDetailClient() {
         {/* Left Panel - Related/Details */}
         <div className="flex-1 overflow-y-auto p-6">
           {/* Tabs */}
-          <div className="sf-card mb-6">
+          <div className="sf-card mb-6 animate-slide-up">
             <div className="border-b border-gray-200">
               <div className="flex">
                 <button
@@ -307,7 +302,7 @@ export function ContactDetailClient() {
                       : 'border-transparent text-gray-600 hover:text-gray-900'
                   )}
                 >
-                  Related
+                  {t('detail.related')}
                 </button>
                 <button
                   onClick={() => setActiveTab('details')}
@@ -318,7 +313,7 @@ export function ContactDetailClient() {
                       : 'border-transparent text-gray-600 hover:text-gray-900'
                   )}
                 >
-                  Details
+                  {t('detail.details')}
                 </button>
               </div>
             </div>
@@ -329,129 +324,84 @@ export function ContactDetailClient() {
                 <div className="grid grid-cols-2 gap-x-8">
                   {/* Left Column */}
                   <div>
-                    <DetailField
-                      label="Contact Owner"
-                      value={ownerName}
-                    />
-                    <DetailField
-                      label="Name"
-                      value={displayName}
-                    />
-                    <DetailField
-                      label="Account Name"
-                      value={data.company}
-                    />
-                    <DetailField
-                      label="Title"
-                      value={data.position}
-                    />
-                    <DetailField
-                      label="Department"
-                      value={data.department}
-                    />
-                    <DetailField
-                      label="Birthdate"
-                      value={data.birthdate}
-                    />
-                    <DetailField
-                      label="Reports To"
-                      value={data.reportsTo}
-                    />
-                    <DetailField
-                      label="Lead Source"
-                      value={data.leadSource}
-                    />
+                    <DetailField label={t('detail.contactOwner')} value={ownerName} />
+                    <DetailField label={t('contacts.fields.name')} value={displayName} />
+                    <DetailField label={t('detail.accountName')} value={data.company} />
+                    <DetailField label={t('detail.title')} value={data.position} />
+                    <DetailField label={t('detail.department')} value={data.department} />
+                    <DetailField label={t('detail.birthdate')} value={data.birthdate} />
+                    <DetailField label={t('detail.reportsTo')} value={data.reportsTo} />
+                    <DetailField label={t('detail.leadSource')} value={data.leadSource} />
                   </div>
 
                   {/* Right Column */}
                   <div>
                     <DetailField
-                      label="Phone"
+                      label={t('contacts.fields.phone')}
                       value={data.phone}
                       icon={data.phone && <Phone className="h-4 w-4 text-gray-400" />}
                     />
+                    <DetailField label={t('detail.homePhone')} value={data.homePhone} />
+                    <DetailField label={t('detail.mobile')} value={data.mobile} />
+                    <DetailField label={t('detail.otherPhone')} value={data.otherPhone} />
+                    <DetailField label={t('detail.fax')} value={data.fax} />
                     <DetailField
-                      label="Home Phone"
-                      value={data.homePhone}
-                    />
-                    <DetailField
-                      label="Mobile"
-                      value={data.mobile}
-                    />
-                    <DetailField
-                      label="Other Phone"
-                      value={data.otherPhone}
-                    />
-                    <DetailField
-                      label="Fax"
-                      value={data.fax}
-                    />
-                    <DetailField
-                      label="Email"
+                      label={t('contacts.fields.email')}
                       value={data.email}
                       icon={data.email && <Mail className="h-4 w-4 text-gray-400" />}
                     />
-                    <DetailField
-                      label="Assistant"
-                      value={data.assistant}
-                    />
-                    <DetailField
-                      label="Asst. Phone"
-                      value={data.assistantPhone}
-                    />
+                    <DetailField label={t('detail.assistant')} value={data.assistant} />
+                    <DetailField label={t('detail.asstPhone')} value={data.assistantPhone} />
                   </div>
 
                   {/* Full Width - Addresses */}
                   <div className="col-span-2 mt-6 pt-6 border-t border-gray-200">
                     <div className="grid grid-cols-2 gap-x-8">
                       <DetailField
-                        label="Mailing Address"
+                        label={t('detail.mailingAddress')}
                         value={data.mailingAddress}
                         icon={<MapPin className="h-4 w-4 text-gray-400" />}
                       />
-                      <DetailField
-                        label="Other Address"
-                        value={data.otherAddress}
-                      />
+                      <DetailField label={t('detail.otherAddress')} value={data.otherAddress} />
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {/* Related Lists */}
-                  <div className="border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                      <h3 className="font-medium text-gray-900">Cases (0)</h3>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                      <h3 className="font-medium text-gray-900">{t('detail.cases')} (0)</h3>
                       <Button size="sm" variant="outline" className="h-7 text-xs">
-                        New
+                        {t('common.create')}
                       </Button>
                     </div>
                     <div className="p-4 text-center text-gray-500 text-sm">
-                      No cases found
+                      {t('detail.noCases')}
                     </div>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                      <h3 className="font-medium text-gray-900">Opportunities (0)</h3>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                      <h3 className="font-medium text-gray-900">{t('detail.opportunities')} (0)</h3>
                       <Button size="sm" variant="outline" className="h-7 text-xs">
-                        New
+                        {t('common.create')}
                       </Button>
                     </div>
                     <div className="p-4 text-center text-gray-500 text-sm">
-                      No opportunities found
+                      {t('detail.noOpportunities')}
                     </div>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg">
-                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200 rounded-t-lg">
-                      <h3 className="font-medium text-gray-900">Files (0)</h3>
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+                      <h3 className="font-medium text-gray-900">{t('detail.files')} (0)</h3>
                       <Button size="sm" variant="outline" className="h-7 text-xs">
-                        Upload
+                        {t('common.upload')}
                       </Button>
                     </div>
                     <div className="p-4 text-center text-gray-500 text-sm">
-                      No files attached
+                      {t('detail.noFiles')}
                     </div>
                   </div>
                 </div>
@@ -461,7 +411,7 @@ export function ContactDetailClient() {
         </div>
 
         {/* Right Panel - Activity */}
-        <div className="w-96 border-l border-gray-200 bg-white flex flex-col">
+        <div className="w-96 border-l border-gray-200 bg-white flex flex-col animate-slide-left">
           {/* Activity Tabs */}
           <div className="border-b border-gray-200 px-4">
             <div className="flex">
@@ -474,7 +424,7 @@ export function ContactDetailClient() {
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 )}
               >
-                Activity
+                {t('activity.title')}
               </button>
               <button
                 onClick={() => setActivityTab('chatter')}
@@ -485,7 +435,7 @@ export function ContactDetailClient() {
                     : 'border-transparent text-gray-600 hover:text-gray-900'
                 )}
               >
-                Chatter
+                {t('activity.chatter')}
               </button>
             </div>
           </div>
@@ -493,57 +443,55 @@ export function ContactDetailClient() {
           {/* Activity Actions */}
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-center gap-4">
-              <ActivityButton icon={FileText} label="Log a Call" color="blue" />
-              <ActivityButton icon={Phone} label="Call" color="green" />
-              <ActivityButton icon={Calendar} label="Event" color="blue" />
-              <ActivityButton icon={Mail} label="Email" color="orange" />
+              <ActivityButton icon={FileText} color="blue" />
+              <ActivityButton icon={Phone} color="green" />
+              <ActivityButton icon={Calendar} color="blue" />
+              <ActivityButton icon={Mail} color="orange" />
             </div>
           </div>
 
           {/* Filters */}
           <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <span className="text-sm text-gray-500">
-              Filters: All time • All activities • All types
+              {t('activity.filters')}: {t('activity.allTime')} • {t('activity.allActivities')} • {t('activity.allTypes')}
             </span>
-            <button className="p-1 rounded hover:bg-gray-100">
+            <button className="p-1 rounded hover:bg-gray-100 transition-colors">
               <Settings className="h-4 w-4 text-gray-400" />
             </button>
           </div>
 
           {/* Activity Controls */}
           <div className="px-4 py-2 border-b border-gray-200 flex items-center gap-4 text-sm">
-            <button className="text-[#0070d2] hover:underline">Refresh</button>
+            <button className="text-[#0070d2] hover:underline">{t('activity.refresh')}</button>
             <span className="text-gray-300">•</span>
-            <button className="text-[#0070d2] hover:underline">Expand All</button>
+            <button className="text-[#0070d2] hover:underline">{t('activity.expandAll')}</button>
             <span className="text-gray-300">•</span>
-            <button className="text-[#0070d2] hover:underline">View All</button>
+            <button className="text-[#0070d2] hover:underline">{t('activity.viewAll')}</button>
           </div>
 
           {/* Activity Content */}
           <div className="flex-1 overflow-y-auto p-4">
             <div className="mb-4">
-              <button className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+              <button className="flex items-center gap-2 text-sm text-gray-700 font-medium hover:text-gray-900 transition-colors">
                 <ChevronDown className="h-4 w-4" />
-                Upcoming & Overdue
+                {t('activity.upcomingOverdue')}
               </button>
             </div>
 
-            <EmptyActivities />
+            <EmptyActivities t={t} />
 
             <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
               <div className="flex items-start gap-2">
                 <div className="p-1 rounded-full bg-blue-100">
                   <Calendar className="h-4 w-4 text-blue-600" />
                 </div>
-                <p className="text-sm text-blue-700">
-                  To change what&apos;s shown, try changing your filters.
-                </p>
+                <p className="text-sm text-blue-700">{t('activity.filterHint')}</p>
               </div>
             </div>
 
             <div className="mt-6">
-              <Button className="w-full bg-[#0070d2] hover:bg-[#005fb2]">
-                Show All Activities
+              <Button className="w-full bg-[#0070d2] hover:bg-[#005fb2] transition-colors">
+                {t('activity.showAllActivities')}
               </Button>
             </div>
           </div>
