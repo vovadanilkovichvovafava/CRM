@@ -177,6 +177,8 @@
     "addActionItem": "Добавить действие",
     "noComments": "Комментариев пока нет",
     "writeComment": "Напишите комментарий...",
+    "attachmentsComingSoon": "Загрузка файлов скоро будет доступна",
+    "commentsComingSoon": "Комментарии скоро будут доступны",
     "status": {
       "todo": "К выполнению",
       "inProgress": "В работе",

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
@@ -24,16 +24,18 @@ import {
   ChevronDown,
   Search,
   Filter,
-  Send,
   Plus,
   Link as LinkIcon,
   Tag,
-  Timer,
-  Upload,
-  MoreHorizontal,
   AlertCircle,
   X,
   Check,
+  Upload,
+  Download,
+  Image,
+  FileText,
+  FileSpreadsheet,
+  File as FileIconGeneric,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -61,7 +63,6 @@ interface Task {
   priority: 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
   dueDate?: string;
   startDate?: string;
-  estimatedHours?: number;
   assigneeId?: string;
   createdAt: string;
   updatedAt: string;
@@ -87,6 +88,40 @@ interface Activity {
   description: string;
   createdAt: string;
   user?: { id: string; name?: string; email: string; avatar?: string };
+}
+
+interface FileItem {
+  id: string;
+  name: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function getFileIcon(mimeType: string) {
+  if (mimeType.startsWith('image/')) {
+    return <Image className="h-5 w-5 text-emerald-500" />;
+  }
+  if (mimeType.includes('pdf')) {
+    return <FileText className="h-5 w-5 text-red-500" />;
+  }
+  if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || mimeType.includes('csv')) {
+    return <FileSpreadsheet className="h-5 w-5 text-green-500" />;
+  }
+  if (mimeType.includes('document') || mimeType.includes('word')) {
+    return <FileText className="h-5 w-5 text-blue-500" />;
+  }
+  return <FileIconGeneric className="h-5 w-5 text-gray-400" />;
 }
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
@@ -351,74 +386,6 @@ function DateField({
   );
 }
 
-// Editable Number Field
-function NumberField({
-  value,
-  onChange,
-  suffix = '',
-  disabled = false,
-}: {
-  value?: number;
-  onChange: (value: number | undefined) => void;
-  suffix?: string;
-  disabled?: boolean;
-}) {
-  const [isEditing, setIsEditing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  if (isEditing) {
-    return (
-      <div className="flex items-center gap-2">
-        <input
-          ref={inputRef}
-          type="number"
-          defaultValue={value || ''}
-          min="0"
-          step="0.5"
-          className="text-sm border border-gray-300 rounded px-2 py-1 w-20 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          onBlur={(e) => {
-            const newValue = parseFloat(e.target.value);
-            onChange(isNaN(newValue) ? undefined : newValue);
-            setIsEditing(false);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              const newValue = parseFloat((e.target as HTMLInputElement).value);
-              onChange(isNaN(newValue) ? undefined : newValue);
-              setIsEditing(false);
-            }
-            if (e.key === 'Escape') {
-              setIsEditing(false);
-            }
-          }}
-          disabled={disabled}
-        />
-        <span className="text-sm text-gray-500">{suffix}</span>
-      </div>
-    );
-  }
-
-  return (
-    <button
-      onClick={() => !disabled && setIsEditing(true)}
-      className={cn(
-        "text-sm hover:bg-gray-100 px-2 py-1 rounded transition-colors",
-        disabled && "opacity-50 cursor-not-allowed"
-      )}
-      disabled={disabled}
-    >
-      {value ? `${value}${suffix}` : <span className="text-gray-400">Empty</span>}
-    </button>
-  );
-}
-
 // Field row component
 function FieldRow({
   icon: Icon,
@@ -450,11 +417,12 @@ export function TaskDetailClient() {
   const [activeTab, setActiveTab] = useState<'details' | 'subtasks'>('details');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-  const [commentText, setCommentText] = useState('');
-  const [isDragging, setIsDragging] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch task
   const { data: task, isLoading, error } = useQuery({
@@ -479,6 +447,13 @@ export function TaskDetailClient() {
       createdAt: task.createdAt
     }] : []),
   ] : [];
+
+  // Fetch files for this task
+  const { data: files = [], isLoading: isLoadingFiles } = useQuery({
+    queryKey: ['files', 'task', taskId],
+    queryFn: () => api.files.listByTask(taskId) as Promise<FileItem[]>,
+    enabled: !!taskId && taskId !== '_placeholder',
+  });
 
   // Mutations
   const updateTaskMutation = useMutation({
@@ -525,6 +500,67 @@ export function TaskDetailClient() {
     },
   });
 
+  const deleteFileMutation = useMutation({
+    mutationFn: (id: string) => api.files.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['files', 'task', taskId] });
+      toast.success(t('files.delete'));
+    },
+    onError: () => {
+      toast.error(t('errors.general'));
+    },
+  });
+
+  // File upload handler
+  const handleFileUpload = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        await api.files.upload(file, { taskId });
+      }
+      queryClient.invalidateQueries({ queryKey: ['files', 'task', taskId] });
+      toast.success(t('common.upload'));
+    } catch {
+      toast.error(t('errors.general'));
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileUpload(e.dataTransfer.files);
+  }, [taskId]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFileUpload(e.target.files);
+    e.target.value = '';
+  };
+
+  const handleDeleteFile = (id: string, name: string) => {
+    if (confirm(`${t('common.delete')} "${name}"?`)) {
+      deleteFileMutation.mutate(id);
+    }
+  };
+
+  const handleDownloadFile = (file: FileItem) => {
+    window.open(api.files.getDownloadUrl(file.id), '_blank');
+  };
+
   // Update handlers
   const handleUpdateStatus = (status: string) => {
     updateTaskMutation.mutate({ status } as Partial<Task>);
@@ -546,17 +582,6 @@ export function TaskDetailClient() {
     updateTaskMutation.mutate({ startDate } as Partial<Task>);
   };
 
-  const handleUpdateEstimatedHours = (estimatedHours: number | undefined) => {
-    updateTaskMutation.mutate({ estimatedHours } as Partial<Task>);
-  };
-
-  const handleSendComment = () => {
-    if (!commentText.trim()) return;
-    // TODO: Implement actual comment API
-    toast.success('Comment sent');
-    setCommentText('');
-  };
-
   const handleOpenEditDialog = () => {
     if (task) {
       setEditTitle(task.title);
@@ -575,24 +600,6 @@ export function TaskDetailClient() {
       }
     });
   };
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      toast.info(`${files.length} file(s) would be uploaded`);
-    }
-  }, []);
 
   if (isLoading) {
     return (
@@ -721,15 +728,6 @@ export function TaskDetailClient() {
                   </div>
                 </FieldRow>
 
-                <FieldRow icon={Timer} label={t('tasks.fields.timeEstimate')}>
-                  <NumberField
-                    value={task.estimatedHours}
-                    onChange={handleUpdateEstimatedHours}
-                    suffix="h"
-                    disabled={isUpdating}
-                  />
-                </FieldRow>
-
                 <FieldRow icon={Tag} label={t('tasks.fields.tags')}>
                   {task.tags && task.tags.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
@@ -845,30 +843,105 @@ export function TaskDetailClient() {
             {activeTab === 'details' && (
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('tasks.customFields')}</h3>
-                  <div className="text-sm text-gray-500 py-4 border border-dashed border-gray-200 rounded-lg text-center">
-                    {t('tasks.noCustomFields')}
-                  </div>
-                </div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    {t('tasks.attachments')}
+                    {files.length > 0 && (
+                      <span className="text-gray-400 font-normal">({files.length})</span>
+                    )}
+                  </h3>
 
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('tasks.attachments')}</h3>
+                  {/* Upload Area */}
                   <div
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={cn(
-                      "border-2 border-dashed rounded-lg py-8 text-center transition-colors cursor-pointer",
+                      "relative border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer mb-4",
                       isDragging
                         ? "border-blue-400 bg-blue-50"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                     )}
+                    onClick={() => fileInputRef.current?.click()}
                   >
-                    <Upload className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">
-                      {t('tasks.dropFilesHere')} <span className="text-blue-600 hover:underline">{t('tasks.upload')}</span>
-                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      disabled={isUploading}
+                    />
+                    {isUploading ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+                        <p className="text-sm text-gray-500">{t('common.loading')}</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <Upload className="h-8 w-8 text-gray-300" />
+                        <p className="text-sm text-gray-500">
+                          {t('tasks.dropFilesHere')} <span className="text-blue-600">{t('tasks.upload')}</span>
+                        </p>
+                        <p className="text-xs text-gray-400">Max 10MB</p>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Files List */}
+                  {isLoadingFiles ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                    </div>
+                  ) : files.length === 0 ? (
+                    <p className="text-sm text-gray-400 text-center py-2">{t('files.noFiles')}</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {files.map((file) => (
+                        <div
+                          key={file.id}
+                          className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 group transition-colors"
+                        >
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white border border-gray-200">
+                            {getFileIcon(file.mimeType)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-900 truncate" title={file.originalName}>
+                              {file.originalName}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {formatFileSize(file.size)} • {format(new Date(file.createdAt), 'MMM d, yyyy')}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                              onClick={() => handleDownloadFile(file)}
+                              title={t('common.download')}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-400 hover:text-red-500"
+                              onClick={() => handleDeleteFile(file.id, file.originalName)}
+                              disabled={deleteFileMutation.isPending}
+                              title={t('common.delete')}
+                            >
+                              {deleteFileMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1046,38 +1119,8 @@ export function TaskDetailClient() {
           </div>
 
           <div className="p-4 border-t border-gray-200 bg-white">
-            <div className="flex items-start gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-blue-500 text-white text-sm">U</AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <textarea
-                  value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  placeholder={t('tasks.writeComment')}
-                  rows={2}
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <div className="flex items-center justify-between mt-2">
-                  <div className="flex items-center gap-1">
-                    <button className="p-1.5 hover:bg-gray-100 rounded transition-colors">
-                      <Paperclip className="h-4 w-4 text-gray-400" />
-                    </button>
-                    <button className="p-1.5 hover:bg-gray-100 rounded transition-colors">
-                      <MoreHorizontal className="h-4 w-4 text-gray-400" />
-                    </button>
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={!commentText.trim()}
-                    onClick={handleSendComment}
-                    className="bg-blue-500 hover:bg-blue-600"
-                  >
-                    <Send className="h-4 w-4 mr-1" />
-                    {t('common.send')}
-                  </Button>
-                </div>
-              </div>
+            <div className="text-center py-3">
+              <p className="text-sm text-gray-400">{t('tasks.commentsComingSoon')}</p>
             </div>
           </div>
         </div>

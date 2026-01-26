@@ -177,6 +177,8 @@
     "addActionItem": "Add Action Item",
     "noComments": "No comments yet",
     "writeComment": "Write a comment...",
+    "attachmentsComingSoon": "File attachments coming soon",
+    "commentsComingSoon": "Comments coming soon",
     "status": {
       "todo": "To Do",
       "inProgress": "In Progress",
