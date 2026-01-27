@@ -1,5 +1,77 @@
 # Instructions for Claude Code
 
+## Repository Overview
+
+This repository contains the **Enterprise CRM + Project Management + Traffic Arbitrage** system specification and development guidelines. It combines concepts from Attio (flexibility), Salesforce (power), ClickUp (PM), with traffic arbitrage specialization.
+
+### Current State
+
+The repository is in the **specification/blueprint phase** — no implementation code exists yet. It contains only documentation files:
+
+```
+CRM/
+├── CLAUDE.md                          # This file — AI assistant guidelines & coding standards
+├── README.md                          # Project overview and ROI analysis
+├── ENTERPRISE_CRM_SPECIFICATION.md    # Full technical spec (~2000 lines): DB schema, API design, architecture
+└── QUICK_START_GUIDE.md               # Step-by-step setup and development timeline
+```
+
+### Target Architecture (when implemented)
+
+```
+enterprise-crm/
+├── apps/
+│   ├── api/                    # NestJS 11 backend
+│   │   ├── prisma/schema.prisma
+│   │   └── src/
+│   │       └── modules/        # objects, records, views, pipelines, tasks, etc.
+│   └── web/                    # Next.js 16 frontend (App Router)
+│       └── src/
+│           ├── app/            # Routes
+│           ├── components/     # UI components (shadcn/ui)
+│           ├── hooks/          # Custom React hooks
+│           └── lib/            # API client, utilities
+├── packages/shared/            # Shared types and utilities
+├── docker-compose.yml
+├── pnpm-workspace.yaml
+└── turbo.json
+```
+
+### Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Backend | NestJS 11, Prisma 7, PostgreSQL 16, Redis 7, BullMQ 5, Socket.io, MinIO |
+| Frontend | Next.js 16, React 19, TypeScript 5.7, Tailwind CSS 4, shadcn/ui, TanStack Query/Table, Zustand |
+| Auth | Supabase Auth |
+| Infra | Docker, Nginx |
+
+### Key Domain Modules
+
+- **Flexible Data Model**: Custom objects, fields (20+ types), records, views (table/board/list/timeline/calendar/map)
+- **Sales Pipeline**: Pipelines, stages, lead scoring (A/B/C/D), forecasting, email sequences
+- **Project Management**: Projects, tasks (hierarchy), sprints, milestones, time tracking, workload view
+- **Traffic Arbitrage**: Keitaro integration, webmaster scoring, offer management, multi-GEO support
+- **Communication**: Email templates, sequences, activity feed, real-time collaboration (Socket.io)
+
+### Key Commands (once implemented)
+
+```bash
+pnpm install          # Install dependencies
+pnpm dev              # Start dev servers
+pnpm build            # Production build
+pnpm lint             # Run ESLint
+pnpm test             # Run tests
+pnpm prisma migrate   # Run DB migrations
+pnpm prisma generate  # Generate Prisma client
+```
+
+### Reference Project
+
+The **mini-zapier** codebase serves as the architectural reference. Reuse patterns but adapt to CRM requirements.
+
+---
+
 Ты - профессиональный full-stack разработчик, работающий над критически важным Enterprise CRM проектом.
 
 ## Основные принципы
